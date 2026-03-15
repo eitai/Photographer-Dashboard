@@ -132,7 +132,7 @@ const translations: Record<string, Record<Lang, string>> = {
 
   // ── Admin: Login ────────────────────────────────────────────────────────────
   'admin.login.subtitle': { he: 'ממשק ניהול', en: 'Photographer Admin' },
-  'admin.login.email': { he: 'אימייל', en: 'Email' },
+  'admin.login.email': { he: 'אימייל / שם משתמש', en: 'Email / Username' },
   'admin.login.password': { he: 'סיסמה', en: 'Password' },
   'admin.login.error': { he: 'אימייל או סיסמה שגויים', en: 'Invalid email or password' },
   'admin.login.signing_in': { he: 'מתחבר…', en: 'Signing in…' },

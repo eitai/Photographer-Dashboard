@@ -40,7 +40,8 @@ export const useAuthStore = create<AuthState>((set) => ({
   theme: _initialTheme,
 
   login: async (email, password) => {
-    const res = await api.post('/auth/login', { email, password });
+    const payload = email.includes('@') ? { email, password } : { username: email, password };
+    const res = await api.post('/auth/login', payload);
     const { token, admin: adminData } = res.data;
     localStorage.setItem('koral_admin_token', token);
     localStorage.setItem('koral_admin_user', JSON.stringify(adminData));

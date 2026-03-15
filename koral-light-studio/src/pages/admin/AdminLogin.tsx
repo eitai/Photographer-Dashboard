@@ -8,7 +8,7 @@ export const AdminLogin = () => {
   const { login, admin } = useAuth();
   const { t } = useI18n();
   const navigate = useNavigate();
-  const [email, setEmail] = useState('');
+  const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -22,7 +22,7 @@ export const AdminLogin = () => {
     setError('');
     setLoading(true);
     try {
-      await login(email, password);
+      await login(identifier, password);
       navigate('/admin/dashboard');
     } catch {
       setError(t('admin.login.error'));
@@ -47,11 +47,12 @@ export const AdminLogin = () => {
           <div>
             <label className='block text-sm text-charcoal mb-1.5'>{t('admin.login.email')}</label>
             <input
-              type='email'
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              type='text'
+              value={identifier}
+              onChange={(e) => setIdentifier(e.target.value)}
               required
               autoFocus
+              autoComplete='username'
               className='w-full px-4 py-2.5 rounded-lg border border-beige bg-ivory text-charcoal text-sm focus:outline-none focus:ring-2 focus:ring-blush/50'
             />
           </div>
