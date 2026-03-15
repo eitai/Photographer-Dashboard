@@ -4,6 +4,7 @@ import { FadeIn } from '@/components/FadeIn';
 import Masonry from 'react-masonry-css';
 import { Lightbox, type LightboxImage } from '@/components/gallery/Lightbox';
 import api from '@/lib/api';
+import { Helmet } from 'react-helmet-async';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
@@ -25,6 +26,13 @@ export const Portfolio = () => {
 
   return (
     <main className='pt-16'>
+      <Helmet>
+        <title>{t('portfolio.title')} | Koral Photography</title>
+        <meta name='description' content='צפו בגלריית הצילומים של קורל — משפחות, הריון, ניו בורן ומיתוג אישי בצפון הארץ.' />
+        <meta property='og:title' content={`${t('portfolio.title')} | Koral Photography`} />
+        <meta property='og:url' content={window.location.href} />
+        <link rel='canonical' href={window.location.href} />
+      </Helmet>
       <section className='section-spacing'>
         <div className='container-narrow'>
           <FadeIn>
@@ -50,7 +58,7 @@ export const Portfolio = () => {
                   <button onClick={() => setLightboxIndex(i)} className='group relative block w-full rounded-xl overflow-hidden'>
                     <img
                       src={getImageUrl(img.thumbnailPath || img.path)}
-                      alt={img.originalName || img.filename || ''}
+                      alt={img.originalName || img.filename || 'Portfolio photography image'}
                       className='w-full h-auto block transition-transform duration-300 group-hover:scale-[1.02]'
                       loading='lazy'
                       decoding='async'

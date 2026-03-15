@@ -54,7 +54,7 @@ export const SubmissionsSection = ({
                     <button
                       onClick={() => downloadAsZip(sub)}
                       disabled={downloading}
-                      className='flex items-center gap-2 bg-blush text-charcoal px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-blush/80 transition-colors disabled:opacity-60'
+                      className='flex items-center gap-2 bg-blush text-primary-foreground px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-blush/80 transition-colors disabled:opacity-60'
                     >
                       <Download size={13} />
                       {downloading ? t('admin.selections.preparing') : t('admin.selections.download')}

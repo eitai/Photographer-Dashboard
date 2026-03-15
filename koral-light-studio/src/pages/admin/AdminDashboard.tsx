@@ -1,10 +1,7 @@
-import { useEffect, useState } from 'react';
 import { AdminLayout } from '@/components/admin/AdminLayout';
 import { useAuth } from '@/hooks/useAuth';
 import { useI18n } from '@/lib/i18n';
-import api from '@/lib/api';
-import { useGalleryStore } from '@/store/galleryStore';
-import { useClientStore } from '@/store/clientStore';
+import { useGalleries, useClients, useBlogCount } from '@/hooks/useQueries';
 import { Users, Images, CheckSquare, BookOpen, ExternalLink } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
@@ -12,23 +9,9 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 export const AdminDashboard = () => {
   const { admin } = useAuth();
   const { t } = useI18n();
-  const { galleries, fetch: fetchGalleries } = useGalleryStore();
-  const { clients, fetch: fetchClients } = useClientStore();
-  const [blogCount, setBlogCount] = useState(0);
-
-  useEffect(() => {
-    fetchGalleries();
-    fetchClients();
-    const loadBlog = async () => {
-      try {
-        const r = await api.get('/blog?admin=1');
-        setBlogCount(r.data.length);
-      } catch {
-        // ignore
-      }
-    };
-    loadBlog();
-  }, []);
+  const { data: galleries = [] } = useGalleries();
+  const { data: clients = [] } = useClients();
+  const { data: blogCount = 0 } = useBlogCount();
 
   const STAT_CARDS = [
     { labelKey: 'admin.dashboard.clients', value: clients.length, icon: Users, to: '/admin/clients', color: 'text-blue-500' },

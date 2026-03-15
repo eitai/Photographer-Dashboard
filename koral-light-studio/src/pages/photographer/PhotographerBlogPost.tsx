@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
+import DOMPurify from 'dompurify';
 import { usePhotographer } from './PhotographerLayout';
 import { FadeIn } from '@/components/FadeIn';
 import { useI18n } from '@/lib/i18n';
 import { ArrowLeft } from 'lucide-react';
 import api from '@/lib/api';
+import { Helmet } from 'react-helmet-async';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
@@ -24,12 +26,6 @@ export const PhotographerBlogPost = () => {
       .finally(() => setLoading(false));
   }, [username, slug]);
 
-  useEffect(() => {
-    if (!post) return;
-    document.title = post.seoTitle || post.title;
-    const meta = document.querySelector('meta[name="description"]');
-    if (meta) meta.setAttribute('content', post.seoDescription || '');
-  }, [post]);
 
   if (loading) {
     return (
@@ -52,8 +48,35 @@ export const PhotographerBlogPost = () => {
     );
   }
 
+  const postImage = post.featuredImagePath ? `${API_BASE}${post.featuredImagePath}` : undefined;
+  const canonicalUrl = `${window.location.origin}/${username}/blog/${post.slug}`;
+
   return (
     <main className='pt-16'>
+      <Helmet>
+        <title>{post.seoTitle || post.title}</title>
+        <meta name='description' content={post.seoDescription || post.title} />
+        <meta property='og:title' content={post.seoTitle || post.title} />
+        <meta property='og:description' content={post.seoDescription || post.title} />
+        <meta property='og:type' content='article' />
+        <meta property='og:url' content={canonicalUrl} />
+        {postImage && <meta property='og:image' content={postImage} />}
+        <meta name='twitter:card' content='summary_large_image' />
+        <meta name='twitter:title' content={post.seoTitle || post.title} />
+        {postImage && <meta name='twitter:image' content={postImage} />}
+        <link rel='canonical' href={canonicalUrl} />
+        <script type='application/ld+json'>
+          {JSON.stringify({
+            '@context': 'https://schema.org',
+            '@type': 'BlogPosting',
+            headline: post.title,
+            description: post.seoDescription || '',
+            image: postImage,
+            datePublished: post.publishedAt || post.createdAt,
+            author: { '@type': 'Person', name: post.authorName || username },
+          })}
+        </script>
+      </Helmet>
       <article className='section-spacing'>
         <div className='max-w-2xl mx-auto px-6'>
           <FadeIn>
@@ -76,7 +99,7 @@ export const PhotographerBlogPost = () => {
 
             <div
               className='prose prose-sm max-w-none text-foreground leading-relaxed [&_h2]: [&_h3]: [&_blockquote]:border-l-blush [&_a]:text-blush'
-              dangerouslySetInnerHTML={{ __html: post.content || '' }}
+              dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(post.content || '') }}
             />
           </FadeIn>
         </div>

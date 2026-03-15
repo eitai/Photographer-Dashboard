@@ -5,6 +5,7 @@
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
+const cookieParser = require('cookie-parser');
 const compression = require('compression');
 const rateLimit = require('express-rate-limit');
 const morgan = require('morgan');
@@ -17,6 +18,9 @@ const app = express();
 
 // ── Security headers ──────────────────────────────────────────────────────────
 app.use(helmet());
+
+// ── Cookie parsing ────────────────────────────────────────────────────────────
+app.use(cookieParser());
 
 // ── CORS ──────────────────────────────────────────────────────────────────────
 const allowedOrigins = [

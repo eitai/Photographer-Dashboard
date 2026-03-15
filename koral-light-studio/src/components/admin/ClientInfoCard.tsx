@@ -91,7 +91,7 @@ export const ClientInfoCard = ({ client, editing, setEditing, form, setForm, sav
           <button
             type='submit'
             disabled={saving}
-            className='bg-blush text-charcoal px-5 py-2 rounded-lg text-sm font-medium hover:bg-blush/80 transition-colors disabled:opacity-60'
+            className='bg-blush text-primary-foreground px-5 py-2 rounded-lg text-sm font-medium hover:bg-blush/80 transition-colors disabled:opacity-60'
           >
             {saving ? t('admin.common.saving') : t('admin.client.save')}
           </button>

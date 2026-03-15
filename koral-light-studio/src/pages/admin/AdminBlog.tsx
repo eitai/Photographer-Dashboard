@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { AdminLayout } from '@/components/admin/AdminLayout';
 import { useI18n } from '@/lib/i18n';
 import api from '@/lib/api';
+import { toast } from 'sonner';
 import { Plus, Edit2, Trash2, Eye, EyeOff } from 'lucide-react';
 
 export const AdminBlog = () => {
@@ -14,7 +15,7 @@ export const AdminBlog = () => {
       const r = await api.get('/blog?admin=1');
       setPosts(r.data);
     } catch {
-      // ignore
+      toast.error(t('admin.blog.load_failed'));
     }
   };
 
@@ -35,7 +36,7 @@ export const AdminBlog = () => {
     <AdminLayout title={t('admin.blog.title')}>
       <div className="flex justify-end mb-6">
         <Link to="/admin/blog/new"
-          className="flex items-center gap-2 bg-blush text-charcoal px-4 py-2 rounded-lg text-sm font-medium hover:bg-blush/80 transition-colors">
+          className="flex items-center gap-2 bg-blush text-primary-foreground px-4 py-2 rounded-lg text-sm font-medium hover:bg-blush/80 transition-colors">
           <Plus size={15} /> {t('admin.blog.new_post')}
         </Link>
       </div>

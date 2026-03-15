@@ -11,7 +11,7 @@ export const NotFound = () => {
         <p className='text-sm text-warm-gray mb-8 leading-relaxed'>{t('notfound.body')}</p>
         <Link
           to='/admin'
-          className='inline-block px-6 py-2.5 rounded-lg bg-blush text-charcoal text-sm font-medium hover:bg-blush/80 transition-colors'
+          className='inline-block px-6 py-2.5 rounded-lg bg-blush text-primary-foreground text-sm font-medium hover:bg-blush/80 transition-colors'
         >
           {t('notfound.cta')}
         </Link>

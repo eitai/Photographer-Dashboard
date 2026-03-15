@@ -1,24 +1,16 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { AdminLayout } from '@/components/admin/AdminLayout';
 import { useI18n } from '@/lib/i18n';
 import api from '@/lib/api';
+import { toast } from 'sonner';
 import { Trash2 } from 'lucide-react';
-
-interface ContactSubmission {
-  _id: string;
-  name: string;
-  email: string;
-  phone?: string;
-  message: string;
-  createdAt: string;
-}
+import { useDeleteConfirmation } from '@/hooks/useDeleteConfirmation';
+import type { ContactSubmission } from '@/types/contact';
 
 export const AdminContact = () => {
   const { t } = useI18n();
   const [messages, setMessages] = useState<ContactSubmission[]>([]);
   const [loading, setLoading] = useState(true);
-  const [deleteTarget, setDeleteTarget] = useState<ContactSubmission | null>(null);
-  const [deleting, setDeleting] = useState(false);
 
   const load = async () => {
     setLoading(true);
@@ -26,7 +18,7 @@ export const AdminContact = () => {
       const r = await api.get('/contact');
       setMessages(r.data);
     } catch {
-      // ignore
+      toast.error(t('admin.contact.load_failed'));
     } finally {
       setLoading(false);
     }
@@ -36,19 +28,16 @@ export const AdminContact = () => {
     load();
   }, []);
 
-  const confirmDelete = async () => {
-    if (!deleteTarget) return;
-    setDeleting(true);
-    try {
-      await api.delete(`/contact/${deleteTarget._id}`);
-      setDeleteTarget(null);
-      load();
-    } catch {
-      // ignore
-    } finally {
-      setDeleting(false);
-    }
-  };
+  const deletion = useDeleteConfirmation<ContactSubmission>(
+    useCallback(async (target) => {
+      try {
+        await api.delete(`/contact/${target._id}`);
+        load();
+      } catch {
+        toast.error(t('admin.contact.delete_failed'));
+      }
+    }, []),
+  );
 
   return (
     <AdminLayout title={t('admin.contact.title')}>
@@ -75,7 +64,7 @@ export const AdminContact = () => {
                   <p className='text-xs text-warm-gray mt-2'>{new Date(msg.createdAt).toLocaleString()}</p>
                 </div>
                 <button
-                  onClick={() => setDeleteTarget(msg)}
+                  onClick={() => deletion.setTarget(msg)}
                   className='shrink-0 p-1.5 rounded-lg text-warm-gray hover:text-rose-500 hover:bg-rose-50 transition-colors'
                   title={t('admin.contact.delete_btn')}
                 >
@@ -88,25 +77,25 @@ export const AdminContact = () => {
       )}
 
       {/* Delete confirmation modal */}
-      {deleteTarget && (
+      {deletion.target && (
         <div className='fixed inset-0 z-50 flex items-center justify-center bg-charcoal/40 backdrop-blur-sm p-4'>
           <div className='bg-card rounded-2xl border border-beige shadow-xl w-full max-w-sm p-6'>
             <h3 className=' text-lg text-charcoal mb-1'>{t('admin.contact.delete_title')}</h3>
             <p className='text-sm text-warm-gray mb-1'>
-              <span className='font-medium text-charcoal'>{deleteTarget.name}</span>
+              <span className='font-medium text-charcoal'>{deletion.target.name}</span>
             </p>
             <p className='text-sm text-warm-gray mb-6'>{t('admin.contact.delete_body')}</p>
             <div className='flex gap-3'>
               <button
-                onClick={confirmDelete}
-                disabled={deleting}
+                onClick={deletion.confirm}
+                disabled={deletion.deleting}
                 className='flex-1 bg-rose-500 text-white py-2 rounded-lg text-sm font-medium hover:bg-rose-600 transition-colors disabled:opacity-60'
               >
-                {deleting ? t('admin.contact.deleting') : t('admin.contact.delete_btn')}
+                {deletion.deleting ? t('admin.contact.deleting') : t('admin.contact.delete_btn')}
               </button>
               <button
-                onClick={() => setDeleteTarget(null)}
-                disabled={deleting}
+                onClick={deletion.cancel}
+                disabled={deletion.deleting}
                 className='flex-1 py-2 rounded-lg text-sm text-warm-gray border border-beige hover:bg-ivory transition-colors'
               >
                 {t('admin.common.cancel')}

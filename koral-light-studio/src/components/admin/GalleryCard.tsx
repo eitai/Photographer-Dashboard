@@ -155,7 +155,7 @@ export const GalleryCard = ({
               <button
                 onClick={() => createDeliveryGallery(g._id)}
                 disabled={creatingDeliveryFor === g._id}
-                className='flex-1 bg-blush text-charcoal px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-blush/80 transition-colors disabled:opacity-60'
+                className='flex-1 bg-blush text-primary-foreground px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-blush/80 transition-colors disabled:opacity-60'
               >
                 {creatingDeliveryFor === g._id ? t('admin.client.creating_delivery') : t('admin.client.create_delivery')}
               </button>

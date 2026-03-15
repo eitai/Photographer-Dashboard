@@ -1,33 +1,25 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { AdminLayout } from '@/components/admin/AdminLayout';
 import { useI18n } from '@/lib/i18n';
 import api from '@/lib/api';
+import { toast } from 'sonner';
 import axios from 'axios';
 import { Download, Star, MessageCircle, Pencil } from 'lucide-react';
 import JSZip from 'jszip';
+import { useGalleries, useUpdateGallery, queryKeys } from '@/hooks/useQueries';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
 export const AdminSelections = () => {
   const { t } = useI18n();
-  const [galleries, setGalleries] = useState<any[]>([]);
+  const { data: allGalleries = [] } = useGalleries();
+  const galleries = allGalleries.filter((g) => g.status === 'selection_submitted');
+  const updateGallery = useUpdateGallery(queryKeys.galleries);
+
   const [selected, setSelected] = useState<string | null>(null);
   const [submissions, setSubmissions] = useState<any[]>([]);
   const [loadingSub, setLoadingSub] = useState(false);
   const [downloading, setDownloading] = useState(false);
-  const [markingInEditingId, setMarkingInEditingId] = useState<string | null>(null);
-
-  useEffect(() => {
-    const load = async () => {
-      try {
-        const r = await api.get('/galleries');
-        setGalleries(r.data.filter((g: any) => g.status === 'selection_submitted'));
-      } catch {
-        // ignore
-      }
-    };
-    load();
-  }, []);
 
   const loadSubmissions = async (galleryId: string) => {
     setSelected(galleryId);
@@ -37,21 +29,19 @@ export const AdminSelections = () => {
     setLoadingSub(false);
   };
 
-  const markInEditing = async (galleryId: string) => {
-    setMarkingInEditingId(galleryId);
-    try {
-      await api.put(`/galleries/${galleryId}`, { status: 'in_editing' });
-      // Remove from list since it no longer has selection_submitted status
-      setGalleries((prev) => prev.filter((g) => g._id !== galleryId));
-      if (selected === galleryId) {
-        setSelected(null);
-        setSubmissions([]);
-      }
-    } catch {
-      // ignore
-    } finally {
-      setMarkingInEditingId(null);
-    }
+  const markInEditing = (galleryId: string) => {
+    updateGallery.mutate(
+      { id: galleryId, data: { status: 'in_editing' } },
+      {
+        onSuccess: () => {
+          if (selected === galleryId) {
+            setSelected(null);
+            setSubmissions([]);
+          }
+        },
+        onError: () => toast.error(t('admin.selections.mark_failed')),
+      },
+    );
   };
 
   const downloadAsZip = async (submission: any) => {
@@ -77,6 +67,7 @@ export const AdminSelections = () => {
   };
 
   const currentGallery = galleries.find((g) => g._id === selected);
+  const markingInEditingId = updateGallery.isPending ? updateGallery.variables?.id ?? null : null;
 
   return (
     <AdminLayout title={t('admin.selections.title')}>
@@ -152,7 +143,7 @@ export const AdminSelections = () => {
                     <button
                       onClick={() => downloadAsZip(sub)}
                       disabled={downloading}
-                      className='flex items-center gap-2 bg-blush text-charcoal px-4 py-2 rounded-lg text-xs font-medium hover:bg-blush/80 transition-colors disabled:opacity-60'
+                      className='flex items-center gap-2 bg-blush text-primary-foreground px-4 py-2 rounded-lg text-xs font-medium hover:bg-blush/80 transition-colors disabled:opacity-60'
                     >
                       <Download size={13} />
                       {downloading ? t('admin.selections.preparing') : t('admin.selections.download')}

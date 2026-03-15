@@ -7,9 +7,16 @@ const asyncHandler = require('../middleware/asyncHandler');
 const router = express.Router();
 
 const signToken = (id) =>
-  jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: process.env.JWT_EXPIRES_IN });
+  jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: process.env.JWT_EXPIRES_IN || '7d' });
 
 const formatAdmin = (a) => ({ id: a._id, name: a.name, email: a.email, role: a.role, username: a.username || null, studioName: a.studioName || null });
+
+const COOKIE_OPTIONS = {
+  httpOnly: true,
+  secure: process.env.NODE_ENV === 'production',
+  sameSite: 'strict',
+  maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+};
 
 // POST /api/auth/login
 // Accepts { email, password } or { username, password } — identifier checked against both fields
@@ -24,8 +31,15 @@ router.post('/login', asyncHandler(async (req, res) => {
     return res.status(401).json({ message: 'Invalid credentials' });
 
   const token = signToken(admin._id);
-  res.json({ token, admin: formatAdmin(admin) });
+  res.cookie('koral_token', token, COOKIE_OPTIONS);
+  res.json({ admin: formatAdmin(admin) });
 }));
+
+// POST /api/auth/logout
+router.post('/logout', (req, res) => {
+  res.clearCookie('koral_token', COOKIE_OPTIONS);
+  res.json({ message: 'Logged out' });
+});
 
 // GET /api/auth/me
 router.get('/me', protect, (req, res) => {

@@ -3,6 +3,7 @@ import { Menu } from 'lucide-react';
 import { AdminSidebar } from './AdminSidebar';
 import { NotificationBell } from './NotificationBell';
 import { useAuthStore } from '@/store/authStore';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 
 interface AdminLayoutProps {
   children: React.ReactNode;
@@ -41,7 +42,9 @@ export const AdminLayout = ({ children, title }: AdminLayoutProps) => {
           <NotificationBell />
         </div>
         <div className='px-4 md:px-8 pb-8'>
-          {children}
+          <ErrorBoundary label={title || 'page content'}>
+            {children}
+          </ErrorBoundary>
         </div>
       </main>
     </div>

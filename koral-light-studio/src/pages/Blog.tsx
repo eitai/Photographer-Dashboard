@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { FadeIn } from '@/components/FadeIn';
 import { useI18n } from '@/lib/i18n';
 import api from '@/lib/api';
+import { Helmet } from 'react-helmet-async';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
@@ -27,6 +28,14 @@ export const Blog = () => {
 
   return (
     <main className='pt-16'>
+      <Helmet>
+        <title>{t('blog.title')} | Koral Photography</title>
+        <meta name='description' content={t('blog.subtitle')} />
+        <meta property='og:title' content={`${t('blog.title')} | Koral Photography`} />
+        <meta property='og:description' content={t('blog.subtitle')} />
+        <meta property='og:url' content={window.location.href} />
+        <link rel='canonical' href={window.location.href} />
+      </Helmet>
       <section className='section-spacing'>
         <div className='container-narrow'>
           <FadeIn>

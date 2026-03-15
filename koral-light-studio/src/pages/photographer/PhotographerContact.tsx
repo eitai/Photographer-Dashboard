@@ -4,12 +4,24 @@ import { FadeIn } from '@/components/FadeIn';
 import { useI18n } from '@/lib/i18n';
 import { toast } from 'sonner';
 import api from '@/lib/api';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+
+const contactSchema = z.object({
+  name: z.string().min(1, 'Name is required').max(100),
+  email: z.string().min(1, 'Email is required').email('Invalid email').max(255),
+  phone: z.string().max(20).optional(),
+  session_type: z.string().min(1, 'Please select a session type'),
+  message: z.string().max(1000).optional(),
+});
+
+type ContactFormValues = z.infer<typeof contactSchema>;
 
 export const PhotographerContact = () => {
   const { t } = useI18n();
   const { username } = usePhotographer();
   const [submitted, setSubmitted] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
 
   const sessionTypes = [
     t('contact.session.family'),
@@ -19,30 +31,26 @@ export const PhotographerContact = () => {
     t('contact.session.landscape'),
   ];
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    setSubmitting(true);
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+  } = useForm<ContactFormValues>({
+    resolver: zodResolver(contactSchema),
+  });
 
-    const form = e.currentTarget;
-    const formData = new FormData(form);
-    const name = (formData.get('name') as string)?.trim();
-    const email = (formData.get('email') as string)?.trim();
-    const phone = (formData.get('phone') as string)?.trim() || null;
-    const sessionType = (formData.get('session_type') as string) || null;
-    const message = (formData.get('message') as string)?.trim() || null;
-
-    if (!name || !email) {
-      toast.error(t('contact.required_fields'));
-      setSubmitting(false);
-      return;
-    }
-
+  const onSubmit = async (data: ContactFormValues) => {
     try {
-      await api.post(`/p/${username}/contact`, { name, email, phone, sessionType, message });
+      await api.post(`/p/${username}/contact`, {
+        name: data.name,
+        email: data.email,
+        phone: data.phone || null,
+        sessionType: data.session_type,
+        message: data.message || null,
+      });
       setSubmitted(true);
     } catch {
       toast.error(t('contact.error'));
-      setSubmitting(false);
     }
   };
 
@@ -74,41 +82,37 @@ export const PhotographerContact = () => {
           </FadeIn>
 
           <FadeIn delay={0.15}>
-            <form onSubmit={handleSubmit} className='max-w-lg mx-auto space-y-5'>
+            <form onSubmit={handleSubmit(onSubmit)} className='max-w-lg mx-auto space-y-5'>
               <div>
                 <label className='block text-sm text-muted-foreground mb-1.5'>{t('contact.name')}</label>
                 <input
-                  name='name'
                   type='text'
-                  required
-                  maxLength={100}
+                  {...register('name')}
                   className='w-full px-4 py-3 rounded-lg bg-card border border-border text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 transition-shadow'
                 />
+                {errors.name && <p className='text-xs text-rose-500 mt-1'>{errors.name.message}</p>}
               </div>
               <div>
                 <label className='block text-sm text-muted-foreground mb-1.5'>{t('contact.phone')}</label>
                 <input
-                  name='phone'
                   type='tel'
-                  maxLength={20}
+                  {...register('phone')}
                   className='w-full px-4 py-3 rounded-lg bg-card border border-border text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 transition-shadow'
                 />
               </div>
               <div>
                 <label className='block text-sm text-muted-foreground mb-1.5'>{t('contact.email')}</label>
                 <input
-                  name='email'
                   type='email'
-                  required
-                  maxLength={255}
+                  {...register('email')}
                   className='w-full px-4 py-3 rounded-lg bg-card border border-border text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 transition-shadow'
                 />
+                {errors.email && <p className='text-xs text-rose-500 mt-1'>{errors.email.message}</p>}
               </div>
               <div>
                 <label className='block text-sm text-muted-foreground mb-1.5'>{t('contact.session')}</label>
                 <select
-                  name='session_type'
-                  required
+                  {...register('session_type')}
                   className='w-full px-4 py-3 rounded-lg bg-card border border-border text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 transition-shadow'
                 >
                   <option value=''>—</option>
@@ -118,22 +122,22 @@ export const PhotographerContact = () => {
                     </option>
                   ))}
                 </select>
+                {errors.session_type && <p className='text-xs text-rose-500 mt-1'>{errors.session_type.message}</p>}
               </div>
               <div>
                 <label className='block text-sm text-muted-foreground mb-1.5'>{t('contact.message')}</label>
                 <textarea
-                  name='message'
+                  {...register('message')}
                   rows={4}
-                  maxLength={1000}
                   className='w-full px-4 py-3 rounded-lg bg-card border border-border text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 transition-shadow resize-none'
                 />
               </div>
               <button
                 type='submit'
-                disabled={submitting}
+                disabled={isSubmitting}
                 className='w-full px-8 py-3 rounded-lg bg-primary text-primary-foreground font-sans text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-50'
               >
-                {submitting ? t('contact.submitting') : t('contact.send')}
+                {isSubmitting ? t('contact.submitting') : t('contact.send')}
               </button>
             </form>
           </FadeIn>

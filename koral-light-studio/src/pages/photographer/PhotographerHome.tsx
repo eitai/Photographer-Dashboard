@@ -7,6 +7,7 @@ import api from '@/lib/api';
 import heroFallback from '@/assets/hero-family.jpg';
 import aboutFallback from '@/assets/about-koral.jpg';
 import { Phone } from 'lucide-react';
+import { Helmet } from 'react-helmet-async';
 
 const InstagramIcon = () => (
   <svg viewBox='0 0 24 24' width='22' height='22' fill='currentColor'>
@@ -69,8 +70,29 @@ export const PhotographerHome = () => {
   const profileSrc = settings.profileImagePath ? `${API_BASE}${settings.profileImagePath}` : aboutFallback;
   const bio = settings.bio || t('about.text');
 
+  const photographerName = photographer?.name || username;
+  const canonicalUrl = `${window.location.origin}/${username}`;
+
   return (
     <main className='pt-16'>
+      <Helmet>
+        <title>{photographerName} | Photography</title>
+        <meta name='description' content={bio} />
+        <meta property='og:title' content={`${photographerName} | Photography`} />
+        <meta property='og:description' content={bio} />
+        <meta property='og:url' content={canonicalUrl} />
+        {settings.profileImagePath && <meta property='og:image' content={`${API_BASE}${settings.profileImagePath}`} />}
+        <link rel='canonical' href={canonicalUrl} />
+        <script type='application/ld+json'>
+          {JSON.stringify({
+            '@context': 'https://schema.org',
+            '@type': 'Person',
+            name: photographerName,
+            description: bio,
+            url: canonicalUrl,
+          })}
+        </script>
+      </Helmet>
       {/* Hero */}
       <section className='relative h-[85vh] min-h-[500px] flex items-center justify-center overflow-hidden'>
         <img src={heroSrc} alt='Photography' className='absolute inset-0 w-full h-full object-cover' />
@@ -181,7 +203,7 @@ export const PhotographerHome = () => {
                   <div className='break-inside-avoid rounded-xl overflow-hidden'>
                     <img
                       src={`${API_BASE}${img.thumbnailPath || img.path}`}
-                      alt=''
+                      alt={img.originalName || `${photographerName} photography showcase`}
                       className='w-full h-auto block hover:scale-[1.02] transition-transform duration-300'
                       loading='lazy'
                     />

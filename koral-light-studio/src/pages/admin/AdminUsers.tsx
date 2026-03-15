@@ -3,30 +3,11 @@ import { AdminLayout } from '@/components/admin/AdminLayout';
 import { useAuth } from '@/hooks/useAuth';
 import { useI18n } from '@/lib/i18n';
 import api from '@/lib/api';
+import { toast } from 'sonner';
 import { Trash2, Plus, Shield, User, Pencil, ExternalLink, X, Check } from 'lucide-react';
+import type { AdminRecord, AdminSettings } from '@/types/admin';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-
-interface AdminRecord {
-  _id: string;
-  name: string;
-  email: string;
-  role: 'admin' | 'superadmin';
-  username?: string | null;
-  studioName?: string | null;
-  createdAt: string;
-}
-
-interface AdminSettings {
-  bio: string;
-  heroImagePath: string;
-  profileImagePath: string;
-  phone: string;
-  instagramHandle: string;
-  facebookUrl: string;
-  heroSubtitle: string;
-  contactEmail: string;
-}
 
 interface ProfileForm {
   name: string;
@@ -83,7 +64,7 @@ export const AdminUsers = () => {
     api
       .get('/admins')
       .then((r) => setAdmins(r.data))
-      .catch(() => {});
+      .catch(() => toast.error(t('admin.users.load_failed')));
   }, []);
 
   const handleCreate = async (e: React.FormEvent) => {
@@ -255,7 +236,7 @@ export const AdminUsers = () => {
                     <button
                       onClick={() => openEdit(a)}
                       className={`w-7 h-7 rounded-full flex items-center justify-center transition-colors ${
-                        editingId === a._id ? 'bg-blush text-charcoal' : 'text-warm-gray hover:text-charcoal hover:bg-beige'
+                        editingId === a._id ? 'bg-blush text-primary-foreground' : 'text-warm-gray hover:text-charcoal hover:bg-beige'
                       }`}
                       title={t('admin.users.edit')}
                     >
@@ -346,7 +327,7 @@ export const AdminUsers = () => {
                       <button
                         onClick={handleSaveProfile}
                         disabled={savingProfile}
-                        className='flex items-center gap-1.5 bg-blush text-charcoal px-4 py-1.5 rounded-lg text-xs font-medium hover:bg-blush/80 transition-colors disabled:opacity-60'
+                        className='flex items-center gap-1.5 bg-blush text-primary-foreground px-4 py-1.5 rounded-lg text-xs font-medium hover:bg-blush/80 transition-colors disabled:opacity-60'
                       >
                         <Check size={13} />
                         {savingProfile ? t('admin.common.saving') : t('admin.users.save_profile')}
@@ -421,7 +402,7 @@ export const AdminUsers = () => {
                       <button
                         onClick={handleSaveLanding}
                         disabled={savingLanding}
-                        className='flex items-center gap-1.5 bg-blush text-charcoal px-4 py-1.5 rounded-lg text-xs font-medium hover:bg-blush/80 transition-colors disabled:opacity-60'
+                        className='flex items-center gap-1.5 bg-blush text-primary-foreground px-4 py-1.5 rounded-lg text-xs font-medium hover:bg-blush/80 transition-colors disabled:opacity-60'
                       >
                         <Check size={13} />
                         {savingLanding ? t('admin.common.saving') : t('admin.users.save_landing')}
@@ -590,7 +571,7 @@ export const AdminUsers = () => {
             <button
               type='submit'
               disabled={creating}
-              className='flex items-center gap-2 bg-blush text-charcoal px-5 py-2 rounded-lg text-sm font-medium hover:bg-blush/80 transition-colors disabled:opacity-60'
+              className='flex items-center gap-2 bg-blush text-primary-foreground px-5 py-2 rounded-lg text-sm font-medium hover:bg-blush/80 transition-colors disabled:opacity-60'
             >
               <Plus size={15} />
               {creating ? t('admin.users.creating') : t('admin.users.create')}

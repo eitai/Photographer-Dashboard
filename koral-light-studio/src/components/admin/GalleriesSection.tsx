@@ -75,7 +75,7 @@ export const GalleriesSection = ({
         </div>
         <button
           onClick={() => setShowGalleryForm(!showGalleryForm)}
-          className='flex items-center gap-1.5 bg-blush text-charcoal px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-blush/80 transition-colors'
+          className='flex items-center gap-1.5 bg-blush text-primary-foreground px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-blush/80 transition-colors'
         >
           <Plus size={13} /> {t('admin.galleries.new')}
         </button>
@@ -117,7 +117,7 @@ export const GalleriesSection = ({
             <button
               type='submit'
               disabled={savingGallery}
-              className='bg-blush text-charcoal px-4 py-1.5 rounded-lg text-xs font-medium hover:bg-blush/80 transition-colors disabled:opacity-60'
+              className='bg-blush text-primary-foreground px-4 py-1.5 rounded-lg text-xs font-medium hover:bg-blush/80 transition-colors disabled:opacity-60'
             >
               {savingGallery ? t('admin.galleries.creating') : t('admin.galleries.create')}
             </button>

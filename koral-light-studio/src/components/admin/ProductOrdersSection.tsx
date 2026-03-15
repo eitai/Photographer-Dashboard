@@ -6,13 +6,7 @@ import { useI18n } from '@/lib/i18n';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 import { fetchProductOrders, createProductOrder, deleteProductOrder, type ProductOrder } from '@/services/productOrderService';
-
-interface Gallery {
-  _id: string;
-  name: string;
-  isDelivery: boolean;
-  token?: string;
-}
+import type { Gallery } from '@/types/gallery';
 
 interface Props {
   clientId: string;
@@ -331,7 +325,7 @@ export const ProductOrdersSection = ({ clientId, clientName, galleries }: Props)
                       <button
                         onClick={() => handleDownload(order)}
                         disabled={downloadingId === order._id}
-                        className='flex items-center gap-1 text-xs bg-blush text-charcoal px-2.5 py-1 rounded-lg hover:bg-blush/80 transition-colors disabled:opacity-60'
+                        className='flex items-center gap-1 text-xs bg-blush text-primary-foreground px-2.5 py-1 rounded-lg hover:bg-blush/80 transition-colors disabled:opacity-60'
                       >
                         <Download size={11} />
                         {downloadingId === order._id ? 'Downloading...' : 'Download All'}

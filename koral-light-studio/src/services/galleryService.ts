@@ -1,5 +1,9 @@
 import api from '@/lib/api';
 
+export const listGalleries = () => api.get('/galleries').then((r) => r.data);
+
+export const updateGallery = (id: string, data: any) => api.put(`/galleries/${id}`, data).then((r) => r.data);
+
 export const fetchGalleries = (clientId: string) =>
   api.get(`/galleries?clientId=${clientId}`).then((r) => r.data);
 

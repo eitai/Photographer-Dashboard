@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cd /c/Users/eitai/Desktop/codevalue/\"store test\")",
+      "Bash(cd /c/Users/eitai/Desktop/codevalue/\"store test\"/koral-light-studio)",
+      "Bash(cd /c/Users/eitai/Desktop/codevalue/\"store test\"/koral-mobile)",
+      "Bash(npm install:*)",
+      "Bash(xargs sed:*)",
+      "Bash(grep -r console. '/c/Users/eitai/Desktop/codevalue/store test/koral-light-studio/src' --include=*.tsx --include=*.ts)",
+      "Bash(grep -r \"form.*action\\\\|<form\\\\|formAction\" '/c/Users/eitai/Desktop/codevalue/store test/koral-light-studio/src' --include=*.tsx --include=*.ts)",
+      "Bash(npm audit:*)",
+      "Bash(sc query:*)",
+      "Bash(net start:*)",
+      "Bash(powershell -Command \"Start-Process ''net'' -ArgumentList ''start MongoDB'' -Verb RunAs -Wait 2>&1\")"
+    ]
+  }
+}

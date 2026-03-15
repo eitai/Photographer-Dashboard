@@ -25,8 +25,8 @@ export const AdminSidebar = ({ isOpen, onClose }: AdminSidebarProps) => {
           { to: '/admin/settings', label: t('admin.nav.settings'), icon: Settings },
         ];
 
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    await logout();
     navigate('/admin');
   };
 

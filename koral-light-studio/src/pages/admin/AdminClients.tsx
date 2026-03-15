@@ -1,49 +1,61 @@
-import { useEffect, useState } from 'react';
+import { useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { AdminLayout } from '@/components/admin/AdminLayout';
 import { StatusBadge } from '@/components/admin/StatusBadge';
 import { useI18n } from '@/lib/i18n';
-import api from '@/lib/api';
-import { useClientStore } from '@/store/clientStore';
+import { useClients, useCreateClient, useDeleteClient } from '@/hooks/useQueries';
 import { Plus, Search, Trash2 } from 'lucide-react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { useModal } from '@/hooks/useModal';
+import { useSearch } from '@/hooks/useSearch';
+import { useDeleteConfirmation } from '@/hooks/useDeleteConfirmation';
 
-const SESSION_TYPES = ['family', 'maternity', 'newborn', 'branding', 'landscape'];
+const SESSION_TYPES = ['family', 'maternity', 'newborn', 'branding', 'landscape'] as const;
+
+const clientSchema = z.object({
+  name: z.string().min(1, 'Name is required'),
+  phone: z.string().optional(),
+  email: z.preprocess(
+    (val) => (val === '' ? undefined : val),
+    z.string().email('Invalid email').optional(),
+  ),
+  sessionType: z.enum(SESSION_TYPES),
+  notes: z.string().optional(),
+});
+
+type ClientFormValues = z.infer<typeof clientSchema>;
 
 export const AdminClients = () => {
   const { t } = useI18n();
-  const { clients, fetch } = useClientStore();
-  const [search, setSearch] = useState('');
-  const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState({ name: '', phone: '', email: '', sessionType: 'family', notes: '' });
-  const [saving, setSaving] = useState(false);
-  const [deleteTarget, setDeleteTarget] = useState<{ _id: string; name: string } | null>(null);
-  const [deleting, setDeleting] = useState(false);
+  const { data: clients = [], isLoading } = useClients();
+  const createClient = useCreateClient();
+  const deleteClient = useDeleteClient();
 
-  useEffect(() => {
-    fetch();
-  }, []);
-
-  const filtered = clients.filter(
-    (c) => c.name.toLowerCase().includes(search.toLowerCase()) || c.email?.toLowerCase().includes(search.toLowerCase()),
+  const form = useModal();
+  const { query: search, setQuery: setSearch, filtered } = useSearch<any>(
+    clients,
+    (c, q) => c.name.toLowerCase().includes(q) || (c.email?.toLowerCase().includes(q) ?? false),
+  );
+  const deletion = useDeleteConfirmation<{ _id: string; name: string }>(
+    useCallback(async (target) => { await deleteClient.mutateAsync(target._id); }, [deleteClient]),
   );
 
-  const confirmDelete = async () => {
-    if (!deleteTarget) return;
-    setDeleting(true);
-    await api.delete(`/clients/${deleteTarget._id}`);
-    setDeleting(false);
-    setDeleteTarget(null);
-    fetch();
-  };
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors },
+  } = useForm<ClientFormValues>({
+    resolver: zodResolver(clientSchema),
+    defaultValues: { name: '', phone: '', email: '', sessionType: 'family', notes: '' },
+  });
 
-  const handleCreate = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setSaving(true);
-    await api.post('/clients', form);
-    setSaving(false);
-    setShowForm(false);
-    setForm({ name: '', phone: '', email: '', sessionType: 'family', notes: '' });
-    fetch();
+  const onSubmit = async (data: ClientFormValues) => {
+    await createClient.mutateAsync(data);
+    form.close();
+    reset();
   };
 
   return (
@@ -60,39 +72,48 @@ export const AdminClients = () => {
           />
         </div>
         <button
-          onClick={() => setShowForm((v) => !v)}
-          className='flex items-center gap-2 bg-blush text-charcoal px-4 py-2 rounded-lg text-sm font-medium hover:bg-blush/80 transition-colors'
+          onClick={form.toggle}
+          className='flex items-center gap-2 bg-transparent border border-black text-black px-4 py-2 rounded text-sm font-medium hover:bg-black/5 transition-colors'
         >
           <Plus size={15} /> {t('admin.clients.new')}
         </button>
       </div>
 
       {/* Create form */}
-      {showForm && (
-        <form onSubmit={handleCreate} className='bg-card border border-beige rounded-xl p-6 mb-6 space-y-4'>
+      {form.isOpen && (
+        <form onSubmit={handleSubmit(onSubmit)} className='bg-card border border-beige rounded-xl p-6 mb-6 space-y-4'>
           <h3 className=' text-charcoal mb-2'>{t('admin.clients.new')}</h3>
           <div className='grid grid-cols-1 sm:grid-cols-2 gap-4'>
-            {[
-              { field: 'name', label: t('admin.common.name'), type: 'text', required: true },
-              { field: 'phone', label: t('admin.common.phone'), type: 'tel' },
-              { field: 'email', label: t('admin.common.email'), type: 'email' },
-            ].map(({ field, label, type, required }) => (
-              <div key={field}>
-                <label className='block text-xs text-warm-gray mb-1'>{label}</label>
-                <input
-                  type={type}
-                  required={required}
-                  value={(form as any)[field]}
-                  onChange={(e) => setForm({ ...form, [field]: e.target.value })}
-                  className='w-full px-3 py-2 rounded-lg border border-beige bg-ivory text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-blush/50'
-                />
-              </div>
-            ))}
+            <div>
+              <label className='block text-xs text-warm-gray mb-1'>{t('admin.common.name')}</label>
+              <input
+                type='text'
+                {...register('name')}
+                className='w-full px-3 py-2 rounded-lg border border-beige bg-ivory text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-blush/50'
+              />
+              {errors.name && <p className='text-xs text-rose-500 mt-1'>{errors.name.message}</p>}
+            </div>
+            <div>
+              <label className='block text-xs text-warm-gray mb-1'>{t('admin.common.phone')}</label>
+              <input
+                type='tel'
+                {...register('phone')}
+                className='w-full px-3 py-2 rounded-lg border border-beige bg-ivory text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-blush/50'
+              />
+            </div>
+            <div>
+              <label className='block text-xs text-warm-gray mb-1'>{t('admin.common.email')}</label>
+              <input
+                type='email'
+                {...register('email')}
+                className='w-full px-3 py-2 rounded-lg border border-beige bg-ivory text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-blush/50'
+              />
+              {errors.email && <p className='text-xs text-rose-500 mt-1'>{errors.email.message}</p>}
+            </div>
             <div>
               <label className='block text-xs text-warm-gray mb-1'>{t('admin.common.session_type')}</label>
               <select
-                value={form.sessionType}
-                onChange={(e) => setForm({ ...form, sessionType: e.target.value })}
+                {...register('sessionType')}
                 className='w-full px-3 py-2 rounded-lg border border-beige bg-ivory text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-blush/50'
               >
                 {SESSION_TYPES.map((st) => (
@@ -106,8 +127,7 @@ export const AdminClients = () => {
           <div>
             <label className='block text-xs text-warm-gray mb-1'>{t('admin.common.notes')}</label>
             <textarea
-              value={form.notes}
-              onChange={(e) => setForm({ ...form, notes: e.target.value })}
+              {...register('notes')}
               rows={2}
               className='w-full px-3 py-2 rounded-lg border border-beige bg-ivory text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-blush/50 resize-none'
             />
@@ -115,14 +135,14 @@ export const AdminClients = () => {
           <div className='flex gap-3'>
             <button
               type='submit'
-              disabled={saving}
-              className='bg-blush text-charcoal px-5 py-2 rounded-lg text-sm font-medium hover:bg-blush/80 transition-colors disabled:opacity-60'
+              disabled={createClient.isPending}
+              className='bg-blush text-primary-foreground px-5 py-2 rounded-lg text-sm font-medium hover:bg-blush/80 transition-colors disabled:opacity-60'
             >
-              {saving ? t('admin.common.saving') : t('admin.clients.create')}
+              {createClient.isPending ? t('admin.common.saving') : t('admin.clients.create')}
             </button>
             <button
               type='button'
-              onClick={() => setShowForm(false)}
+              onClick={() => { form.close(); reset(); }}
               className='px-5 py-2 rounded-lg text-sm text-warm-gray hover:bg-ivory transition-colors border border-beige'
             >
               {t('admin.common.cancel')}
@@ -133,7 +153,9 @@ export const AdminClients = () => {
 
       {/* Table */}
       <div className='bg-card rounded-xl border border-beige overflow-x-auto'>
-        {filtered.length === 0 ? (
+        {isLoading ? (
+          <p className='text-sm text-warm-gray p-6'>{t('admin.common.loading')}</p>
+        ) : filtered.length === 0 ? (
           <p className='text-sm text-warm-gray p-6'>{t('admin.clients.no_clients')}</p>
         ) : (
           <table className='w-full text-sm table-fixed'>
@@ -177,7 +199,7 @@ export const AdminClients = () => {
                         {t('admin.clients.view')}
                       </Link>
                       <button
-                        onClick={() => setDeleteTarget({ _id: c._id, name: c.name })}
+                        onClick={() => deletion.setTarget({ _id: c._id, name: c.name })}
                         className='text-warm-gray hover:text-rose-500 transition-colors'
                         title={t('admin.clients.delete_btn')}
                       >
@@ -191,26 +213,27 @@ export const AdminClients = () => {
           </table>
         )}
       </div>
+
       {/* Delete confirmation modal */}
-      {deleteTarget && (
+      {deletion.target && (
         <div className='fixed inset-0 z-50 flex items-center justify-center bg-charcoal/40 backdrop-blur-sm p-4'>
           <div className='bg-card rounded-2xl border border-beige shadow-xl w-full max-w-sm p-6'>
             <h3 className=' text-lg text-charcoal mb-1'>{t('admin.clients.delete_title')}</h3>
             <p className='text-sm text-warm-gray mb-1'>
-              <span className='font-medium text-charcoal'>{deleteTarget.name}</span>
+              <span className='font-medium text-charcoal'>{deletion.target.name}</span>
             </p>
             <p className='text-sm text-warm-gray mb-6'>{t('admin.clients.delete_body')}</p>
             <div className='flex gap-3'>
               <button
-                onClick={confirmDelete}
-                disabled={deleting}
+                onClick={deletion.confirm}
+                disabled={deletion.deleting}
                 className='flex-1 bg-rose-500 text-white py-2 rounded-lg text-sm font-medium hover:bg-rose-600 transition-colors disabled:opacity-60'
               >
-                {deleting ? t('admin.clients.deleting') : t('admin.clients.delete_btn')}
+                {deletion.deleting ? t('admin.clients.deleting') : t('admin.clients.delete_btn')}
               </button>
               <button
-                onClick={() => setDeleteTarget(null)}
-                disabled={deleting}
+                onClick={deletion.cancel}
+                disabled={deletion.deleting}
                 className='flex-1 py-2 rounded-lg text-sm text-warm-gray border border-beige hover:bg-ivory transition-colors'
               >
                 {t('admin.common.cancel')}

@@ -72,7 +72,7 @@ export const AdminLogin = () => {
           <button
             type='submit'
             disabled={loading}
-            className='w-full bg-blush text-charcoal py-2.5 rounded-lg text-sm font-medium hover:bg-blush/80 transition-colors duration-150 disabled:opacity-60'
+            className='w-full bg-blush text-primary-foreground py-2.5 rounded-lg text-sm font-medium hover:bg-blush/80 transition-colors duration-150 disabled:opacity-60'
           >
             {loading ? t('admin.login.signing_in') : t('admin.login.sign_in')}
           </button>

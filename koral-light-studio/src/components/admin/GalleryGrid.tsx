@@ -1,4 +1,3 @@
-import { ArrowRight } from 'lucide-react';
 import { GalleryCard } from '@/components/admin/GalleryCard';
 
 interface GalleryGridProps {
@@ -82,29 +81,19 @@ export const GalleryGrid = ({
   };
 
   return (
-    <div className='flex flex-col gap-3 items-start'>
+    <div className='flex flex-col gap-3 w-full'>
       {groups.map((group) => {
         if (group.type === 'single') {
           return (
-            <div key={group.gallery._id} className='w-85'>
+            <div key={group.gallery._id} className='grid grid-cols-2 gap-3'>
               <GalleryCard g={group.gallery} {...sharedCardProps} />
             </div>
           );
         }
         return (
-          <div key={group.original._id} className='flex items-start gap-1'>
-            <div className='w-85 shrink-0'>
-              <GalleryCard g={group.original} {...sharedCardProps} />
-            </div>
-            <div className='flex flex-col items-center justify-start pt-8 shrink-0 px-1'>
-              <div className='flex flex-col items-center gap-1 text-blush'>
-                <ArrowRight size={16} />
-                <span className='text-[9px] font-medium text-blush/70 whitespace-nowrap'>Delivered</span>
-              </div>
-            </div>
-            <div className='w-85 shrink-0'>
-              <GalleryCard g={group.delivery} {...sharedCardProps} />
-            </div>
+          <div key={group.original._id} className='grid grid-cols-2 gap-3'>
+            <GalleryCard g={group.original} {...sharedCardProps} />
+            <GalleryCard g={group.delivery} {...sharedCardProps} />
           </div>
         );
       })}

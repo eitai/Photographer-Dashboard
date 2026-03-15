@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { AdminLayout } from '@/components/admin/AdminLayout';
 import { useI18n } from '@/lib/i18n';
 import api from '@/lib/api';
+import { toast } from 'sonner';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Image from '@tiptap/extension-image';
@@ -20,8 +21,20 @@ import {
   Image as ImageIcon,
   ArrowLeft,
 } from 'lucide-react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 
 const CATEGORIES = ['Family Photography', 'Maternity', 'Newborn', 'Branding', 'Landscape', 'Behind the Lens'];
+
+const blogSchema = z.object({
+  title: z.string().min(1, 'Title is required'),
+  category: z.string().optional(),
+  seoTitle: z.string().optional(),
+  seoDescription: z.string().max(160, 'Max 160 characters').optional(),
+});
+
+type BlogFormValues = z.infer<typeof blogSchema>;
 
 export const AdminBlogEditor = () => {
   const { id } = useParams();
@@ -29,15 +42,22 @@ export const AdminBlogEditor = () => {
   const { t } = useI18n();
   const isEdit = Boolean(id);
 
-  const [form, setForm] = useState({
-    title: '',
-    seoTitle: '',
-    seoDescription: '',
-    category: '',
-    published: false,
-  });
+  const [published, setPublished] = useState(false);
   const [saving, setSaving] = useState(false);
   const [featuredImage, setFeaturedImage] = useState<File | null>(null);
+
+  const {
+    register,
+    handleSubmit,
+    reset,
+    watch,
+    formState: { errors },
+  } = useForm<BlogFormValues>({
+    resolver: zodResolver(blogSchema),
+    defaultValues: { title: '', category: '', seoTitle: '', seoDescription: '' },
+  });
+
+  const titleValue = watch('title');
 
   const editor = useEditor({
     extensions: [
@@ -60,26 +80,28 @@ export const AdminBlogEditor = () => {
       try {
         const r = await api.get(`/blog/${id}`);
         const p = r.data;
-        setForm({
+        reset({
           title: p.title,
           seoTitle: p.seoTitle || '',
           seoDescription: p.seoDescription || '',
           category: p.category || '',
-          published: p.published,
         });
+        setPublished(p.published);
         editor.commands.setContent(p.content || '');
       } catch {
-        // ignore
+        toast.error(t('admin.blog.load_failed'));
       }
     };
     load();
   }, [id, editor]);
 
-  const save = async (publish?: boolean) => {
+  const save = async (formValues: BlogFormValues, publish?: boolean) => {
     setSaving(true);
     const content = editor?.getHTML() || '';
     const data = new FormData();
-    Object.entries({ ...form, content, published: String(publish ?? form.published) }).forEach(([k, v]) => data.append(k, v));
+    Object.entries({ ...formValues, content, published: String(publish ?? published) }).forEach(([k, v]) =>
+      data.append(k, v as string),
+    );
     if (featuredImage) data.append('featuredImage', featuredImage);
 
     if (isEdit) {
@@ -125,12 +147,14 @@ export const AdminBlogEditor = () => {
       <div className='grid grid-cols-1 lg:grid-cols-3 gap-6'>
         {/* Editor */}
         <div className='lg:col-span-2 space-y-4'>
-          <input
-            value={form.title}
-            onChange={(e) => setForm({ ...form, title: e.target.value })}
-            placeholder={t('admin.editor.title_placeholder')}
-            className='w-full text-2xl  text-charcoal bg-transparent border-0 border-b border-beige pb-3 focus:outline-none focus:border-blush'
-          />
+          <div>
+            <input
+              {...register('title')}
+              placeholder={t('admin.editor.title_placeholder')}
+              className='w-full text-2xl  text-charcoal bg-transparent border-0 border-b border-beige pb-3 focus:outline-none focus:border-blush'
+            />
+            {errors.title && <p className='text-xs text-rose-500 mt-1'>{errors.title.message}</p>}
+          </div>
 
           {/* Rich text toolbar */}
           <div className='bg-card border border-beige rounded-t-lg flex flex-wrap gap-0.5 p-2'>
@@ -158,16 +182,16 @@ export const AdminBlogEditor = () => {
           {/* Actions */}
           <div className='bg-card rounded-xl border border-beige p-4 space-y-3'>
             <button
-              onClick={() => save(false)}
+              onClick={handleSubmit((data) => save(data, false))}
               disabled={saving}
               className='w-full py-2 rounded-lg text-sm border border-beige text-charcoal hover:bg-ivory transition-colors disabled:opacity-60'
             >
               {saving ? t('admin.common.saving') : t('admin.editor.save_draft')}
             </button>
             <button
-              onClick={() => save(true)}
+              onClick={handleSubmit((data) => save(data, true))}
               disabled={saving}
-              className='w-full py-2 rounded-lg text-sm bg-blush text-charcoal font-medium hover:bg-blush/80 transition-colors disabled:opacity-60'
+              className='w-full py-2 rounded-lg text-sm bg-blush text-primary-foreground font-medium hover:bg-blush/80 transition-colors disabled:opacity-60'
             >
               {saving ? t('admin.editor.publishing') : t('admin.editor.publish')}
             </button>
@@ -177,8 +201,7 @@ export const AdminBlogEditor = () => {
           <div className='bg-card rounded-xl border border-beige p-4'>
             <label className='block text-xs text-warm-gray mb-2'>{t('admin.editor.category')}</label>
             <select
-              value={form.category}
-              onChange={(e) => setForm({ ...form, category: e.target.value })}
+              {...register('category')}
               className='w-full px-3 py-2 rounded-lg border border-beige bg-ivory text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-blush/50'
             >
               <option value=''>{t('admin.editor.select')}</option>
@@ -207,21 +230,20 @@ export const AdminBlogEditor = () => {
             <div>
               <label className='block text-xs text-warm-gray mb-1'>{t('admin.editor.seo_title')}</label>
               <input
-                value={form.seoTitle}
-                onChange={(e) => setForm({ ...form, seoTitle: e.target.value })}
-                placeholder={form.title}
+                {...register('seoTitle')}
+                placeholder={titleValue}
                 className='w-full px-3 py-2 rounded-lg border border-beige bg-ivory text-xs text-charcoal focus:outline-none focus:ring-2 focus:ring-blush/50'
               />
             </div>
             <div>
               <label className='block text-xs text-warm-gray mb-1'>{t('admin.editor.meta_desc')}</label>
               <textarea
-                value={form.seoDescription}
-                onChange={(e) => setForm({ ...form, seoDescription: e.target.value })}
+                {...register('seoDescription')}
                 rows={3}
                 placeholder={t('admin.editor.meta_placeholder')}
                 className='w-full px-3 py-2 rounded-lg border border-beige bg-ivory text-xs text-charcoal focus:outline-none focus:ring-2 focus:ring-blush/50 resize-none'
               />
+              {errors.seoDescription && <p className='text-xs text-rose-500 mt-1'>{errors.seoDescription.message}</p>}
             </div>
           </div>
         </div>

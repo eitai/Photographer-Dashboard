@@ -4,6 +4,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useAuthStore } from '@/store/authStore';
 import { useI18n } from '@/lib/i18n';
 import api from '@/lib/api';
+import { toast } from 'sonner';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
@@ -143,7 +144,7 @@ export const AdminSettings = () => {
         if (r.data.heroImagePath) setHeroPreview(`${API_BASE}${r.data.heroImagePath}`);
         if (r.data.profileImagePath) setProfilePreview(`${API_BASE}${r.data.profileImagePath}`);
       })
-      .catch(() => {});
+      .catch(() => toast.error(t('admin.settings.load_failed')));
   }, []);
 
   const handleProfile = async (e: React.FormEvent) => {
@@ -204,7 +205,7 @@ export const AdminSettings = () => {
       const res = await api.post('/settings/hero-image', form, { headers: { 'Content-Type': 'multipart/form-data' } });
       setHeroPreview(`${API_BASE}${res.data.heroImagePath}`);
     } catch {
-      /* ignore */
+      toast.error(t('admin.settings.hero_upload_failed'));
     } finally {
       setUploadingHero(false);
     }
@@ -220,7 +221,7 @@ export const AdminSettings = () => {
       const res = await api.post('/settings/profile-image', form, { headers: { 'Content-Type': 'multipart/form-data' } });
       setProfilePreview(`${API_BASE}${res.data.profileImagePath}`);
     } catch {
-      /* ignore */
+      toast.error(t('admin.settings.profile_upload_failed'));
     } finally {
       setUploadingProfile(false);
     }
@@ -272,7 +273,7 @@ export const AdminSettings = () => {
               <button
                 type='submit'
                 disabled={savingProfile}
-                className='bg-blush text-charcoal px-5 py-2 rounded-lg text-sm font-medium hover:bg-blush/80 transition-colors disabled:opacity-60'
+                className='bg-blush text-primary-foreground px-5 py-2 rounded-lg text-sm font-medium hover:bg-blush/80 transition-colors disabled:opacity-60'
               >
                 {savingProfile ? t('admin.common.saving') : t('admin.settings.save_profile')}
               </button>
@@ -303,7 +304,7 @@ export const AdminSettings = () => {
               <button
                 type='submit'
                 disabled={saving}
-                className='bg-blush text-charcoal px-5 py-2 rounded-lg text-sm font-medium hover:bg-blush/80 transition-colors disabled:opacity-60'
+                className='bg-blush text-primary-foreground px-5 py-2 rounded-lg text-sm font-medium hover:bg-blush/80 transition-colors disabled:opacity-60'
               >
                 {saving ? t('admin.settings.updating') : t('admin.settings.update_password')}
               </button>
@@ -465,7 +466,7 @@ export const AdminSettings = () => {
               <button
                 type='submit'
                 disabled={savingLanding}
-                className='bg-blush text-charcoal px-5 py-2 rounded-lg text-sm font-medium hover:bg-blush/80 transition-colors disabled:opacity-60'
+                className='bg-blush text-primary-foreground px-5 py-2 rounded-lg text-sm font-medium hover:bg-blush/80 transition-colors disabled:opacity-60'
               >
                 {savingLanding ? t('admin.common.saving') : t('admin.settings.save_landing')}
               </button>

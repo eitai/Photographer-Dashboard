@@ -15,20 +15,19 @@ interface AuthState {
   loading: boolean;
   theme: string;
   login: (email: string, password: string) => Promise<void>;
-  logout: () => void;
+  logout: () => Promise<void>;
   setAdmin: (admin: AdminUser) => void;
   setTheme: (theme: string) => void;
 }
 
-// Synchronous init from localStorage — no async needed
-const _token = localStorage.getItem('koral_admin_token');
+// Restore admin profile from localStorage for immediate UI render.
+// The actual auth token is an httpOnly cookie — the browser manages it.
 const _stored = localStorage.getItem('koral_admin_user');
 let _initialAdmin: AdminUser | null = null;
-if (_token && _stored) {
+if (_stored) {
   try {
     _initialAdmin = JSON.parse(_stored);
   } catch {
-    localStorage.removeItem('koral_admin_token');
     localStorage.removeItem('koral_admin_user');
   }
 }
@@ -42,14 +41,18 @@ export const useAuthStore = create<AuthState>((set) => ({
   login: async (email, password) => {
     const payload = email.includes('@') ? { email, password } : { username: email, password };
     const res = await api.post('/auth/login', payload);
-    const { token, admin: adminData } = res.data;
-    localStorage.setItem('koral_admin_token', token);
+    const { admin: adminData } = res.data;
+    // Token is set as httpOnly cookie by the server — never touches JS
     localStorage.setItem('koral_admin_user', JSON.stringify(adminData));
     set({ admin: adminData });
   },
 
-  logout: () => {
-    localStorage.removeItem('koral_admin_token');
+  logout: async () => {
+    try {
+      await api.post('/auth/logout');
+    } catch {
+      // Best-effort — clear local state regardless
+    }
     localStorage.removeItem('koral_admin_user');
     set({ admin: null });
   },

@@ -3,15 +3,9 @@ import { AdminLayout } from '@/components/admin/AdminLayout';
 import api from '@/lib/api';
 import { X, Check, Search, Maximize2 } from 'lucide-react';
 import { Lightbox, type LightboxImage } from '@/components/gallery/Lightbox';
+import type { ShowcaseGallery } from '@/types/gallery';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-
-interface ShowcaseGallery {
-  _id: string;
-  name: string;
-  clientName?: string;
-  clientId?: { name: string; email: string };
-}
 const PAGE_SIZE = 50;
 
 export const AdminShowcase = () => {
@@ -278,7 +272,7 @@ export const AdminShowcase = () => {
             <button
               onClick={save}
               disabled={saving}
-              className='bg-blush text-charcoal px-5 py-2 rounded-lg text-sm font-medium hover:bg-blush/80 transition-colors disabled:opacity-60'
+              className='bg-blush text-primary-foreground px-5 py-2 rounded-lg text-sm font-medium hover:bg-blush/80 transition-colors disabled:opacity-60'
             >
               {saving ? 'שומר...' : 'שמור'}
             </button>

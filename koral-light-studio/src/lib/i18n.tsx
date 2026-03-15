@@ -103,6 +103,8 @@ const translations: Record<string, Record<Lang, string>> = {
   'gallery.photo_selected': { he: 'נבחרה', en: 'Selected' },
   'gallery.choose_more': { he: 'בחרי עוד', en: 'Choose more' },
   'gallery.close_window': { he: 'סגרי חלון', en: 'Close window' },
+  'gallery.already_submitted': { he: 'הבחירה כבר נשלחה', en: 'Selection already submitted' },
+  'gallery.already_submitted_desc': { he: 'כבר שלחת את בחירת התמונות שלך לגלריה זו.', en: 'You have already submitted your photo selection for this gallery.' },
   'gallery.max_reached': { he: 'הגעת למקסימום הבחירות', en: 'Maximum selections reached' },
   'gallery.select_of': { he: 'מתוך', en: 'of' },
   // Delivery gallery (download-only)
@@ -200,6 +202,8 @@ const translations: Record<string, Record<Lang, string>> = {
     he: 'הגלריה וכל התמונות שבה יימחקו לצמיתות. פעולה זו לא ניתנת לביטול.',
     en: 'The gallery and all its images will be permanently deleted. This cannot be undone.',
   },
+  'admin.client.load_failed': { he: 'טעינת פרטי הלקוח נכשלה', en: 'Failed to load client details' },
+  'admin.client.galleries_load_failed': { he: 'טעינת הגלריות נכשלה', en: 'Failed to load galleries' },
 
   // ── Admin: Galleries ────────────────────────────────────────────────────────
   'admin.galleries.title': { he: 'גלריות', en: 'Galleries' },
@@ -234,6 +238,8 @@ const translations: Record<string, Record<Lang, string>> = {
   'admin.upload.error': { he: 'שגיאה', en: 'Error' },
   'admin.upload.done': { he: 'הושלם', en: 'Done' },
   'admin.upload.no_images': { he: 'טרם הועלו תמונות.', en: 'No images uploaded yet.' },
+  'admin.upload.load_failed': { he: 'טעינת הגלריה נכשלה', en: 'Failed to load gallery' },
+  'admin.upload.images_load_failed': { he: 'טעינת התמונות נכשלה', en: 'Failed to load images' },
   'admin.upload.selected': { he: 'נבחרו', en: 'selected' },
   'admin.upload.clear_selection': { he: 'נקה בחירה', en: 'Clear selection' },
   'admin.upload.delete_selected': { he: 'מחק נבחרים', en: 'Delete selected' },
@@ -268,6 +274,8 @@ const translations: Record<string, Record<Lang, string>> = {
     en: "This photo will be removed from the client's selection. The original file won't be deleted.",
   },
   'admin.selections.deleting': { he: 'מסיר…', en: 'Removing…' },
+  'admin.selections.load_failed': { he: 'טעינת הגלריות נכשלה', en: 'Failed to load galleries' },
+  'admin.selections.mark_failed': { he: 'עדכון הסטטוס נכשל', en: 'Failed to update status' },
 
   // ── Admin: Blog ─────────────────────────────────────────────────────────────
   'admin.blog.title': { he: 'בלוג', en: 'Blog' },
@@ -280,6 +288,7 @@ const translations: Record<string, Record<Lang, string>> = {
   'admin.blog.published': { he: 'פורסם', en: 'Published' },
   'admin.blog.draft': { he: 'טיוטה', en: 'Draft' },
   'admin.blog.delete_confirm': { he: 'למחוק את הפוסט?', en: 'Delete this post?' },
+  'admin.blog.load_failed': { he: 'טעינת הפוסטים נכשלה', en: 'Failed to load posts' },
 
   // ── Admin: Blog Editor ──────────────────────────────────────────────────────
   'admin.editor.title_placeholder': { he: 'כותרת הפוסט…', en: 'Post title…' },
@@ -313,6 +322,8 @@ const translations: Record<string, Record<Lang, string>> = {
   'admin.contact.delete_body': { he: 'פעולה זו לא ניתנת לביטול.', en: 'This action cannot be undone.' },
   'admin.contact.delete_btn': { he: 'מחק', en: 'Delete' },
   'admin.contact.deleting': { he: 'מוחק…', en: 'Deleting…' },
+  'admin.contact.load_failed': { he: 'טעינת הפניות נכשלה', en: 'Failed to load messages' },
+  'admin.contact.delete_failed': { he: 'מחיקת הפנייה נכשלה', en: 'Failed to delete message' },
   'admin.nav.contact': { he: 'פניות', en: 'Contact' },
 
   // ── Admin: Gallery in-editing action ────────────────────────────────────────
@@ -425,6 +436,9 @@ const translations: Record<string, Record<Lang, string>> = {
   'theme.bw.desc': { he: 'נקי, קלאסי, ניגודיות גבוהה', en: 'Clean, classic, high contrast' },
   'admin.settings.public_page_title': { he: 'הדף הציבורי שלך', en: 'Your Public Page' },
   'admin.settings.public_page_label': { he: 'כתובת הדף הציבורי שלך:', en: 'Your public page URL:' },
+  'admin.settings.load_failed': { he: 'טעינת ההגדרות נכשלה', en: 'Failed to load settings' },
+  'admin.settings.hero_upload_failed': { he: 'העלאת תמונת הרקע נכשלה', en: 'Failed to upload hero image' },
+  'admin.settings.profile_upload_failed': { he: 'העלאת תמונת הפרופיל נכשלה', en: 'Failed to upload profile image' },
 
   // ── Admin: Dashboard (addition) ──────────────────────────────────────────────
   'admin.dashboard.view_landing': { he: 'צפה בדף הנחיתה שלך', en: 'View Your Landing Page' },
@@ -445,6 +459,7 @@ const translations: Record<string, Record<Lang, string>> = {
   'admin.users.landing_saved': { he: 'דף נחיתה נשמר', en: 'Landing page saved' },
   'admin.users.image_uploaded': { he: 'תמונה הועלתה', en: 'Image uploaded' },
   'admin.users.save_error': { he: 'שגיאה בשמירה', en: 'Error saving' },
+  'admin.users.load_failed': { he: 'טעינת המשתמשים נכשלה', en: 'Failed to load users' },
   'admin.users.upload_error': { he: 'שגיאה בהעלאה', en: 'Error uploading' },
   'admin.users.section_profile': { he: 'פרופיל', en: 'Profile' },
   'admin.users.section_landing': { he: 'דף נחיתה', en: 'Landing Page' },

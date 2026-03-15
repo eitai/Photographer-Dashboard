@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { FadeIn } from '@/components/FadeIn';
 import api from '@/lib/api';
+import { Helmet } from 'react-helmet-async';
 import heroImage from '@/assets/hero-family.jpg';
 import aboutImage from '@/assets/about-koral.jpg';
 import familiesImg from '@/assets/portfolio-families.jpg';
@@ -49,6 +50,14 @@ export const Index = () => {
 
   return (
     <main className='pt-16'>
+      <Helmet>
+        <title>Koral Photography | צילומי משפחות, הריון וניו בורן בצפון</title>
+        <meta name='description' content='קורל פוטוגרפי — צילומי משפחות, הריון, ניו בורן ומיתוג אישי בצפון הארץ. אור טבעי, רגעים אמיתיים.' />
+        <meta property='og:title' content='Koral Photography | צילומי משפחות בצפון' />
+        <meta property='og:description' content='צילומי משפחות, הריון, ניו בורן ומיתוג אישי בצפון הארץ' />
+        <meta property='og:url' content={window.location.href} />
+        <link rel='canonical' href={window.location.origin + '/'} />
+      </Helmet>
       {/* Hero */}
       <section className='relative h-[85vh] min-h-[500px] flex items-center justify-center overflow-hidden'>
         <img src={heroImage} alt='Family photography in natural light' className='absolute inset-0 w-full h-full object-cover' />
@@ -138,7 +147,7 @@ export const Index = () => {
                   <div className='break-inside-avoid rounded-xl overflow-hidden'>
                     <img
                       src={`${API_BASE}${img.path}`}
-                      alt=''
+                      alt={img.originalName || 'Photography showcase'}
                       className='w-full h-auto block hover:scale-[1.02] transition-transform duration-300'
                       loading='lazy'
                     />

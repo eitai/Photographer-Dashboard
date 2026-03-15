@@ -4,6 +4,7 @@ import { AdminLayout } from '@/components/admin/AdminLayout';
 import { StatusBadge } from '@/components/admin/StatusBadge';
 import { useI18n } from '@/lib/i18n';
 import api from '@/lib/api';
+import { toast } from 'sonner';
 import { ArrowLeft, Trash2, CloudUpload, Check, Maximize2, ChevronLeft, ChevronRight, X, ImagePlus, ChevronDown } from 'lucide-react';
 
 const STATUSES = ['gallery_sent', 'viewed', 'selection_submitted', 'in_editing', 'delivered'] as const;
@@ -21,6 +22,7 @@ export const AdminGalleryUpload = () => {
   const { id } = useParams();
   const { t } = useI18n();
   const [gallery, setGallery] = useState<any>(null);
+  const [loadError, setLoadError] = useState(false);
   const [images, setImages] = useState<any[]>([]);
   const [queue, setQueue] = useState<UploadFile[]>([]);
   const [dragging, setDragging] = useState(false);
@@ -42,7 +44,8 @@ export const AdminGalleryUpload = () => {
       const r = await api.get(`/galleries/${id}`);
       setGallery(r.data);
     } catch {
-      // ignore
+      setLoadError(true);
+      toast.error(t('admin.upload.load_failed'));
     }
   };
   const loadImages = async () => {
@@ -50,7 +53,7 @@ export const AdminGalleryUpload = () => {
       const r = await api.get(`/galleries/${id}/images`);
       setImages(r.data);
     } catch {
-      // ignore
+      toast.error(t('admin.upload.images_load_failed'));
     }
   };
 
@@ -143,10 +146,17 @@ export const AdminGalleryUpload = () => {
     handleFiles(e.dataTransfer.files);
   };
 
-  if (!gallery)
+  if (!gallery && !loadError)
     return (
       <AdminLayout title={t('admin.common.loading')}>
         <p className='text-warm-gray text-sm'>{t('admin.common.loading')}</p>
+      </AdminLayout>
+    );
+
+  if (loadError)
+    return (
+      <AdminLayout title={t('admin.upload.load_failed')}>
+        <p className='text-warm-gray text-sm'>{t('admin.upload.load_failed')}</p>
       </AdminLayout>
     );
 
@@ -432,7 +442,7 @@ export const AdminGalleryUpload = () => {
                       toggleSelect(img._id);
                     }}
                     className={`absolute bottom-1 left-1/2 -translate-x-1/2 flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-                      isSelected ? 'bg-blush text-charcoal' : 'bg-white/10 text-white hover:bg-white/20'
+                      isSelected ? 'bg-blush text-primary-foreground' : 'bg-white/10 text-white hover:bg-white/20'
                     }`}
                   >
                     <Check size={14} />

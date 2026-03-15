@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { Bell } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { useGalleryStore } from '@/store/galleryStore';
+import { useGalleries } from '@/hooks/useQueries';
 import { useAuth } from '@/hooks/useAuth';
 
 function getDismissedKey(adminId: string) {
@@ -22,7 +22,7 @@ function saveDismissed(adminId: string, ids: Set<string>) {
 }
 
 export const NotificationBell = () => {
-  const { galleries, fetch } = useGalleryStore();
+  const { data: galleries = [] } = useGalleries();
   const { admin } = useAuth();
   const [open, setOpen] = useState(false);
   const [dismissed, setDismissed] = useState<Set<string>>(new Set());
@@ -33,8 +33,6 @@ export const NotificationBell = () => {
     if (admin?.id) setDismissed(loadDismissed(admin.id));
     else setDismissed(new Set());
   }, [admin?.id]);
-
-  useEffect(() => { fetch(); }, []);
 
   // Close dropdown on outside click
   useEffect(() => {
