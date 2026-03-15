@@ -6,6 +6,7 @@ const galleryImageSchema = new mongoose.Schema({
   originalName:  { type: String },
   path:          { type: String, required: true },
   thumbnailPath: { type: String },
+  beforePath:    { type: String },
   sortOrder:     { type: Number, default: 0 },
 }, { timestamps: true });
 

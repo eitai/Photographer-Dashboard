@@ -1,0 +1,38 @@
+{
+  "expo": {
+    "name": "Koral Admin",
+    "slug": "koral-admin",
+    "version": "1.0.0",
+    "scheme": "koral-admin",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#FAF8F4"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.koral.admin"
+    },
+    "android": {
+      "package": "com.koral.admin",
+      "adaptiveIcon": {
+        "backgroundColor": "#E7B8B5",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false
+    },
+    "extra": {
+      "eas": {
+        "projectId": ""
+      }
+    },
+    "plugins": [
+      "expo-router"
+    ]
+  }
+}

@@ -17,4 +17,14 @@ const protect = async (req, res, next) => {
   }
 };
 
-module.exports = { protect };
+// Only superadmins pass through
+const superprotect = async (req, res, next) => {
+  await protect(req, res, () => {
+    if (req.admin?.role !== 'superadmin') {
+      return res.status(403).json({ message: 'Superadmin access required' });
+    }
+    next();
+  });
+};
+
+module.exports = { protect, superprotect };

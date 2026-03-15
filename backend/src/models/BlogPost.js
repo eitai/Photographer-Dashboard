@@ -3,6 +3,7 @@ const slugify = require('slugify');
 
 const blogPostSchema = new mongoose.Schema(
   {
+    adminId:  { type: mongoose.Schema.Types.ObjectId, ref: 'Admin' },
     title: { type: String, required: true },
     slug: { type: String, unique: true },
     content: { type: String },

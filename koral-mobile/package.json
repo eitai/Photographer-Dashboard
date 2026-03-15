@@ -1,0 +1,26 @@
+{
+  "name": "koral-mobile",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Koral Photography — React Native monorepo (admin + client apps)",
+  "scripts": {
+    "admin": "cd apps/admin && npx expo start",
+    "client": "cd apps/client && npx expo start",
+    "admin:android": "cd apps/admin && npx expo start --android",
+    "admin:ios": "cd apps/admin && npx expo start --ios",
+    "client:android": "cd apps/client && npx expo start --android",
+    "client:ios": "cd apps/client && npx expo start --ios",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "lint": "npm run lint --workspaces --if-present"
+  },
+  "devDependencies": {
+    "typescript": "~5.3.3"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "react-dom": "^19.2.0",
+    "react-native-web": "^0.21.2"
+  }
+}

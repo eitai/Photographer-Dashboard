@@ -31,8 +31,12 @@ app.use('/api/clients', require('./src/routes/clients'));
 app.use('/api/galleries', require('./src/routes/galleries'));
 app.use('/api/galleries/:galleryId/images', require('./src/routes/images'));
 app.use('/api/galleries/:galleryId', require('./src/routes/selections'));
-app.use('/api/blog',    require('./src/routes/blog'));
-app.use('/api/contact', require('./src/routes/contact'));
+app.use('/api/blog',     require('./src/routes/blog'));
+app.use('/api/contact',  require('./src/routes/contact'));
+app.use('/api/settings', require('./src/routes/settings'));
+app.use('/api/admins',        require('./src/routes/admins'));
+app.use('/api/product-orders', require('./src/routes/productOrders'));
+app.use('/api/p/:id',          require('./src/routes/public'));
 
 // Health check
 app.get('/api/health', (req, res) => res.json({ status: 'OK', timestamp: new Date() }));

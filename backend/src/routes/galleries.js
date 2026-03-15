@@ -19,6 +19,13 @@ router.get('/token/:token', async (req, res) => {
   if (gallery.status === 'gallery_sent') {
     gallery.status = 'viewed';
     await gallery.save();
+    // Sync client status
+    if (gallery.clientId) {
+      await Client.findOneAndUpdate(
+        { _id: gallery.clientId, status: 'gallery_sent' },
+        { status: 'viewed' }
+      );
+    }
   }
   res.json(gallery);
 });
@@ -28,39 +35,54 @@ router.use(protect);
 
 // GET /api/galleries
 router.get('/', async (req, res) => {
-  const galleries = await Gallery.find().populate('clientId', 'name email').sort({ createdAt: -1 });
+  const filter = { adminId: req.admin._id };
+  if (req.query.clientId) filter.clientId = req.query.clientId;
+  const galleries = await Gallery.find(filter).populate('clientId', 'name email').sort({ createdAt: -1 });
   res.json(galleries);
 });
 
 // POST /api/galleries
 router.post('/', async (req, res) => {
-  const gallery = await Gallery.create(req.body);
+  try {
+    // Accept `title` as an alias for `name` (mobile clients send `title`)
+    const body = { ...req.body };
+    if (!body.name && body.title) { body.name = body.title; delete body.title; }
+    const gallery = await Gallery.create({ ...body, adminId: req.admin._id });
 
-  // Send gallery link email if client has an email address
-  let emailSent = false;
-  if (req.body.clientId) {
-    const client = await Client.findById(req.body.clientId);
-    if (client?.email) {
-      const galleryUrl = `${process.env.FRONTEND_URL}/gallery/${gallery.token}`;
-      emailSent = await sendGalleryLink({
-        clientName: client.name,
-        clientEmail: client.email,
-        galleryName: gallery.name,
-        galleryUrl,
-        headerMessage: gallery.headerMessage,
-      });
+    // Send gallery link email if client has an email address
+    let emailSent = false;
+    if (body.clientId) {
+      const client = await Client.findById(body.clientId);
+      if (client?.email) {
+        const galleryUrl = `${process.env.FRONTEND_URL}/gallery/${gallery.token}`;
+        emailSent = await sendGalleryLink({
+          clientName: client.name,
+          clientEmail: client.email,
+          galleryName: gallery.name,
+          galleryUrl,
+          headerMessage: gallery.headerMessage,
+        });
+        if (emailSent) {
+          gallery.lastEmailSentAt = new Date();
+          await gallery.save();
+        }
+      }
     }
-  }
 
-  res.status(201).json({ ...gallery.toObject(), emailSent });
+    res.status(201).json({ ...gallery.toObject(), emailSent });
+  } catch (err) {
+    if (err.name === 'ValidationError') return res.status(400).json({ message: err.message });
+    throw err;
+  }
 });
 
 // POST /api/galleries/:id/delivery  — Create a linked delivery gallery
 router.post('/:id/delivery', async (req, res) => {
-  const original = await Gallery.findById(req.params.id).populate('clientId');
+  const original = await Gallery.findOne({ _id: req.params.id, adminId: req.admin._id }).populate('clientId');
   if (!original) return res.status(404).json({ message: 'Gallery not found' });
 
   const delivery = await Gallery.create({
+    adminId: req.admin._id,
     clientId: original.clientId,
     clientName: original.clientName,
     name: req.body.name || `${original.name} — Edited`,
@@ -97,26 +119,28 @@ router.post('/:id/resend-email', async (req, res) => {
   });
 
   if (!sent) return res.status(503).json({ message: 'SMTP not configured' });
-  res.json({ message: 'Email sent' });
+  gallery.lastEmailSentAt = new Date();
+  await gallery.save();
+  res.json({ message: 'Email sent', lastEmailSentAt: gallery.lastEmailSentAt });
 });
 
 // GET /api/galleries/:id
 router.get('/:id', async (req, res) => {
-  const gallery = await Gallery.findById(req.params.id).populate('clientId');
+  const gallery = await Gallery.findOne({ _id: req.params.id, adminId: req.admin._id }).populate('clientId');
   if (!gallery) return res.status(404).json({ message: 'Gallery not found' });
   res.json(gallery);
 });
 
 // PUT /api/galleries/:id
 router.put('/:id', async (req, res) => {
-  const gallery = await Gallery.findByIdAndUpdate(req.params.id, req.body, { new: true });
+  const gallery = await Gallery.findOneAndUpdate({ _id: req.params.id, adminId: req.admin._id }, req.body, { new: true });
   if (!gallery) return res.status(404).json({ message: 'Gallery not found' });
   res.json(gallery);
 });
 
 // DELETE /api/galleries/:id
 router.delete('/:id', async (req, res) => {
-  await Gallery.findByIdAndDelete(req.params.id);
+  await Gallery.findOneAndDelete({ _id: req.params.id, adminId: req.admin._id });
   res.json({ message: 'Gallery deleted' });
 });
 

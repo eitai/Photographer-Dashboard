@@ -5,6 +5,8 @@ const gallerySubmissionSchema = new mongoose.Schema({
   sessionId:        { type: String, required: true },
   selectedImageIds: [{ type: mongoose.Schema.Types.ObjectId, ref: 'GalleryImage' }],
   clientMessage:    { type: String },
+  imageComments:    { type: Map, of: String, default: {} },
+  heroImageId:      { type: mongoose.Schema.Types.ObjectId, ref: 'GalleryImage', default: null },
   submittedAt:      { type: Date, default: Date.now },
 });
 
