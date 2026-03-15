@@ -78,8 +78,14 @@ app.use('/api/contact', contactLimiter);
 app.use('/api/p/:id/contact', contactLimiter);
 
 // ── Static files ──────────────────────────────────────────────────────────────
+// crossOriginResourcePolicy must be disabled here so browsers can load images
+// from this origin into pages served from a different origin (the frontend).
 app.use(
   '/uploads',
+  (req, res, next) => {
+    res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+    next();
+  },
   express.static(path.join(__dirname, '../uploads'), {
     maxAge: '1d',
     etag: true,
