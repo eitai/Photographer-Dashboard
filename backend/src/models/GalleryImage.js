@@ -8,6 +8,9 @@ const galleryImageSchema = new mongoose.Schema({
   thumbnailPath: { type: String },
   beforePath:    { type: String },
   sortOrder:     { type: Number, default: 0 },
+  size:          { type: Number, default: 0 }, // bytes — used for per-admin storage quota
 }, { timestamps: true });
+
+galleryImageSchema.index({ galleryId: 1, sortOrder: 1 });
 
 module.exports = mongoose.model('GalleryImage', galleryImageSchema);

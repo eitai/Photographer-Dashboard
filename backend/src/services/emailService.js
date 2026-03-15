@@ -13,6 +13,14 @@ function createTransporter() {
   });
 }
 
+// Minimal HTML escaper — prevents stored XSS when admin input is interpolated into email HTML
+const esc = (s) =>
+  String(s ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+
 async function sendGalleryLink({ clientName, clientEmail, galleryName, galleryUrl, headerMessage }) {
   const transporter = createTransporter();
   if (!transporter) {
@@ -46,12 +54,12 @@ async function sendGalleryLink({ clientName, clientEmail, galleryName, galleryUr
           <tr>
             <td style="padding:36px 40px;">
               <p style="margin:0 0 16px;font-size:16px;color:#3D2C2C;line-height:1.7;">
-                שלום ${clientName},
+                שלום ${esc(clientName)},
               </p>
               <p style="margin:0 0 16px;font-size:15px;color:#5C4B4B;line-height:1.7;">
-                שמחה לבשר לך שהגלריה שלך <strong>${galleryName}</strong> מוכנה לצפייה.
+                שמחה לבשר לך שהגלריה שלך <strong>${esc(galleryName)}</strong> מוכנה לצפייה.
               </p>
-              ${headerMessage ? `<p style="margin:0 0 24px;font-size:14px;color:#7A6060;line-height:1.7;padding:16px;background:#FAF8F4;border-radius:8px;border-right:3px solid #E7B8B5;">${headerMessage}</p>` : ''}
+              ${headerMessage ? `<p style="margin:0 0 24px;font-size:14px;color:#7A6060;line-height:1.7;padding:16px;background:#FAF8F4;border-radius:8px;border-right:3px solid #E7B8B5;">${esc(headerMessage)}</p>` : ''}
               <p style="margin:0 0 28px;font-size:15px;color:#5C4B4B;line-height:1.7;">
                 לחצי על הכפתור להלן כדי לצפות בתמונות ולבחור את האהובות עליך.
               </p>

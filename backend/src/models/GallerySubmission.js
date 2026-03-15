@@ -10,4 +10,6 @@ const gallerySubmissionSchema = new mongoose.Schema({
   submittedAt:      { type: Date, default: Date.now },
 });
 
+gallerySubmissionSchema.index({ galleryId: 1 });
+
 module.exports = mongoose.model('GallerySubmission', gallerySubmissionSchema);

@@ -1,51 +1,52 @@
 require('dotenv').config();
-const express = require('express');
-const cors = require('cors');
-const path = require('path');
+
+// ── Startup validation ────────────────────────────────────────────────────────
+const { validateEnv } = require('./src/config/validateEnv');
+const { ok, missing } = validateEnv();
+if (!ok) {
+  console.error(`[startup] Missing required env vars: ${missing.join(', ')}`);
+  console.error('[startup] Copy .env.example to .env and fill in all values.');
+  process.exit(1);
+}
+
+const mongoose = require('mongoose');
 const connectDB = require('./src/config/db');
+const logger = require('./src/utils/logger');
+const app = require('./src/app');
 
 connectDB();
 
-const app = express();
-
-app.use(cors({
-  origin: (origin, callback) => {
-    // Allow requests with no origin (curl, mobile apps) or any localhost port
-    if (!origin || origin.startsWith('http://localhost') || origin.startsWith('http://127.0.0.1')) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
-  credentials: true,
-}));
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-
-// Serve uploaded images as static files
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
-
-// Routes
-app.use('/api/auth',    require('./src/routes/auth'));
-app.use('/api/clients', require('./src/routes/clients'));
-app.use('/api/galleries', require('./src/routes/galleries'));
-app.use('/api/galleries/:galleryId/images', require('./src/routes/images'));
-app.use('/api/galleries/:galleryId', require('./src/routes/selections'));
-app.use('/api/blog',     require('./src/routes/blog'));
-app.use('/api/contact',  require('./src/routes/contact'));
-app.use('/api/settings', require('./src/routes/settings'));
-app.use('/api/admins',        require('./src/routes/admins'));
-app.use('/api/product-orders', require('./src/routes/productOrders'));
-app.use('/api/p/:id',          require('./src/routes/public'));
-
-// Health check
-app.get('/api/health', (req, res) => res.json({ status: 'OK', timestamp: new Date() }));
-
-// Global error handler
-app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(err.status || 500).json({ message: err.message || 'Internal server error' });
+const PORT = process.env.PORT || 5000;
+const server = app.listen(PORT, () => {
+  logger.info(`Koral API running on port ${PORT} [${process.env.NODE_ENV || 'development'}]`);
 });
 
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`Koral API running on port ${PORT}`));
+server.setTimeout(30000);
+
+// ── Process handlers ──────────────────────────────────────────────────────────
+process.on('unhandledRejection', (reason) => {
+  logger.error('Unhandled promise rejection:', reason);
+  process.exit(1);
+});
+
+process.on('uncaughtException', (err) => {
+  logger.error('Uncaught exception:', err);
+  process.exit(1);
+});
+
+const gracefulShutdown = async (signal) => {
+  logger.info(`${signal} received — shutting down gracefully`);
+  server.close(async () => {
+    logger.info('HTTP server closed');
+    await mongoose.disconnect();
+    logger.info('Database disconnected');
+    process.exit(0);
+  });
+  setTimeout(() => {
+    logger.error('Forced shutdown after timeout');
+    process.exit(1);
+  }, 10000);
+};
+
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));

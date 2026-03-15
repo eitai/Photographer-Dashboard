@@ -1,0 +1,24 @@
+# Environment — never commit real credentials
+.env
+.env.local
+.env.production
+
+# Dependencies
+node_modules/
+
+# Uploads (user content — not source code)
+uploads/*
+!uploads/.gitkeep
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/

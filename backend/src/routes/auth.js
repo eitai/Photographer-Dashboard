@@ -2,6 +2,7 @@ const express = require('express');
 const jwt = require('jsonwebtoken');
 const Admin = require('../models/Admin');
 const { protect } = require('../middleware/auth');
+const asyncHandler = require('../middleware/asyncHandler');
 
 const router = express.Router();
 
@@ -11,18 +12,20 @@ const signToken = (id) =>
 const formatAdmin = (a) => ({ id: a._id, name: a.name, email: a.email, role: a.role, username: a.username || null, studioName: a.studioName || null });
 
 // POST /api/auth/login
-router.post('/login', async (req, res) => {
-  const { email, password } = req.body;
-  if (!email || !password)
-    return res.status(400).json({ message: 'Email and password required' });
+// Accepts { email, password } or { username, password } — identifier checked against both fields
+router.post('/login', asyncHandler(async (req, res) => {
+  const { email, username, password } = req.body;
+  const identifier = email || username;
+  if (!identifier || !password)
+    return res.status(400).json({ message: 'Credentials required' });
 
-  const admin = await Admin.findOne({ email });
+  const admin = await Admin.findOne({ $or: [{ email: identifier }, { username: identifier }] });
   if (!admin || !(await admin.comparePassword(password)))
     return res.status(401).json({ message: 'Invalid credentials' });
 
   const token = signToken(admin._id);
   res.json({ token, admin: formatAdmin(admin) });
-});
+}));
 
 // GET /api/auth/me
 router.get('/me', protect, (req, res) => {
@@ -30,29 +33,31 @@ router.get('/me', protect, (req, res) => {
 });
 
 // PUT /api/auth/password
-router.put('/password', protect, async (req, res) => {
+router.put('/password', protect, asyncHandler(async (req, res) => {
   const { current, next } = req.body;
+  if (!next || typeof next !== 'string' || next.length < 8) {
+    return res.status(400).json({ message: 'New password must be at least 8 characters' });
+  }
   const admin = await Admin.findById(req.admin._id);
   if (!(await admin.comparePassword(current)))
     return res.status(400).json({ message: 'Current password is incorrect' });
   admin.password = next;
   await admin.save();
   res.json({ message: 'Password updated' });
-});
+}));
 
-// POST /api/auth/push-token  — save Expo push token for the authenticated admin
-router.post('/push-token', protect, async (req, res) => {
+// POST /api/auth/push-token
+router.post('/push-token', protect, asyncHandler(async (req, res) => {
   const { token } = req.body;
   if (!token || typeof token !== 'string') {
     return res.status(400).json({ message: 'token is required and must be a string' });
   }
-
   await Admin.findByIdAndUpdate(req.admin._id, { pushToken: token });
   res.json({ message: 'Push token saved' });
-});
+}));
 
-// PATCH /api/auth/profile  — update own profile (name, studioName, username)
-router.patch('/profile', protect, async (req, res) => {
+// PATCH /api/auth/profile
+router.patch('/profile', protect, asyncHandler(async (req, res) => {
   const { name, studioName, username } = req.body;
   const update = {};
   if (name !== undefined) update.name = name;
@@ -64,22 +69,17 @@ router.patch('/profile', protect, async (req, res) => {
     if (conflict) return res.status(409).json({ message: 'Username already taken' });
   }
 
-  try {
-    const updated = await Admin.findByIdAndUpdate(req.admin._id, update, { new: true, runValidators: true }).select('-password');
-    res.json({ admin: formatAdmin(updated) });
-  } catch (err) {
-    if (err.name === 'ValidationError') return res.status(400).json({ message: err.message });
-    throw err;
-  }
-});
+  const updated = await Admin.findByIdAndUpdate(req.admin._id, update, { new: true, runValidators: true }).select('-password');
+  res.json({ admin: formatAdmin(updated) });
+}));
 
-// POST /api/auth/seed  — creates first admin as superadmin (only works when no admins exist)
-router.post('/seed', async (req, res) => {
-  const { name, email, password } = req.body;
+// POST /api/auth/seed  — creates first superadmin (only when no admins exist)
+router.post('/seed', asyncHandler(async (req, res) => {
+  const { name, email, username, password } = req.body;
   const count = await Admin.countDocuments();
   if (count > 0) return res.status(400).json({ message: 'Admins already exist. Use superadmin panel to add more.' });
-  const admin = await Admin.create({ name, email, password, role: 'superadmin' });
+  const admin = await Admin.create({ name, email, username, password, role: 'superadmin' });
   res.status(201).json({ message: 'Superadmin created', id: admin._id });
-});
+}));
 
 module.exports = router;

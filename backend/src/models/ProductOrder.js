@@ -19,4 +19,6 @@ const productOrderSchema = new mongoose.Schema({
   status:            { type: String, enum: ['pending', 'submitted'], default: 'pending' },
 }, { timestamps: true });
 
+productOrderSchema.index({ adminId: 1, clientId: 1 });
+
 module.exports = mongoose.model('ProductOrder', productOrderSchema);

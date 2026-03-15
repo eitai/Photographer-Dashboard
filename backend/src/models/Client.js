@@ -13,4 +13,7 @@ const clientSchema = new mongoose.Schema({
   status:      { type: String, enum: STATUS, default: 'gallery_sent' },
 }, { timestamps: true });
 
+clientSchema.index({ adminId: 1 });
+clientSchema.index({ adminId: 1, status: 1 });
+
 module.exports = mongoose.model('Client', clientSchema);

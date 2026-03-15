@@ -1,0 +1,38 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run dev)",
+      "Bash(npm run build)",
+      "Bash(npm run test)",
+      "Bash(npm run test:watch)",
+      "Bash(npm run lint)",
+      "Bash(npm install)",
+      "Bash(npm install *)",
+      "Bash(pnpm install)",
+      "Bash(pnpm install *)",
+      "Bash(pnpm run *)",
+      "Bash(pnpm typecheck)",
+      "Bash(pnpm lint)",
+      "Bash(npx tsc --noEmit)",
+      "Bash(npx expo install *)",
+      "Bash(npx expo start *)",
+      "Bash(node --version)",
+      "Bash(node -e *)",
+      "Bash(npm --version)",
+      "Bash(pnpm --version)",
+      "Bash(git status)",
+      "Bash(git diff *)",
+      "Bash(git log *)",
+      "Bash(git branch *)",
+      "Bash(curl -s http://localhost:5000/api/health)",
+      "Bash(curl -s -X POST http://localhost:5000/api/auth/seed)"
+    ],
+    "deny": [
+      "Bash(taskkill *)",
+      "Bash(rm -rf *)",
+      "Bash(git push --force *)",
+      "Bash(git reset --hard *)",
+      "Bash(node scripts/reset-db.js)"
+    ]
+  }
+}

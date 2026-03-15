@@ -17,6 +17,9 @@ const blogPostSchema = new mongoose.Schema(
   { timestamps: true },
 );
 
+blogPostSchema.index({ adminId: 1, published: 1 });
+blogPostSchema.index({ adminId: 1, publishedAt: -1 });
+
 blogPostSchema.pre('save', function (next) {
   if (this.isModified('title') || !this.slug) {
     this.slug = slugify(this.title, { lower: true, strict: true }) + '-' + Date.now();

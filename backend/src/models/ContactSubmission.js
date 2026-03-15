@@ -9,4 +9,6 @@ const contactSubmissionSchema = new mongoose.Schema({
   message:     { type: String },
 }, { timestamps: true });
 
+contactSubmissionSchema.index({ adminId: 1, createdAt: -1 });
+
 module.exports = mongoose.model('ContactSubmission', contactSubmissionSchema);

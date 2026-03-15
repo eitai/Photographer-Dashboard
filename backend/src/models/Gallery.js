@@ -21,6 +21,10 @@ const gallerySchema = new mongoose.Schema({
   lastEmailSentAt: { type: Date, default: null },
 }, { timestamps: true });
 
+gallerySchema.index({ adminId: 1 });
+gallerySchema.index({ clientId: 1 });
+gallerySchema.index({ adminId: 1, status: 1 });
+
 gallerySchema.pre('save', function (next) {
   if (!this.token) this.token = crypto.randomBytes(24).toString('hex');
   next();
