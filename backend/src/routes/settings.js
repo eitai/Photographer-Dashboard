@@ -3,7 +3,7 @@ const SiteSettings = require('../models/SiteSettings');
 const Gallery = require('../models/Gallery');
 const GalleryImage = require('../models/GalleryImage');
 const { protect } = require('../middleware/auth');
-const upload = require('../middleware/upload');
+const { uploadImage: upload } = require('../middleware/upload');
 const asyncHandler = require('../middleware/asyncHandler');
 
 const router = express.Router();

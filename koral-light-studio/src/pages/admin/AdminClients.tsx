@@ -9,7 +9,9 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useModal } from '@/hooks/useModal';
+import { Modal } from '@/components/ui/Modal';
 import { useSearch } from '@/hooks/useSearch';
+import type { Client } from '@/types/admin';
 import { useDeleteConfirmation } from '@/hooks/useDeleteConfirmation';
 
 const SESSION_TYPES = ['family', 'maternity', 'newborn', 'branding', 'landscape'] as const;
@@ -17,10 +19,7 @@ const SESSION_TYPES = ['family', 'maternity', 'newborn', 'branding', 'landscape'
 const clientSchema = z.object({
   name: z.string().min(1, 'Name is required'),
   phone: z.string().optional(),
-  email: z.preprocess(
-    (val) => (val === '' ? undefined : val),
-    z.string().email('Invalid email').optional(),
-  ),
+  email: z.preprocess((val) => (val === '' ? undefined : val), z.string().email('Invalid email').optional()),
   sessionType: z.enum(SESSION_TYPES),
   notes: z.string().optional(),
 });
@@ -34,12 +33,18 @@ export const AdminClients = () => {
   const deleteClient = useDeleteClient();
 
   const form = useModal();
-  const { query: search, setQuery: setSearch, filtered } = useSearch<any>(
-    clients,
-    (c, q) => c.name.toLowerCase().includes(q) || (c.email?.toLowerCase().includes(q) ?? false),
-  );
+  const {
+    query: search,
+    setQuery: setSearch,
+    filtered,
+  } = useSearch<Client>(clients, (c, q) => c.name.toLowerCase().includes(q) || (c.email?.toLowerCase().includes(q) ?? false));
   const deletion = useDeleteConfirmation<{ _id: string; name: string }>(
-    useCallback(async (target) => { await deleteClient.mutateAsync(target._id); }, [deleteClient]),
+    useCallback(
+      async (target) => {
+        await deleteClient.mutateAsync(target._id);
+      },
+      [deleteClient],
+    ),
   );
 
   const {
@@ -61,19 +66,19 @@ export const AdminClients = () => {
   return (
     <AdminLayout title={t('admin.clients.title')}>
       {/* Toolbar */}
-      <div className='flex items-center gap-3 mb-6'>
+      <div className='flex flex-wrap items-center gap-3 mb-6'>
         <div className='relative flex-1 max-w-sm'>
-          <Search size={15} className='absolute left-3 top-1/2 -translate-y-1/2 text-warm-gray' />
+          <Search size={15} className='absolute start-3 top-1/2 -translate-y-1/2 text-warm-gray' />
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder={t('admin.clients.search')}
-            className='w-full pl-9 pr-4 py-2 rounded-lg border border-beige bg-card text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-blush/50'
+            className='w-full ps-9 pe-4 py-2 min-h-[44px] rounded-lg border border-beige bg-card text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-blush/50'
           />
         </div>
         <button
           onClick={form.toggle}
-          className='flex items-center gap-2 bg-transparent border border-black text-black px-4 py-2 rounded text-sm font-medium hover:bg-black/5 transition-colors'
+          className='flex items-center gap-2 bg-transparent border border-black text-black px-4 py-2 min-h-[44px] rounded text-sm font-medium hover:bg-black/5 transition-colors'
         >
           <Plus size={15} /> {t('admin.clients.new')}
         </button>
@@ -89,7 +94,7 @@ export const AdminClients = () => {
               <input
                 type='text'
                 {...register('name')}
-                className='w-full px-3 py-2 rounded-lg border border-beige bg-ivory text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-blush/50'
+                className='w-full px-3 py-2.5 min-h-[44px] rounded-lg border border-beige bg-ivory text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-blush/50'
               />
               {errors.name && <p className='text-xs text-rose-500 mt-1'>{errors.name.message}</p>}
             </div>
@@ -98,7 +103,7 @@ export const AdminClients = () => {
               <input
                 type='tel'
                 {...register('phone')}
-                className='w-full px-3 py-2 rounded-lg border border-beige bg-ivory text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-blush/50'
+                className='w-full px-3 py-2.5 min-h-[44px] rounded-lg border border-beige bg-ivory text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-blush/50'
               />
             </div>
             <div>
@@ -106,7 +111,7 @@ export const AdminClients = () => {
               <input
                 type='email'
                 {...register('email')}
-                className='w-full px-3 py-2 rounded-lg border border-beige bg-ivory text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-blush/50'
+                className='w-full px-3 py-2.5 min-h-[44px] rounded-lg border border-beige bg-ivory text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-blush/50'
               />
               {errors.email && <p className='text-xs text-rose-500 mt-1'>{errors.email.message}</p>}
             </div>
@@ -114,7 +119,7 @@ export const AdminClients = () => {
               <label className='block text-xs text-warm-gray mb-1'>{t('admin.common.session_type')}</label>
               <select
                 {...register('sessionType')}
-                className='w-full px-3 py-2 rounded-lg border border-beige bg-ivory text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-blush/50'
+                className='w-full px-3 py-2.5 min-h-[44px] rounded-lg border border-beige bg-ivory text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-blush/50'
               >
                 {SESSION_TYPES.map((st) => (
                   <option key={st} value={st}>
@@ -129,21 +134,24 @@ export const AdminClients = () => {
             <textarea
               {...register('notes')}
               rows={2}
-              className='w-full px-3 py-2 rounded-lg border border-beige bg-ivory text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-blush/50 resize-none'
+              className='w-full px-3 py-2.5 min-h-[44px] rounded-lg border border-beige bg-ivory text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-blush/50 resize-none'
             />
           </div>
           <div className='flex gap-3'>
             <button
               type='submit'
               disabled={createClient.isPending}
-              className='bg-blush text-primary-foreground px-5 py-2 rounded-lg text-sm font-medium hover:bg-blush/80 transition-colors disabled:opacity-60'
+              className='bg-blush text-primary-foreground px-5 py-2 min-h-[44px] rounded-lg text-sm font-medium hover:bg-blush/80 transition-colors disabled:opacity-60'
             >
               {createClient.isPending ? t('admin.common.saving') : t('admin.clients.create')}
             </button>
             <button
               type='button'
-              onClick={() => { form.close(); reset(); }}
-              className='px-5 py-2 rounded-lg text-sm text-warm-gray hover:bg-ivory transition-colors border border-beige'
+              onClick={() => {
+                form.close();
+                reset();
+              }}
+              className='px-5 py-2 min-h-[44px] rounded-lg text-sm text-warm-gray hover:bg-ivory transition-colors border border-beige'
             >
               {t('admin.common.cancel')}
             </button>
@@ -200,7 +208,7 @@ export const AdminClients = () => {
                       </Link>
                       <button
                         onClick={() => deletion.setTarget({ _id: c._id, name: c.name })}
-                        className='text-warm-gray hover:text-rose-500 transition-colors'
+                        className='text-warm-gray hover:text-rose-500 transition-colors p-2.5 min-h-[44px] min-w-[44px] flex items-center justify-center -m-2.5'
                         title={t('admin.clients.delete_btn')}
                       >
                         <Trash2 size={14} />
@@ -215,33 +223,29 @@ export const AdminClients = () => {
       </div>
 
       {/* Delete confirmation modal */}
-      {deletion.target && (
-        <div className='fixed inset-0 z-50 flex items-center justify-center bg-charcoal/40 backdrop-blur-sm p-4'>
-          <div className='bg-card rounded-2xl border border-beige shadow-xl w-full max-w-sm p-6'>
-            <h3 className=' text-lg text-charcoal mb-1'>{t('admin.clients.delete_title')}</h3>
-            <p className='text-sm text-warm-gray mb-1'>
-              <span className='font-medium text-charcoal'>{deletion.target.name}</span>
-            </p>
-            <p className='text-sm text-warm-gray mb-6'>{t('admin.clients.delete_body')}</p>
-            <div className='flex gap-3'>
-              <button
-                onClick={deletion.confirm}
-                disabled={deletion.deleting}
-                className='flex-1 bg-rose-500 text-white py-2 rounded-lg text-sm font-medium hover:bg-rose-600 transition-colors disabled:opacity-60'
-              >
-                {deletion.deleting ? t('admin.clients.deleting') : t('admin.clients.delete_btn')}
-              </button>
-              <button
-                onClick={deletion.cancel}
-                disabled={deletion.deleting}
-                className='flex-1 py-2 rounded-lg text-sm text-warm-gray border border-beige hover:bg-ivory transition-colors'
-              >
-                {t('admin.common.cancel')}
-              </button>
-            </div>
-          </div>
+      <Modal isOpen={!!deletion.target} onClose={deletion.cancel}>
+        <h3 className=' text-lg text-charcoal mb-1'>{t('admin.clients.delete_title')}</h3>
+        <p className='text-sm text-warm-gray mb-1'>
+          <span className='font-medium text-charcoal'>{deletion.target?.name}</span>
+        </p>
+        <p className='text-sm text-warm-gray mb-6'>{t('admin.clients.delete_body')}</p>
+        <div className='flex gap-3'>
+          <button
+            onClick={deletion.confirm}
+            disabled={deletion.deleting}
+            className='flex-1 bg-rose-500 text-white py-3 min-h-[44px] rounded-lg text-sm font-medium hover:bg-rose-600 transition-colors disabled:opacity-60'
+          >
+            {deletion.deleting ? t('admin.clients.deleting') : t('admin.clients.delete_btn')}
+          </button>
+          <button
+            onClick={deletion.cancel}
+            disabled={deletion.deleting}
+            className='flex-1 py-3 min-h-[44px] rounded-lg text-sm text-warm-gray border border-beige hover:bg-ivory transition-colors'
+          >
+            {t('admin.common.cancel')}
+          </button>
         </div>
-      )}
+      </Modal>
     </AdminLayout>
   );
 };

@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '@/lib/api';
 import * as clientService from '@/services/clientService';
 import * as galleryService from '@/services/galleryService';
+import { Client } from '@/types/admin';
 
 // ---------------------------------------------------------------------------
 // Query keys
@@ -82,7 +83,7 @@ export function useDeleteClient() {
 export function useUpdateClient(id: string) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (data: any) => clientService.updateClient(id, data),
+    mutationFn: (data: Partial<Client>) => clientService.updateClient(id, data),
     onSuccess: (updated) => {
       queryClient.setQueryData(queryKeys.client(id), updated);
       queryClient.invalidateQueries({ queryKey: queryKeys.clients });
@@ -93,7 +94,7 @@ export function useUpdateClient(id: string) {
 export function useCreateDelivery(clientId: string) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ galleryId, data }: { galleryId: string; data: any }) =>
+    mutationFn: ({ galleryId, data }: { galleryId: string; data: Record<string, unknown> }) =>
       galleryService.createDelivery(galleryId, data),
     onSuccess: () =>
       queryClient.invalidateQueries({ queryKey: queryKeys.galleriesByClient(clientId) }),
@@ -148,7 +149,7 @@ export function useDeleteSubmissionImage(clientId: string) {
 export function useUpdateGallery(invalidateKey?: readonly string[]) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, data }: { id: string; data: any }) =>
+    mutationFn: ({ id, data }: { id: string; data: Record<string, unknown> }) =>
       galleryService.updateGallery(id, data),
     onSuccess: () => {
       if (invalidateKey) queryClient.invalidateQueries({ queryKey: invalidateKey });

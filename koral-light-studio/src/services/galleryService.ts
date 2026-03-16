@@ -27,3 +27,14 @@ export const removeSubmission = (galleryId: string, submissionId: string) =>
 
 export const removeSubmissionImage = (galleryId: string, submissionId: string, imageId: string) =>
   api.delete(`/galleries/${galleryId}/submissions/${submissionId}/images/${imageId}`);
+
+export const uploadGalleryVideo = (galleryId: string, file: File) => {
+  const form = new FormData();
+  form.append('video', file);
+  return api.post(`/galleries/${galleryId}/video`, form, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  }).then((r) => r.data);
+};
+
+export const deleteGalleryVideo = (galleryId: string) =>
+  api.delete(`/galleries/${galleryId}/video`).then((r) => r.data);

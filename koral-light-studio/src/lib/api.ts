@@ -1,9 +1,9 @@
 import axios from 'axios';
 
-const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+export const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
 const api = axios.create({
-  baseURL: `${BASE_URL}/api`,
+  baseURL: `${API_BASE}/api`,
   headers: { 'Content-Type': 'application/json' },
   // Required for the browser to send/receive httpOnly cookies cross-origin
   withCredentials: true,

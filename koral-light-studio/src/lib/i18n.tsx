@@ -155,6 +155,7 @@ const translations: Record<string, Record<Lang, string>> = {
   'admin.common.saving': { he: 'שומר…', en: 'Saving…' },
   'admin.common.deleting': { he: 'מוחק…', en: 'Deleting…' },
   'admin.common.cancel': { he: 'ביטול', en: 'Cancel' },
+  'admin.common.delete': { he: 'מחק', en: 'Delete' },
   'admin.common.name': { he: 'שם', en: 'Name' },
   'admin.common.phone': { he: 'טלפון', en: 'Phone' },
   'admin.common.email': { he: 'אימייל', en: 'Email' },
@@ -240,6 +241,7 @@ const translations: Record<string, Record<Lang, string>> = {
   'admin.upload.no_images': { he: 'טרם הועלו תמונות.', en: 'No images uploaded yet.' },
   'admin.upload.load_failed': { he: 'טעינת הגלריה נכשלה', en: 'Failed to load gallery' },
   'admin.upload.images_load_failed': { he: 'טעינת התמונות נכשלה', en: 'Failed to load images' },
+  'admin.upload.status_update_failed': { he: 'עדכון הסטטוס נכשל', en: 'Failed to update status' },
   'admin.upload.selected': { he: 'נבחרו', en: 'selected' },
   'admin.upload.clear_selection': { he: 'נקה בחירה', en: 'Clear selection' },
   'admin.upload.delete_selected': { he: 'מחק נבחרים', en: 'Delete selected' },
@@ -329,6 +331,12 @@ const translations: Record<string, Record<Lang, string>> = {
   // ── Admin: Gallery in-editing action ────────────────────────────────────────
   'admin.gallery.mark_in_editing': { he: 'סמן כבעריכה', en: 'Mark as In Editing' },
   'admin.gallery.marking': { he: 'מעדכן…', en: 'Updating…' },
+  'admin.gallery.upload_video': { he: 'העלה וידאו', en: 'Upload Video' },
+  'admin.gallery.uploading_video': { he: 'מעלה…', en: 'Uploading…' },
+  'admin.gallery.delete_video': { he: 'מחק וידאו', en: 'Delete Video' },
+  'admin.gallery.video_uploaded': { he: 'הוידאו הועלה בהצלחה', en: 'Video uploaded successfully' },
+  'admin.gallery.video_deleted': { he: 'הוידאו נמחק', en: 'Video deleted' },
+  'admin.gallery.video_error': { he: 'שגיאה בהעלאת הוידאו', en: 'Video upload failed' },
 
   // ── Admin: Studio Profile ────────────────────────────────────────────────────
   'admin.settings.studio_profile': { he: 'פרופיל סטודיו', en: 'Studio Profile' },

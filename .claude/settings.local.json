@@ -11,7 +11,12 @@
       "Bash(npm audit:*)",
       "Bash(sc query:*)",
       "Bash(net start:*)",
-      "Bash(powershell -Command \"Start-Process ''net'' -ArgumentList ''start MongoDB'' -Verb RunAs -Wait 2>&1\")"
+      "Bash(powershell -Command \"Start-Process ''net'' -ArgumentList ''start MongoDB'' -Verb RunAs -Wait 2>&1\")",
+      "Bash(grep -n \"useState\\\\|isOpen\\\\|showModal\\\\|modalOpen\" \"/c/Users/eitai/Desktop/codevalue/store test/koral-light-studio/src/pages/admin\"/*.tsx)",
+      "Bash(find 'c:/Users/eitai/Desktop/codevalue/store test/koral-light-studio/src/hooks' -type f -name *.ts -o -name *.tsx)",
+      "Bash(find 'c:/Users/eitai/Desktop/codevalue/store test/koral-light-studio/src/pages/admin' -type f -name *.ts -o -name *.tsx)",
+      "Bash(node -e \"require\\(''./src/middleware/upload''\\)\")",
+      "Bash(node -e \"require\\(''./src/app''\\)\")"
     ]
   }
 }

@@ -1,4 +1,6 @@
 const express = require('express');
+const path = require('path');
+const fs = require('fs');
 const mongoose = require('mongoose');
 const Gallery = require('../models/Gallery');
 const Client = require('../models/Client');
@@ -6,6 +8,7 @@ const { protect } = require('../middleware/auth');
 const asyncHandler = require('../middleware/asyncHandler');
 const { sendGalleryLink } = require('../services/emailService');
 const { withTransaction } = require('../utils/transaction');
+const { uploadVideo } = require('../middleware/upload');
 
 const router = express.Router();
 
@@ -160,6 +163,40 @@ router.delete('/:id', protect, asyncHandler(async (req, res) => {
   const gallery = await Gallery.findOneAndDelete({ _id: req.params.id, adminId: req.admin._id });
   if (!gallery) return res.status(404).json({ message: 'Gallery not found' });
   res.json({ message: 'Gallery deleted' });
+}));
+
+// POST /api/galleries/:id/video  — upload or replace a video for a gallery
+router.post('/:id/video', protect, uploadVideo.single('video'), asyncHandler(async (req, res) => {
+  const gallery = await Gallery.findOne({ _id: req.params.id, adminId: req.admin._id });
+  if (!gallery) return res.status(404).json({ message: 'Gallery not found' });
+  if (!req.file) return res.status(400).json({ message: 'No video file provided' });
+
+  // Delete old video file if one exists
+  if (gallery.videoFilename) {
+    const oldPath = path.join(__dirname, '../../uploads', gallery.videoFilename);
+    fs.unlink(oldPath, () => {}); // non-fatal
+  }
+
+  gallery.videoPath = `/uploads/${req.file.filename}`;
+  gallery.videoFilename = req.file.filename;
+  await gallery.save();
+  res.json(gallery);
+}));
+
+// DELETE /api/galleries/:id/video  — remove the video from a gallery
+router.delete('/:id/video', protect, asyncHandler(async (req, res) => {
+  const gallery = await Gallery.findOne({ _id: req.params.id, adminId: req.admin._id });
+  if (!gallery) return res.status(404).json({ message: 'Gallery not found' });
+
+  if (gallery.videoFilename) {
+    const filePath = path.join(__dirname, '../../uploads', gallery.videoFilename);
+    fs.unlink(filePath, () => {}); // non-fatal
+  }
+
+  gallery.videoPath = null;
+  gallery.videoFilename = null;
+  await gallery.save();
+  res.json({ message: 'Video deleted' });
 }));
 
 module.exports = router;

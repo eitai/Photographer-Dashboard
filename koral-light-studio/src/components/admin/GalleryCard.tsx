@@ -1,6 +1,8 @@
+import { useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { StatusBadge } from '@/components/admin/StatusBadge';
-import { Copy, Check, Mail, ExternalLink, Trash2 } from 'lucide-react';
+import { Copy, Check, Mail, ExternalLink, Trash2, Video } from 'lucide-react';
+import { API_BASE } from '@/lib/api';
 
 interface GalleryCardProps {
   g: any;
@@ -22,6 +24,10 @@ interface GalleryCardProps {
   setDeliveryHeaderMessage: (msg: string) => void;
   createDeliveryGallery: (originalGalleryId: string) => void;
   onMarkInEditing: (galleryId: string) => void;
+  onUploadVideo: (galleryId: string, file: File) => void;
+  uploadingVideoId: string | null;
+  onDeleteVideo: (galleryId: string) => void;
+  deletingVideoId: string | null;
 }
 
 export const GalleryCard = ({
@@ -44,7 +50,12 @@ export const GalleryCard = ({
   setDeliveryHeaderMessage,
   createDeliveryGallery,
   onMarkInEditing,
+  onUploadVideo,
+  uploadingVideoId,
+  onDeleteVideo,
+  deletingVideoId,
 }: GalleryCardProps) => {
+  const videoInputRef = useRef<HTMLInputElement>(null);
   const hasDelivery = galleries.some((g2) => g2.deliveryOf === g._id);
 
   return (
@@ -175,6 +186,49 @@ export const GalleryCard = ({
             + {t('admin.client.create_delivery')}
           </button>
         ))}
+
+      {/* Video section */}
+      <div className='mt-3 pt-3 border-t border-beige'>
+        {g.videoPath ? (
+          <div className='space-y-2'>
+            <video
+              src={`${API_BASE}${g.videoPath}`}
+              controls
+              className='w-full rounded-lg max-h-48 bg-black'
+            />
+            <button
+              onClick={() => onDeleteVideo(g._id)}
+              disabled={deletingVideoId === g._id}
+              className='flex items-center gap-1 text-xs text-rose-500 hover:text-rose-700 transition-colors disabled:opacity-50'
+            >
+              <Trash2 size={12} />
+              {t('admin.gallery.delete_video')}
+            </button>
+          </div>
+        ) : (
+          <>
+            <input
+              ref={videoInputRef}
+              type='file'
+              accept='video/*'
+              className='hidden'
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) onUploadVideo(g._id, file);
+                e.target.value = '';
+              }}
+            />
+            <button
+              onClick={() => videoInputRef.current?.click()}
+              disabled={uploadingVideoId === g._id}
+              className='w-full flex items-center justify-center gap-1.5 text-xs text-warm-gray border border-beige rounded-lg py-1.5 hover:bg-beige transition-colors disabled:opacity-50'
+            >
+              <Video size={12} />
+              {uploadingVideoId === g._id ? t('admin.gallery.uploading_video') : t('admin.gallery.upload_video')}
+            </button>
+          </>
+        )}
+      </div>
     </div>
   );
 };

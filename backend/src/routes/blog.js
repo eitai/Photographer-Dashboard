@@ -1,6 +1,6 @@
 const express = require('express');
 const BlogPost = require('../models/BlogPost');
-const upload = require('../middleware/upload');
+const { uploadImage: upload } = require('../middleware/upload');
 const { protect } = require('../middleware/auth');
 const asyncHandler = require('../middleware/asyncHandler');
 

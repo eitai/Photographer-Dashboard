@@ -1,3 +1,14 @@
+export interface Client {
+  _id: string;
+  name: string;
+  email?: string;
+  phone?: string;
+  sessionType: 'family' | 'maternity' | 'newborn' | 'branding' | 'landscape';
+  status: string;
+  notes?: string;
+  createdAt?: string;
+}
+
 export interface AdminRecord {
   _id: string;
   name: string;
@@ -17,4 +28,22 @@ export interface AdminSettings {
   facebookUrl: string;
   heroSubtitle: string;
   contactEmail: string;
+}
+
+export interface GalleryDetail {
+  _id: string;
+  name: string;
+  clientName: string;
+  clientId: string | { _id: string };
+  status: string;
+  videoPath?: string | null;
+  videoFilename?: string | null;
+}
+
+export interface GalleryImage {
+  _id: string;
+  path: string;
+  thumbnailPath?: string;
+  originalName: string;
+  beforePath?: string;
 }
