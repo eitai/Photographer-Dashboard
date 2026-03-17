@@ -3,6 +3,7 @@ const jwt = require('jsonwebtoken');
 const Admin = require('../models/Admin');
 const { protect } = require('../middleware/auth');
 const asyncHandler = require('../middleware/asyncHandler');
+const validatePassword = require('../utils/validatePassword');
 
 const router = express.Router();
 
@@ -25,6 +26,10 @@ router.post('/login', asyncHandler(async (req, res) => {
   const identifier = email || username;
   if (!identifier || !password)
     return res.status(400).json({ message: 'Credentials required' });
+
+  // Reject non-string values — prevents NoSQL injection via { "$gt": "" } objects
+  if (typeof identifier !== 'string' || typeof password !== 'string')
+    return res.status(400).json({ message: 'Credentials must be strings' });
 
   const admin = await Admin.findOne({ $or: [{ email: identifier }, { username: identifier }] });
   if (!admin || !(await admin.comparePassword(password)))
@@ -49,9 +54,8 @@ router.get('/me', protect, (req, res) => {
 // PUT /api/auth/password
 router.put('/password', protect, asyncHandler(async (req, res) => {
   const { current, next } = req.body;
-  if (!next || typeof next !== 'string' || next.length < 8) {
-    return res.status(400).json({ message: 'New password must be at least 8 characters' });
-  }
+  const pwErr = validatePassword(next);
+  if (pwErr) return res.status(400).json({ message: pwErr });
   const admin = await Admin.findById(req.admin._id);
   if (!(await admin.comparePassword(current)))
     return res.status(400).json({ message: 'Current password is incorrect' });

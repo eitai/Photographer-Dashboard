@@ -16,6 +16,18 @@ const logger = require('./utils/logger');
 
 const app = express();
 
+// ── HTTPS redirect (production only, before all other middleware) ─────────────
+if (process.env.NODE_ENV === 'production') {
+  app.use((req, res, next) => {
+    // Health checks from internal load balancers are exempt
+    if (req.path === '/api/health' || req.path === '/api/v1/health') return next();
+    if (req.headers['x-forwarded-proto'] !== 'https') {
+      return res.redirect(301, `https://${req.hostname}${req.url}`);
+    }
+    next();
+  });
+}
+
 // ── Security headers ──────────────────────────────────────────────────────────
 app.use(helmet());
 
@@ -57,9 +69,23 @@ app.use(express.json({ limit: '10kb' }));
 app.use(express.urlencoded({ limit: '10kb', extended: true }));
 
 // ── Compression ───────────────────────────────────────────────────────────────
-app.use(compression());
+app.use(compression({
+  filter: (req, res) => {
+    if (req.path.startsWith('/uploads')) return false;
+    return compression.filter(req, res);
+  },
+}));
 
 // ── Rate limiting ─────────────────────────────────────────────────────────────
+const globalLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: process.env.NODE_ENV === 'test' ? 10000 : 500,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { message: 'Too many requests, please try again later.' },
+});
+app.use('/api', globalLimiter);
+
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: process.env.NODE_ENV === 'test' ? 1000 : 20,
@@ -76,10 +102,20 @@ const contactLimiter = rateLimit({
   message: { message: 'Too many contact submissions, please try again later.' },
 });
 
+const submissionLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: process.env.NODE_ENV === 'test' ? 10000 : 30,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { message: 'Too many submissions, please try again later.' },
+});
+
 app.use('/api/auth/login', authLimiter);
 app.use('/api/auth/seed', authLimiter);
 app.use('/api/contact', contactLimiter);
 app.use('/api/p/:id/contact', contactLimiter);
+app.use('/api/galleries/:galleryId/submit', submissionLimiter);
+app.use('/api/product-orders/:id/selection', submissionLimiter);
 
 // ── Static files ──────────────────────────────────────────────────────────────
 // crossOriginResourcePolicy must be disabled here so browsers can load images

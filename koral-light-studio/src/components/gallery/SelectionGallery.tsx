@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
-import { Check, Send, Maximize2, Star, MessageCircle } from 'lucide-react';
+import { Check, Send, Maximize2, Star, MessageCircle, Video, Download } from 'lucide-react';
+
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 import Masonry from 'react-masonry-css';
 import { FadeIn } from '@/components/FadeIn';
 import { useI18n } from '@/lib/i18n';
@@ -226,6 +228,32 @@ export const SelectionGallery = ({ gallery, images, getImageUrl }: Props) => {
               </p>
             </div>
           </FadeIn>
+
+          {(gallery.videos ?? []).length > 0 && (
+            <FadeIn>
+              <div className='mb-10 space-y-4'>
+                {(gallery.videos ?? []).map((v) => (
+                  <div key={v.filename} className='rounded-2xl overflow-hidden border border-border bg-black'>
+                    <div className='flex items-center gap-2 px-4 py-3 bg-background/90 border-b border-border'>
+                      <Video size={14} className='text-muted-foreground' />
+                      <span className='text-sm font-medium text-foreground truncate flex-1'>
+                        {v.originalName || t('gallery.video_section')}
+                      </span>
+                      <a
+                        href={`${API_BASE}${v.path}`}
+                        download={v.originalName || v.filename}
+                        className='ms-auto flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors shrink-0'
+                      >
+                        <Download size={13} />
+                        {t('gallery.download_video')}
+                      </a>
+                    </div>
+                    <video src={`${API_BASE}${v.path}`} controls className='w-full max-h-[70vh]' />
+                  </div>
+                ))}
+              </div>
+            </FadeIn>
+          )}
 
           {selectedIds.size > 0 && (
             <div className='sticky top-16 z-40 bg-background/90 backdrop-blur-sm border-b border-border py-3 mb-8 -mx-6 px-6'>

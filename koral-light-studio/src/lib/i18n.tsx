@@ -112,6 +112,8 @@ const translations: Record<string, Record<Lang, string>> = {
   'gallery.download_all': { he: 'הורדת הכל (ZIP)', en: 'Download All (ZIP)' },
   'gallery.download_photo': { he: 'הורדה', en: 'Download' },
   'gallery.preparing_zip': { he: 'מכין ZIP…', en: 'Preparing ZIP…' },
+  'gallery.video_section': { he: 'וידאו', en: 'Video' },
+  'gallery.download_video': { he: 'הורדת וידאו', en: 'Download Video' },
 
   // Contact
   'contact.required_fields': { he: 'נא למלא את השדות החובה', en: 'Please fill in required fields' },
@@ -337,6 +339,7 @@ const translations: Record<string, Record<Lang, string>> = {
   'admin.gallery.video_uploaded': { he: 'הוידאו הועלה בהצלחה', en: 'Video uploaded successfully' },
   'admin.gallery.video_deleted': { he: 'הוידאו נמחק', en: 'Video deleted' },
   'admin.gallery.video_error': { he: 'שגיאה בהעלאת הוידאו', en: 'Video upload failed' },
+  'admin.gallery.upload_video_multi': { he: 'ניתן לבחור מספר קבצים', en: 'select multiple files' },
 
   // ── Admin: Studio Profile ────────────────────────────────────────────────────
   'admin.settings.studio_profile': { he: 'פרופיל סטודיו', en: 'Studio Profile' },

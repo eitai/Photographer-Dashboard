@@ -6,7 +6,6 @@ import axios from 'axios';
 import { toast } from 'sonner';
 import JSZip from 'jszip';
 import * as galleryService from '@/services/galleryService';
-import { uploadGalleryVideo, deleteGalleryVideo } from '@/services/galleryService';
 import { ArrowLeft } from 'lucide-react';
 import { ClientInfoCard } from '@/components/admin/ClientInfoCard';
 import { GalleriesSection } from '@/components/admin/GalleriesSection';
@@ -89,8 +88,6 @@ export const AdminClientDetail = () => {
   const [deleteImageTarget, setDeleteImageTarget] = useState<{ galleryId: string; submissionId: string; imageId: string } | null>(null);
   const [deleteSubTarget, setDeleteSubTarget] = useState<{ galleryId: string; submissionId: string } | null>(null);
   const [deleteGalleryTarget, setDeleteGalleryTarget] = useState<string | null>(null);
-  const [uploadingVideoId, setUploadingVideoId] = useState<string | null>(null);
-  const [deletingVideoId, setDeletingVideoId] = useState<string | null>(null);
 
   // Sync form when client data first arrives
   useEffect(() => {
@@ -158,32 +155,6 @@ export const AdminClientDetail = () => {
     if (!deleteImageTarget) return;
     await deleteSubmissionImageMutation.mutateAsync(deleteImageTarget);
     setDeleteImageTarget(null);
-  };
-
-  const handleUploadVideo = async (galleryId: string, file: File) => {
-    setUploadingVideoId(galleryId);
-    try {
-      await uploadGalleryVideo(galleryId, file);
-      toast.success(t('admin.gallery.video_uploaded'));
-      queryClient.invalidateQueries({ queryKey: queryKeys.galleriesByClient(id!) });
-    } catch {
-      toast.error(t('admin.gallery.video_error'));
-    } finally {
-      setUploadingVideoId(null);
-    }
-  };
-
-  const handleDeleteVideo = async (galleryId: string) => {
-    setDeletingVideoId(galleryId);
-    try {
-      await deleteGalleryVideo(galleryId);
-      toast.success(t('admin.gallery.video_deleted'));
-      queryClient.invalidateQueries({ queryKey: queryKeys.galleriesByClient(id!) });
-    } catch {
-      toast.error(t('admin.gallery.video_error'));
-    } finally {
-      setDeletingVideoId(null);
-    }
   };
 
   const markInEditing = (galleryId: string) => {
@@ -256,10 +227,6 @@ export const AdminClientDetail = () => {
             creatingDeliveryFor={creatingDeliveryFor}
             markingInEditingId={markingInEditingId}
             onMarkInEditing={markInEditing}
-            onUploadVideo={handleUploadVideo}
-            uploadingVideoId={uploadingVideoId}
-            onDeleteVideo={handleDeleteVideo}
-            deletingVideoId={deletingVideoId}
             copyLink={copyLink}
             whatsAppLink={whatsAppLink}
             resendEmail={handleResendEmail}

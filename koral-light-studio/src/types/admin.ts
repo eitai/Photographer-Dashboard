@@ -30,14 +30,19 @@ export interface AdminSettings {
   contactEmail: string;
 }
 
+export interface GalleryVideo {
+  path: string;
+  filename: string;
+  originalName: string;
+}
+
 export interface GalleryDetail {
   _id: string;
   name: string;
   clientName: string;
   clientId: string | { _id: string };
   status: string;
-  videoPath?: string | null;
-  videoFilename?: string | null;
+  videos?: GalleryVideo[];
 }
 
 export interface GalleryImage {

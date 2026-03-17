@@ -4,6 +4,7 @@ const BlogPost = require('../models/BlogPost');
 const SiteSettings = require('../models/SiteSettings');
 const ContactSubmission = require('../models/ContactSubmission');
 const asyncHandler = require('../middleware/asyncHandler');
+const validateContact = require('../utils/validateContact');
 
 const router = express.Router({ mergeParams: true });
 
@@ -61,6 +62,9 @@ router.get('/blog/:slug', asyncHandler(async (req, res) => {
 // POST /api/p/:id/contact
 router.post('/contact', asyncHandler(async (req, res) => {
   const { name, phone, email, sessionType, message } = req.body;
+  const err = validateContact({ name, phone, email, sessionType, message });
+  if (err) return res.status(400).json({ message: err });
+
   const submission = await ContactSubmission.create({
     name, phone, email, sessionType, message,
     adminId: req.photographerAdmin._id,

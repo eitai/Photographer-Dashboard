@@ -24,10 +24,6 @@ interface GalleriesSectionProps {
   setDeliveryHeaderMessage: (msg: string) => void;
   createDeliveryGallery: (id: string) => void;
   onMarkInEditing: (galleryId: string) => void;
-  onUploadVideo: (galleryId: string, file: File) => void;
-  uploadingVideoId: string | null;
-  onDeleteVideo: (galleryId: string) => void;
-  deletingVideoId: string | null;
 }
 
 export const GalleriesSection = ({
@@ -50,10 +46,6 @@ export const GalleriesSection = ({
   setDeliveryHeaderMessage,
   createDeliveryGallery,
   onMarkInEditing,
-  onUploadVideo,
-  uploadingVideoId,
-  onDeleteVideo,
-  deletingVideoId,
 }: GalleriesSectionProps) => {
   const [showGalleryForm, setShowGalleryForm] = useState(false);
   const [galleryForm, setGalleryForm] = useState({ name: '', headerMessage: '', maxSelections: 10 });
@@ -176,10 +168,6 @@ export const GalleriesSection = ({
           setDeliveryHeaderMessage={setDeliveryHeaderMessage}
           createDeliveryGallery={createDeliveryGallery}
           onMarkInEditing={onMarkInEditing}
-          onUploadVideo={onUploadVideo}
-          uploadingVideoId={uploadingVideoId}
-          onDeleteVideo={onDeleteVideo}
-          deletingVideoId={deletingVideoId}
         />
       )}
     </div>

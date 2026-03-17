@@ -5,7 +5,7 @@ const sharp = require('sharp');
 const GalleryImage = require('../models/GalleryImage');
 const Gallery = require('../models/Gallery');
 const GallerySubmission = require('../models/GallerySubmission');
-const { uploadImage: upload } = require('../middleware/upload');
+const { uploadImage: upload, validateImageMagicBytes } = require('../middleware/upload');
 const { protect } = require('../middleware/auth');
 const checkQuota = require('../middleware/checkQuota');
 const asyncHandler = require('../middleware/asyncHandler');
@@ -38,7 +38,7 @@ router.get('/', asyncHandler(async (req, res) => {
 }));
 
 // POST /api/galleries/:galleryId/images  — ADMIN
-router.post('/', protect, checkQuota, upload.array('images', 1000), asyncHandler(async (req, res) => {
+router.post('/', protect, checkQuota, upload.array('images', 1000), validateImageMagicBytes, asyncHandler(async (req, res) => {
   const { galleryId } = req.params;
   const gallery = await Gallery.findById(galleryId);
   if (!gallery) return res.status(404).json({ message: 'Gallery not found' });
@@ -90,9 +90,11 @@ router.post('/', protect, checkQuota, upload.array('images', 1000), asyncHandler
 }));
 
 // PATCH /api/galleries/:galleryId/images/:imageId/before  — ADMIN
-router.patch('/:imageId/before', protect, upload.single('before'), asyncHandler(async (req, res) => {
+router.patch('/:imageId/before', protect, upload.single('before'), validateImageMagicBytes, asyncHandler(async (req, res) => {
   const image = await GalleryImage.findById(req.params.imageId);
   if (!image) return res.status(404).json({ message: 'Image not found' });
+  const gallery = await Gallery.findOne({ _id: image.galleryId, adminId: req.admin._id });
+  if (!gallery) return res.status(403).json({ message: 'Forbidden' });
   if (!req.file) return res.status(400).json({ message: 'No file uploaded' });
 
   // Delete old before file if exists

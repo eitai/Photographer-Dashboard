@@ -117,7 +117,7 @@ router.post('/:id/delivery', protect, asyncHandler(async (req, res) => {
 
 // POST /api/galleries/:id/resend-email
 router.post('/:id/resend-email', protect, asyncHandler(async (req, res) => {
-  const gallery = await Gallery.findById(req.params.id).populate('clientId');
+  const gallery = await Gallery.findOne({ _id: req.params.id, adminId: req.admin._id }).populate('clientId');
   if (!gallery) return res.status(404).json({ message: 'Gallery not found' });
 
   const client = gallery.clientId;
@@ -165,36 +165,35 @@ router.delete('/:id', protect, asyncHandler(async (req, res) => {
   res.json({ message: 'Gallery deleted' });
 }));
 
-// POST /api/galleries/:id/video  — upload or replace a video for a gallery
-router.post('/:id/video', protect, uploadVideo.single('video'), asyncHandler(async (req, res) => {
+// POST /api/galleries/:id/video  — upload one or more videos
+router.post('/:id/video', protect, uploadVideo.array('videos', 20), asyncHandler(async (req, res) => {
   const gallery = await Gallery.findOne({ _id: req.params.id, adminId: req.admin._id });
   if (!gallery) return res.status(404).json({ message: 'Gallery not found' });
-  if (!req.file) return res.status(400).json({ message: 'No video file provided' });
+  if (!req.files?.length) return res.status(400).json({ message: 'No video files provided' });
 
-  // Delete old video file if one exists
-  if (gallery.videoFilename) {
-    const oldPath = path.join(__dirname, '../../uploads', gallery.videoFilename);
-    fs.unlink(oldPath, () => {}); // non-fatal
+  for (const file of req.files) {
+    gallery.videos.push({
+      path: `/uploads/${file.filename}`,
+      filename: file.filename,
+      originalName: file.originalname,
+    });
   }
-
-  gallery.videoPath = `/uploads/${req.file.filename}`;
-  gallery.videoFilename = req.file.filename;
   await gallery.save();
   res.json(gallery);
 }));
 
-// DELETE /api/galleries/:id/video  — remove the video from a gallery
-router.delete('/:id/video', protect, asyncHandler(async (req, res) => {
+// DELETE /api/galleries/:id/video/:filename  — remove a specific video
+router.delete('/:id/video/:filename', protect, asyncHandler(async (req, res) => {
   const gallery = await Gallery.findOne({ _id: req.params.id, adminId: req.admin._id });
   if (!gallery) return res.status(404).json({ message: 'Gallery not found' });
 
-  if (gallery.videoFilename) {
-    const filePath = path.join(__dirname, '../../uploads', gallery.videoFilename);
-    fs.unlink(filePath, () => {}); // non-fatal
-  }
+  const idx = gallery.videos.findIndex((v) => v.filename === req.params.filename);
+  if (idx === -1) return res.status(404).json({ message: 'Video not found' });
 
-  gallery.videoPath = null;
-  gallery.videoFilename = null;
+  const filePath = path.join(__dirname, '../../uploads', req.params.filename);
+  fs.unlink(filePath, () => {}); // non-fatal
+
+  gallery.videos.splice(idx, 1);
   await gallery.save();
   res.json({ message: 'Video deleted' });
 }));

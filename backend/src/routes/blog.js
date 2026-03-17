@@ -1,6 +1,6 @@
 const express = require('express');
 const BlogPost = require('../models/BlogPost');
-const { uploadImage: upload } = require('../middleware/upload');
+const { uploadImage: upload, validateImageMagicBytes } = require('../middleware/upload');
 const { protect } = require('../middleware/auth');
 const asyncHandler = require('../middleware/asyncHandler');
 
@@ -23,7 +23,7 @@ router.get('/:id', protect, asyncHandler(async (req, res) => {
 }));
 
 // POST /api/blog  — ADMIN
-router.post('/', protect, upload.single('featuredImage'), asyncHandler(async (req, res) => {
+router.post('/', protect, upload.single('featuredImage'), validateImageMagicBytes, asyncHandler(async (req, res) => {
   const { title, content, seoTitle, seoDescription, category, published, publishedAt } = req.body;
   const data = { title, content, seoTitle, seoDescription, category, published, publishedAt, adminId: req.admin._id };
   if (req.file) data.featuredImagePath = `/uploads/${req.file.filename}`;
@@ -32,7 +32,7 @@ router.post('/', protect, upload.single('featuredImage'), asyncHandler(async (re
 }));
 
 // PUT /api/blog/:id  — ADMIN
-router.put('/:id', protect, upload.single('featuredImage'), asyncHandler(async (req, res) => {
+router.put('/:id', protect, upload.single('featuredImage'), validateImageMagicBytes, asyncHandler(async (req, res) => {
   const { title, content, seoTitle, seoDescription, category, published, publishedAt } = req.body;
   const data = { title, content, seoTitle, seoDescription, category, published, publishedAt };
   if (req.file) data.featuredImagePath = `/uploads/${req.file.filename}`;

@@ -27,6 +27,17 @@ router.post('/submit', asyncHandler(async (req, res) => {
     return res.status(400).json({ message: `You can only select up to ${gallery.maxSelections} photos.` });
   }
 
+  // Validate every submitted image actually belongs to this gallery
+  if (selectedImageIds.length > 0) {
+    const validCount = await GalleryImage.countDocuments({
+      _id: { $in: selectedImageIds },
+      galleryId,
+    });
+    if (validCount !== selectedImageIds.length) {
+      return res.status(400).json({ message: 'One or more selected images are invalid.' });
+    }
+  }
+
   let submission;
   await withTransaction(async (session) => {
     const opts = session ? { session } : {};
@@ -80,6 +91,8 @@ router.post('/submit', asyncHandler(async (req, res) => {
 
 // GET /api/galleries/:galleryId/submissions  — ADMIN
 router.get('/submissions', protect, asyncHandler(async (req, res) => {
+  const gallery = await Gallery.findOne({ _id: req.params.galleryId, adminId: req.admin._id });
+  if (!gallery) return res.status(403).json({ message: 'Forbidden' });
   const submissions = await GallerySubmission.find({ galleryId: req.params.galleryId })
     .populate('selectedImageIds')
     .sort({ submittedAt: -1 });

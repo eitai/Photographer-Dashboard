@@ -16,6 +16,7 @@ export interface GalleryData {
   maxSelections: number;
   isDelivery: boolean;
   status: 'gallery_sent' | 'viewed' | 'selection_submitted' | 'in_editing' | 'delivered';
+  videos?: { path: string; filename: string; originalName: string }[];
 }
 
 /** Minimal gallery shape used in admin list/card views */

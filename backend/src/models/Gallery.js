@@ -19,8 +19,11 @@ const gallerySchema = new mongoose.Schema({
   isDelivery:      { type: Boolean, default: false },
   deliveryOf:      { type: mongoose.Schema.Types.ObjectId, ref: 'Gallery', default: null },
   lastEmailSentAt: { type: Date, default: null },
-  videoPath:       { type: String, default: null },
-  videoFilename:   { type: String, default: null },
+  videos: [{
+    path:         { type: String, required: true },
+    filename:     { type: String, required: true },
+    originalName: { type: String, default: '' },
+  }],
 }, { timestamps: true });
 
 gallerySchema.index({ adminId: 1 });

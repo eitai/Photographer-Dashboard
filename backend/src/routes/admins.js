@@ -2,8 +2,9 @@ const express = require('express');
 const Admin = require('../models/Admin');
 const SiteSettings = require('../models/SiteSettings');
 const { superprotect } = require('../middleware/auth');
-const { uploadImage: upload } = require('../middleware/upload');
+const { uploadImage: upload, validateImageMagicBytes } = require('../middleware/upload');
 const asyncHandler = require('../middleware/asyncHandler');
+const validatePassword = require('../utils/validatePassword');
 
 const router = express.Router();
 router.use(superprotect);
@@ -19,6 +20,9 @@ router.post('/', asyncHandler(async (req, res) => {
   const { name, email, password, role, username, studioName } = req.body;
   if (!name || !email || !password)
     return res.status(400).json({ message: 'Name, email and password are required' });
+
+  const pwErr = validatePassword(password);
+  if (pwErr) return res.status(400).json({ message: pwErr });
 
   const exists = await Admin.findOne({ email });
   if (exists) return res.status(400).json({ message: 'Email already in use' });
@@ -102,7 +106,7 @@ router.put('/:id/landing', asyncHandler(async (req, res) => {
 }));
 
 // POST /api/admins/:id/hero-image
-router.post('/:id/hero-image', upload.single('image'), asyncHandler(async (req, res) => {
+router.post('/:id/hero-image', upload.single('image'), validateImageMagicBytes, asyncHandler(async (req, res) => {
   if (!req.file) return res.status(400).json({ message: 'No image uploaded' });
   const heroImagePath = `/uploads/${req.file.filename}`;
   await SiteSettings.findOneAndUpdate(
@@ -114,7 +118,7 @@ router.post('/:id/hero-image', upload.single('image'), asyncHandler(async (req, 
 }));
 
 // POST /api/admins/:id/profile-image
-router.post('/:id/profile-image', upload.single('image'), asyncHandler(async (req, res) => {
+router.post('/:id/profile-image', upload.single('image'), validateImageMagicBytes, asyncHandler(async (req, res) => {
   if (!req.file) return res.status(400).json({ message: 'No image uploaded' });
   const profileImagePath = `/uploads/${req.file.filename}`;
   await SiteSettings.findOneAndUpdate(

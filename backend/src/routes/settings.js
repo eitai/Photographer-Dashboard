@@ -3,7 +3,7 @@ const SiteSettings = require('../models/SiteSettings');
 const Gallery = require('../models/Gallery');
 const GalleryImage = require('../models/GalleryImage');
 const { protect } = require('../middleware/auth');
-const { uploadImage: upload } = require('../middleware/upload');
+const { uploadImage: upload, validateImageMagicBytes } = require('../middleware/upload');
 const asyncHandler = require('../middleware/asyncHandler');
 
 const router = express.Router();
@@ -63,7 +63,7 @@ router.put('/landing', protect, asyncHandler(async (req, res) => {
 }));
 
 // POST /api/settings/hero-image  — ADMIN
-router.post('/hero-image', protect, upload.single('image'), asyncHandler(async (req, res) => {
+router.post('/hero-image', protect, upload.single('image'), validateImageMagicBytes, asyncHandler(async (req, res) => {
   if (!req.file) return res.status(400).json({ message: 'No image provided' });
   const heroImagePath = `/uploads/${req.file.filename}`;
   await SiteSettings.findOneAndUpdate(
@@ -75,7 +75,7 @@ router.post('/hero-image', protect, upload.single('image'), asyncHandler(async (
 }));
 
 // POST /api/settings/profile-image  — ADMIN
-router.post('/profile-image', protect, upload.single('image'), asyncHandler(async (req, res) => {
+router.post('/profile-image', protect, upload.single('image'), validateImageMagicBytes, asyncHandler(async (req, res) => {
   if (!req.file) return res.status(400).json({ message: 'No image provided' });
   const profileImagePath = `/uploads/${req.file.filename}`;
   await SiteSettings.findOneAndUpdate(

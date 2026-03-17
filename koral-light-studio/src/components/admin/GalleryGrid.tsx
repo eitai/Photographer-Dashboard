@@ -19,10 +19,6 @@ interface GalleryGridProps {
   setDeliveryHeaderMessage: (msg: string) => void;
   createDeliveryGallery: (originalGalleryId: string) => void;
   onMarkInEditing: (galleryId: string) => void;
-  onUploadVideo: (galleryId: string, file: File) => void;
-  uploadingVideoId: string | null;
-  onDeleteVideo: (galleryId: string) => void;
-  deletingVideoId: string | null;
 }
 
 export const GalleryGrid = ({
@@ -44,10 +40,6 @@ export const GalleryGrid = ({
   setDeliveryHeaderMessage,
   createDeliveryGallery,
   onMarkInEditing,
-  onUploadVideo,
-  uploadingVideoId,
-  onDeleteVideo,
-  deletingVideoId,
 }: GalleryGridProps) => {
   // Build delivery map: originalId → delivery gallery (only for originals in this list)
   const deliveryByOriginalId = new Map<string, any>();
@@ -86,10 +78,6 @@ export const GalleryGrid = ({
     setDeliveryHeaderMessage,
     createDeliveryGallery,
     onMarkInEditing,
-    onUploadVideo,
-    uploadingVideoId,
-    onDeleteVideo,
-    deletingVideoId,
   };
 
   return (
