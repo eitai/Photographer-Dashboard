@@ -1,32 +1,21 @@
-const mongoose = require('mongoose');
+const pool = require('../db');
 
 /**
- * Runs `fn(session)` inside a MongoDB multi-document transaction.
- *
- * In production, the MongoDB deployment MUST be a replica set (Atlas or self-hosted).
- * In development/test with a standalone mongod, transactions are not supported;
- * we fall back to unprotected sequential writes so local dev still works.
+ * Runs `fn(client)` inside a PostgreSQL transaction.
+ * Commits on success, rolls back on any error, always releases the client.
  */
 async function withTransaction(fn) {
-  let session;
+  const client = await pool.connect();
   try {
-    session = await mongoose.startSession();
-    await session.withTransaction(() => fn(session));
+    await client.query('BEGIN');
+    const result = await fn(client);
+    await client.query('COMMIT');
+    return result;
   } catch (err) {
-    // Standalone MongoDB (local dev) reports code 20 or a message containing
-    // "Transaction numbers" when sessions/transactions are unavailable.
-    const isStandalone =
-      err.code === 20 ||
-      err.codeName === 'IllegalOperation' ||
-      err.message?.includes('Transaction numbers') ||
-      err.message?.includes('not support transactions');
-
-    if (process.env.NODE_ENV !== 'production' && isStandalone) {
-      return fn(null); // fall back to unprotected writes
-    }
+    await client.query('ROLLBACK');
     throw err;
   } finally {
-    session?.endSession();
+    client.release();
   }
 }
 

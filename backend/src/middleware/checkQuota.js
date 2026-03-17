@@ -1,5 +1,4 @@
-const Gallery = require('../models/Gallery');
-const GalleryImage = require('../models/GalleryImage');
+const pool = require('../db');
 
 // Default 10 GB per admin; override with MAX_STORAGE_BYTES env var
 const MAX_BYTES = parseInt(process.env.MAX_STORAGE_BYTES || String(10 * 1024 * 1024 * 1024));
@@ -10,15 +9,14 @@ const MAX_BYTES = parseInt(process.env.MAX_STORAGE_BYTES || String(10 * 1024 * 1
  */
 const checkQuota = async (req, res, next) => {
   try {
-    const galleries = await Gallery.find({ adminId: req.admin._id }).select('_id');
-    const galleryIds = galleries.map((g) => g._id);
-
-    const [result] = await GalleryImage.aggregate([
-      { $match: { galleryId: { $in: galleryIds } } },
-      { $group: { _id: null, total: { $sum: '$size' } } },
-    ]);
-
-    const usedBytes = result?.total || 0;
+    const { rows } = await pool.query(
+      `SELECT COALESCE(SUM(gi.size), 0)::bigint AS total
+       FROM gallery_images gi
+       JOIN galleries g ON g.id = gi.gallery_id
+       WHERE g.admin_id = $1`,
+      [req.admin.id]
+    );
+    const usedBytes = Number(rows[0].total);
     if (usedBytes >= MAX_BYTES) {
       const limitGB = (MAX_BYTES / (1024 ** 3)).toFixed(0);
       return res.status(413).json({

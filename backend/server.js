@@ -9,8 +9,7 @@ if (!ok) {
   process.exit(1);
 }
 
-const mongoose = require('mongoose');
-const connectDB = require('./src/config/db');
+const { connectDB, pool } = require('./src/config/db');
 const logger = require('./src/utils/logger');
 const app = require('./src/app');
 
@@ -38,7 +37,7 @@ const gracefulShutdown = async (signal) => {
   logger.info(`${signal} received — shutting down gracefully`);
   server.close(async () => {
     logger.info('HTTP server closed');
-    await mongoose.disconnect();
+    await pool.end();
     logger.info('Database disconnected');
     process.exit(0);
   });

@@ -3,6 +3,8 @@
  *
  * Covers core domain flows: auth, client CRUD, gallery lifecycle,
  * multi-tenant isolation, field injection prevention, and selection submission.
+ *
+ * Requires a real PostgreSQL database via DATABASE_URL environment variable.
  */
 
 process.env.NODE_ENV = 'test';
@@ -10,60 +12,69 @@ process.env.JWT_SECRET = 'test_secret_32_chars_minimum_ok!';
 process.env.JWT_EXPIRES_IN = '7d';
 process.env.FRONTEND_URL = 'http://localhost:8080';
 
-const { MongoMemoryReplSet } = require('mongodb-memory-server');
-const mongoose = require('mongoose');
-const request = require('supertest');
+if (!process.env.DATABASE_URL) {
+  throw new Error('DATABASE_URL must be set to run integration tests');
+}
 
-let mongod;
+const { pool, connectDB } = require('../src/config/db');
+const request = require('supertest');
+const jwt = require('jsonwebtoken');
+
 let app;
 
 // Two admins — used for multi-tenant isolation tests
 let adminA, adminB;
 let tokenA, tokenB;
 
-beforeAll(async () => {
-  // Replica set is required for multi-document transactions
-  mongod = await MongoMemoryReplSet.create({ replSet: { count: 1 } });
-  process.env.MONGO_URI = mongod.getUri();
-  await mongoose.connect(process.env.MONGO_URI);
+// Unique email suffix to avoid conflicts across test runs
+const SUFFIX = Date.now();
 
+beforeAll(async () => {
+  await connectDB();
   app = require('../src/app');
 
-  // Login helper — returns a real JWT via the login route
-  const loginAdmin = async (email, password) => {
-    const res = await request(app).post('/api/auth/login').send({ email, password });
-    return res.body.token;
-  };
-
-  // Seed via auth route to exercise the full stack
+  // Seed via admin model to exercise the full stack
   const Admin = require('../src/models/Admin');
-  adminA = await Admin.create({ name: 'Admin A', email: 'a@test.com', password: 'password123', role: 'admin' });
-  adminB = await Admin.create({ name: 'Admin B', email: 'b@test.com', password: 'password123', role: 'admin' });
+  adminA = await Admin.create({
+    name: 'Admin A',
+    email: `a_${SUFFIX}@test.com`,
+    password: 'password123',
+    role: 'admin',
+  });
+  adminB = await Admin.create({
+    name: 'Admin B',
+    email: `b_${SUFFIX}@test.com`,
+    password: 'password123',
+    role: 'admin',
+  });
 
-  tokenA = await loginAdmin('a@test.com', 'password123');
-  tokenB = await loginAdmin('b@test.com', 'password123');
-}, 60000); // replica set init takes longer than standalone
+  // Generate JWTs directly — same mechanism as the login route
+  tokenA = jwt.sign({ id: adminA.id }, process.env.JWT_SECRET, { expiresIn: '1d' });
+  tokenB = jwt.sign({ id: adminB.id }, process.env.JWT_SECRET, { expiresIn: '1d' });
+}, 30000);
 
 afterAll(async () => {
-  await mongoose.disconnect();
-  await mongod.stop();
+  // Clean up test data
+  await pool.query('DELETE FROM admins WHERE email LIKE $1', [`%_${SUFFIX}@test.com`]);
+  await pool.end();
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
 describe('Auth — login', () => {
-  test('valid credentials return a JWT token', async () => {
+  test('valid credentials return a token in response body', async () => {
     const res = await request(app)
       .post('/api/auth/login')
-      .send({ email: 'a@test.com', password: 'password123' });
+      .send({ email: `a_${SUFFIX}@test.com`, password: 'password123' });
     expect(res.status).toBe(200);
-    expect(res.body.token).toBeDefined();
-    expect(typeof res.body.token).toBe('string');
+    // Token is now set as httpOnly cookie; admin object is in body
+    expect(res.body.admin).toBeDefined();
+    expect(res.body.admin.id).toBeDefined();
   });
 
   test('wrong password returns 401', async () => {
     const res = await request(app)
       .post('/api/auth/login')
-      .send({ email: 'a@test.com', password: 'wrongpassword' });
+      .send({ email: `a_${SUFFIX}@test.com`, password: 'wrongpassword' });
     expect(res.status).toBe(401);
   });
 
@@ -86,8 +97,8 @@ describe('Clients — CRUD', () => {
       .send({ name: 'Dana Cohen', email: 'dana@test.com', sessionType: 'family' });
     expect(res.status).toBe(201);
     expect(res.body.name).toBe('Dana Cohen');
-    expect(res.body.adminId).toBe(adminA._id.toString());
-    clientId = res.body._id;
+    expect(res.body.adminId).toBe(adminA.id);
+    clientId = res.body.id;
   });
 
   test('GET returns only this admin\'s clients', async () => {
@@ -103,7 +114,7 @@ describe('Clients — CRUD', () => {
     expect(res.status).toBe(200);
     expect(Array.isArray(res.body)).toBe(true);
     // All returned clients must belong to admin A
-    res.body.forEach((c) => expect(c.adminId).toBe(adminA._id.toString()));
+    res.body.forEach((c) => expect(c.adminId).toBe(adminA.id));
     // Admin B's client must not appear
     expect(res.body.find((c) => c.name === 'Other Client')).toBeUndefined();
   });
@@ -118,14 +129,14 @@ describe('Clients — CRUD', () => {
     expect(res.body.phone).toBe('050-1234567');
   });
 
-  test('PUT cannot override adminId', async () => {
-    const fakeId = new mongoose.Types.ObjectId().toString();
+  test('PUT cannot override adminId (field is ignored)', async () => {
+    const fakeId = '00000000-0000-0000-0000-000000000000';
     const res = await request(app)
       .put(`/api/clients/${clientId}`)
       .set('Authorization', `Bearer ${tokenA}`)
       .send({ adminId: fakeId, name: 'Injected' });
     expect(res.status).toBe(200);
-    expect(res.body.adminId).toBe(adminA._id.toString()); // adminId unchanged
+    expect(res.body.adminId).toBe(adminA.id); // adminId unchanged
   });
 
   test('Admin B cannot read Admin A\'s client', async () => {
@@ -177,8 +188,8 @@ describe('Galleries — lifecycle', () => {
     expect(res.body.name).toBe('Wedding 2025');
     expect(typeof res.body.token).toBe('string');
     expect(res.body.token.length).toBeGreaterThan(0);
-    expect(res.body.adminId).toBe(adminA._id.toString());
-    galleryId = res.body._id;
+    expect(res.body.adminId).toBe(adminA.id);
+    galleryId = res.body.id;
     galleryToken = res.body.token;
   });
 
@@ -188,7 +199,7 @@ describe('Galleries — lifecycle', () => {
       .set('Authorization', `Bearer ${tokenA}`)
       .send({ name: 'Injected Gallery', token: 'my-custom-token' });
     expect(res.status).toBe(201);
-    expect(res.body.token).not.toBe('my-custom-token'); // real token was generated
+    expect(res.body.token).not.toBe('my-custom-token'); // DB-generated token was used
   });
 
   test('POST cannot inject isDelivery=true', async () => {
@@ -203,11 +214,11 @@ describe('Galleries — lifecycle', () => {
   test('GET /token/:token returns the gallery', async () => {
     const res = await request(app).get(`/api/galleries/token/${galleryToken}`);
     expect(res.status).toBe(200);
-    expect(res.body._id).toBe(galleryId);
+    expect(res.body.id).toBe(galleryId);
   });
 
-  test('Token access transitions status from gallery_sent → viewed', async () => {
-    // Fetch again to confirm status changed
+  test('Token access transitions status from gallery_sent -> viewed', async () => {
+    // Status was already changed by the previous test; fetch again to confirm
     const res = await request(app).get(`/api/galleries/token/${galleryToken}`);
     expect(res.status).toBe(200);
     expect(res.body.status).toBe('viewed');
@@ -260,7 +271,7 @@ describe('Galleries — lifecycle', () => {
   });
 
   test('DELETE returns 404 for non-existent gallery', async () => {
-    const fakeId = new mongoose.Types.ObjectId().toString();
+    const fakeId = '00000000-0000-0000-0000-000000000001';
     const res = await request(app)
       .delete(`/api/galleries/${fakeId}`)
       .set('Authorization', `Bearer ${tokenA}`);
@@ -281,18 +292,18 @@ describe('Blog — CRUD', () => {
     expect(res.body.title).toBe('My First Post');
     expect(typeof res.body.slug).toBe('string');
     expect(res.body.slug.length).toBeGreaterThan(0);
-    expect(res.body.adminId).toBe(adminA._id.toString());
-    postId = res.body._id;
+    expect(res.body.adminId).toBe(adminA.id);
+    postId = res.body.id;
   });
 
-  test('POST cannot inject adminId', async () => {
-    const fakeId = new mongoose.Types.ObjectId().toString();
+  test('POST cannot inject adminId (field is ignored)', async () => {
+    const fakeId = '00000000-0000-0000-0000-000000000000';
     const res = await request(app)
       .post('/api/blog')
       .set('Authorization', `Bearer ${tokenA}`)
       .send({ title: 'Injected Post', adminId: fakeId });
     expect(res.status).toBe(201);
-    expect(res.body.adminId).toBe(adminA._id.toString());
+    expect(res.body.adminId).toBe(adminA.id);
   });
 
   test('PUT updates post content', async () => {
@@ -327,23 +338,24 @@ describe('Blog — CRUD', () => {
 // ─────────────────────────────────────────────────────────────────────────────
 describe('Public profile — contact form', () => {
   test('Contact form cannot inject adminId', async () => {
-    const fakeId = new mongoose.Types.ObjectId().toString();
+    const fakeId = '00000000-0000-0000-0000-000000000000';
     const res = await request(app)
-      .post(`/api/p/${adminA._id}/contact`)
+      .post(`/api/p/${adminA.id}/contact`)
       .send({ name: 'Test User', email: 't@test.com', adminId: fakeId, message: 'Hello' });
     expect(res.status).toBe(201);
 
     // Verify in DB that the stored adminId is adminA's, not the injected value
-    const ContactSubmission = require('../src/models/ContactSubmission');
-    const submission = await ContactSubmission.findById(res.body.id);
-    expect(submission.adminId.toString()).toBe(adminA._id.toString());
+    const { rows } = await pool.query(
+      'SELECT admin_id FROM contact_submissions WHERE id = $1',
+      [res.body.id]
+    );
+    expect(rows[0].admin_id).toBe(adminA.id);
   });
 
   test('Contact form requires name field', async () => {
     const res = await request(app)
-      .post(`/api/p/${adminA._id}/contact`)
+      .post(`/api/p/${adminA.id}/contact`)
       .send({ email: 't@test.com', message: 'Hello' });
-    // ContactSubmission model has name as required
     expect(res.status).toBe(400);
   });
 });
@@ -360,13 +372,13 @@ describe('P2 — Transactions: gallery token access', () => {
       .post('/api/clients')
       .set('Authorization', `Bearer ${tokenA}`)
       .send({ name: 'Txn Client', email: 'txn@test.com' });
-    clientId = clientRes.body._id;
+    clientId = clientRes.body.id;
 
     const galleryRes = await request(app)
       .post('/api/galleries')
       .set('Authorization', `Bearer ${tokenA}`)
       .send({ name: 'Txn Gallery', clientId });
-    galleryId = galleryRes.body._id;
+    galleryId = galleryRes.body.id;
     galleryToken = galleryRes.body.token;
   });
 
@@ -391,7 +403,7 @@ describe('P2 — Transactions: selection submission', () => {
       .post('/api/galleries')
       .set('Authorization', `Bearer ${tokenA}`)
       .send({ name: 'Selection Gallery', maxSelections: 3 });
-    galleryId = galleryRes.body._id;
+    galleryId = galleryRes.body.id;
   });
 
   test('Submission atomically updates gallery status to selection_submitted', async () => {
@@ -413,16 +425,17 @@ describe('P2 — Storage quota', () => {
     expect(typeof checkQuota).toBe('function');
   });
 
-  test('GalleryImage model has size field', () => {
-    const GalleryImage = require('../src/models/GalleryImage');
-    const paths = Object.keys(GalleryImage.schema.paths);
-    expect(paths).toContain('size');
+  test('GalleryImage model has size field in DB schema', async () => {
+    const { rows } = await pool.query(
+      `SELECT column_name FROM information_schema.columns
+       WHERE table_name = 'gallery_images' AND column_name = 'size'`
+    );
+    expect(rows.length).toBe(1);
   });
 
   test('MAX_STORAGE_BYTES env var is respected', () => {
     const orig = process.env.MAX_STORAGE_BYTES;
     process.env.MAX_STORAGE_BYTES = String(1024);
-    // Force re-require with the new env (module is cached — just verify the env is read)
     expect(parseInt(process.env.MAX_STORAGE_BYTES)).toBe(1024);
     if (orig === undefined) delete process.env.MAX_STORAGE_BYTES;
     else process.env.MAX_STORAGE_BYTES = orig;

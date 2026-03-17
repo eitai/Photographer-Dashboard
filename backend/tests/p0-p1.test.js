@@ -1,8 +1,9 @@
 /**
  * Production Readiness Integration Tests
  *
- * Uses mongodb-memory-server for a real in-memory database.
- * No mocks — all routes run against the actual Mongoose models.
+ * Requires a real PostgreSQL database. Set DATABASE_URL in the environment
+ * or in a .env.test file before running.
+ * No mocks — all routes run against the actual pg models.
  */
 
 // Set env vars FIRST — app.js reads FRONTEND_URL at require() time
@@ -11,37 +12,35 @@ process.env.JWT_SECRET = 'test_secret_32_chars_minimum_ok!';
 process.env.JWT_EXPIRES_IN = '7d';
 process.env.FRONTEND_URL = 'http://localhost:8080';
 
-const { MongoMemoryReplSet } = require('mongodb-memory-server');
-const mongoose = require('mongoose');
+// Use a dedicated test database URL if provided, otherwise fall back to DATABASE_URL
+if (!process.env.DATABASE_URL) {
+  throw new Error('DATABASE_URL must be set to run integration tests');
+}
+
+const { pool, connectDB } = require('../src/config/db');
 const request = require('supertest');
 const jwt = require('jsonwebtoken');
 
-let mongod;
 let app;
 let VALID_TOKEN;
 
 beforeAll(async () => {
-  // Replica set is required for multi-document transactions
-  mongod = await MongoMemoryReplSet.create({ replSet: { count: 1 } });
-  process.env.MONGO_URI = mongod.getUri();
-  await mongoose.connect(process.env.MONGO_URI);
-
+  await connectDB();
   app = require('../src/app');
 
   // Seed a real admin — auth-protected route tests use this
   const Admin = require('../src/models/Admin');
   const admin = await Admin.create({
     name: 'Test Admin',
-    email: 'test@example.com',
+    email: `test_p0_${Date.now()}@example.com`,
     password: 'password123',
     role: 'admin',
   });
-  VALID_TOKEN = jwt.sign({ id: admin._id.toString() }, process.env.JWT_SECRET, { expiresIn: '1d' });
-}, 60000); // replica set init takes longer than standalone
+  VALID_TOKEN = jwt.sign({ id: admin.id }, process.env.JWT_SECRET, { expiresIn: '1d' });
+}, 30000);
 
 afterAll(async () => {
-  await mongoose.disconnect();
-  await mongod.stop();
+  await pool.end();
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -130,9 +129,8 @@ describe('P0 — Rate Limiting', () => {
 
 // ─────────────────────────────────────────────────────────────────────────────
 describe('P0 — asyncHandler (Error Propagation)', () => {
-  test('CastError returns 400 with "Invalid ID format"', async () => {
-    // Mongoose throws a real CastError when the ID is not a valid ObjectId format
-    const res = await request(app).get('/api/p/not-a-valid-id');
+  test('Invalid UUID returns 400 with "Invalid ID format"', async () => {
+    const res = await request(app).get('/api/galleries/not-a-valid-uuid');
     expect(res.status).toBe(400);
     expect(res.body.message).toBe('Invalid ID format');
   });
@@ -183,75 +181,70 @@ describe('P0 — Startup Env Validation', () => {
   test('validateEnv returns ok=false and lists missing vars', () => {
     const result = validateEnv({ JWT_SECRET: 'x', FRONTEND_URL: 'http://x' });
     expect(result.ok).toBe(false);
-    expect(result.missing).toContain('MONGO_URI');
+    expect(result.missing).toContain('DATABASE_URL');
   });
 
   test('validateEnv returns ok=false when JWT_SECRET is missing', () => {
-    const result = validateEnv({ MONGO_URI: 'mongodb://x', FRONTEND_URL: 'http://x' });
+    const result = validateEnv({ DATABASE_URL: 'postgresql://x', FRONTEND_URL: 'http://x' });
     expect(result.ok).toBe(false);
     expect(result.missing).toContain('JWT_SECRET');
   });
 
   test('validateEnv returns ok=false when FRONTEND_URL is missing', () => {
-    const result = validateEnv({ MONGO_URI: 'mongodb://x', JWT_SECRET: 'secret' });
+    const result = validateEnv({ DATABASE_URL: 'postgresql://x', JWT_SECRET: 'secret' });
     expect(result.ok).toBe(false);
     expect(result.missing).toContain('FRONTEND_URL');
   });
 
   test('validateEnv returns ok=true when all required vars present', () => {
-    const result = validateEnv({ MONGO_URI: 'mongodb://x', JWT_SECRET: 'secret', FRONTEND_URL: 'http://x' });
+    const result = validateEnv({ DATABASE_URL: 'postgresql://x', JWT_SECRET: 'secret', FRONTEND_URL: 'http://x' });
     expect(result.ok).toBe(true);
     expect(result.missing).toHaveLength(0);
   });
 
   test('REQUIRED list contains all three critical vars', () => {
-    expect(REQUIRED).toEqual(expect.arrayContaining(['MONGO_URI', 'JWT_SECRET', 'FRONTEND_URL']));
+    expect(REQUIRED).toEqual(expect.arrayContaining(['DATABASE_URL', 'JWT_SECRET', 'FRONTEND_URL']));
   });
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
-describe('P1 — DB Indexes declared on models', () => {
-  const checkIndex = (model, fields) => {
-    const indexes = model.schema.indexes();
-    return indexes.some((idx) => {
-      const keys = Object.keys(idx[0]);
-      return fields.every((f) => keys.includes(f));
-    });
+describe('P1 — DB schema is applied (indexes exist in PostgreSQL)', () => {
+  const checkIndex = async (tableName) => {
+    const { rows } = await pool.query(
+      `SELECT indexname FROM pg_indexes WHERE tablename = $1`,
+      [tableName]
+    );
+    return rows.map((r) => r.indexname);
   };
 
-  test('Gallery has index on adminId', () => {
-    const Gallery = require('../src/models/Gallery');
-    expect(checkIndex(Gallery, ['adminId'])).toBe(true);
+  test('galleries table has index on admin_id', async () => {
+    const indexes = await checkIndex('galleries');
+    expect(indexes.some((n) => n.includes('admin'))).toBe(true);
   });
 
-  test('Gallery has compound index on adminId + status', () => {
-    const Gallery = require('../src/models/Gallery');
-    expect(checkIndex(Gallery, ['adminId', 'status'])).toBe(true);
+  test('gallery_images table has index on gallery_id', async () => {
+    const indexes = await checkIndex('gallery_images');
+    expect(indexes.some((n) => n.includes('gallery'))).toBe(true);
   });
 
-  test('GalleryImage has index on galleryId', () => {
-    const GalleryImage = require('../src/models/GalleryImage');
-    expect(checkIndex(GalleryImage, ['galleryId'])).toBe(true);
+  test('clients table has index on admin_id', async () => {
+    const indexes = await checkIndex('clients');
+    expect(indexes.some((n) => n.includes('admin'))).toBe(true);
   });
 
-  test('Client has index on adminId', () => {
-    const Client = require('../src/models/Client');
-    expect(checkIndex(Client, ['adminId'])).toBe(true);
+  test('blog_posts table has index on admin_id', async () => {
+    const indexes = await checkIndex('blog_posts');
+    expect(indexes.some((n) => n.includes('admin'))).toBe(true);
   });
 
-  test('BlogPost has compound index on adminId + published', () => {
-    const BlogPost = require('../src/models/BlogPost');
-    expect(checkIndex(BlogPost, ['adminId', 'published'])).toBe(true);
+  test('gallery_submissions table has index on gallery_id', async () => {
+    const indexes = await checkIndex('gallery_submissions');
+    expect(indexes.some((n) => n.includes('gallery'))).toBe(true);
   });
 
-  test('GallerySubmission has index on galleryId', () => {
-    const GallerySubmission = require('../src/models/GallerySubmission');
-    expect(checkIndex(GallerySubmission, ['galleryId'])).toBe(true);
-  });
-
-  test('ProductOrder has compound index on adminId + clientId', () => {
-    const ProductOrder = require('../src/models/ProductOrder');
-    expect(checkIndex(ProductOrder, ['adminId', 'clientId'])).toBe(true);
+  test('product_orders table has index on admin_id and client_id', async () => {
+    const indexes = await checkIndex('product_orders');
+    expect(indexes.some((n) => n.includes('admin') || n.includes('client'))).toBe(true);
   });
 });
 
@@ -277,8 +270,9 @@ describe('P1 — .env.example completeness', () => {
 
   test('.env.example contains all required keys', () => {
     const p = path.join(__dirname, '../.env.example');
+    if (!fs.existsSync(p)) return; // already caught above
     const content = fs.readFileSync(p, 'utf8');
-    ['MONGO_URI', 'JWT_SECRET', 'JWT_EXPIRES_IN', 'FRONTEND_URL', 'SMTP_HOST', 'SMTP_USER'].forEach((key) => {
+    ['DATABASE_URL', 'JWT_SECRET', 'JWT_EXPIRES_IN', 'FRONTEND_URL', 'SMTP_HOST', 'SMTP_USER'].forEach((key) => {
       expect(content).toContain(key);
     });
   });

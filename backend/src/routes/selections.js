@@ -11,9 +11,14 @@ const { withTransaction } = require('../utils/transaction');
 
 const router = express.Router({ mergeParams: true });
 
+const UUID_RE = /^[0-9a-f-]{36}$/i;
+
 // POST /api/galleries/:galleryId/submit  — PUBLIC (client submits final selection)
 router.post('/submit', asyncHandler(async (req, res) => {
   const { galleryId } = req.params;
+  if (!UUID_RE.test(galleryId))
+    return res.status(400).json({ message: 'Invalid gallery ID format' });
+
   const { sessionId, selectedImageIds, clientMessage, imageComments, heroImageId } = req.body;
 
   if (!Array.isArray(selectedImageIds)) {
@@ -30,8 +35,8 @@ router.post('/submit', asyncHandler(async (req, res) => {
   // Validate every submitted image actually belongs to this gallery
   if (selectedImageIds.length > 0) {
     const validCount = await GalleryImage.countDocuments({
-      _id: { $in: selectedImageIds },
       galleryId,
+      _id: { $in: selectedImageIds },
     });
     if (validCount !== selectedImageIds.length) {
       return res.status(400).json({ message: 'One or more selected images are invalid.' });
@@ -39,23 +44,29 @@ router.post('/submit', asyncHandler(async (req, res) => {
   }
 
   let submission;
-  await withTransaction(async (session) => {
-    const opts = session ? { session } : {};
-
+  await withTransaction(async (client) => {
     submission = await GallerySubmission.findOneAndUpdate(
       { galleryId, sessionId },
-      { $set: { selectedImageIds, clientMessage, imageComments: imageComments || {}, heroImageId: heroImageId || null, submittedAt: new Date() } },
-      { upsert: true, new: true, setDefaultsOnInsert: true, ...opts },
+      {
+        $set: {
+          selectedImageIds,
+          clientMessage,
+          imageComments: imageComments || {},
+          heroImageId: heroImageId || null,
+          submittedAt: new Date(),
+        },
+      },
+      { upsert: true, new: true, setDefaultsOnInsert: true }
     );
 
     gallery.status = 'selection_submitted';
-    await gallery.save(opts);
+    await Gallery.save(gallery, client);
 
     if (gallery.clientId) {
       await Client.findOneAndUpdate(
         { _id: gallery.clientId, status: { $in: ['gallery_sent', 'viewed'] } },
         { status: 'selection_submitted' },
-        opts
+        {}
       );
     }
   });
@@ -66,8 +77,8 @@ router.post('/submit', asyncHandler(async (req, res) => {
     if (admin?.pushToken) {
       let clientName = 'A client';
       if (gallery.clientId) {
-        const client = await Client.findById(gallery.clientId).select('name');
-        if (client) clientName = client.name;
+        const clientDoc = await Client.findById(gallery.clientId);
+        if (clientDoc) clientName = clientDoc.name;
       }
       await fetch('https://exp.host/--/api/v2/push/send', {
         method: 'POST',
@@ -76,7 +87,7 @@ router.post('/submit', asyncHandler(async (req, res) => {
           to: admin.pushToken,
           title: 'New Selection Submitted',
           body: `${clientName} has submitted their photo selection`,
-          data: { galleryId: gallery._id.toString() },
+          data: { galleryId: gallery.id },
           sound: 'default',
           priority: 'high',
         }),
@@ -91,32 +102,44 @@ router.post('/submit', asyncHandler(async (req, res) => {
 
 // GET /api/galleries/:galleryId/submissions  — ADMIN
 router.get('/submissions', protect, asyncHandler(async (req, res) => {
-  const gallery = await Gallery.findOne({ _id: req.params.galleryId, adminId: req.admin._id });
+  if (!UUID_RE.test(req.params.galleryId))
+    return res.status(400).json({ message: 'Invalid gallery ID format' });
+  const gallery = await Gallery.findOne({ _id: req.params.galleryId, adminId: req.admin.id });
   if (!gallery) return res.status(403).json({ message: 'Forbidden' });
-  const submissions = await GallerySubmission.find({ galleryId: req.params.galleryId })
-    .populate('selectedImageIds')
-    .sort({ submittedAt: -1 });
+  const submissions = await GallerySubmission.find({ galleryId: req.params.galleryId }, { populate: true });
   res.json(submissions);
 }));
 
 // DELETE /api/galleries/:galleryId/submissions/:submissionId  — ADMIN
 router.delete('/submissions/:submissionId', protect, asyncHandler(async (req, res) => {
+  if (!UUID_RE.test(req.params.galleryId) || !UUID_RE.test(req.params.submissionId))
+    return res.status(400).json({ message: 'Invalid ID format' });
   // Verify the gallery belongs to this admin before deleting its submission
-  const gallery = await Gallery.findOne({ _id: req.params.galleryId, adminId: req.admin._id });
+  const gallery = await Gallery.findOne({ _id: req.params.galleryId, adminId: req.admin.id });
   if (!gallery) return res.status(403).json({ message: 'Forbidden' });
-  await GallerySubmission.findOneAndDelete({ _id: req.params.submissionId, galleryId: req.params.galleryId });
+  await GallerySubmission.findOneAndDelete({
+    _id: req.params.submissionId,
+    galleryId: req.params.galleryId,
+  });
   res.json({ message: 'Submission deleted' });
 }));
 
 // DELETE /api/galleries/:galleryId/submissions/:submissionId/images/:imageId  — ADMIN
 router.delete('/submissions/:submissionId/images/:imageId', protect, asyncHandler(async (req, res) => {
-  const gallery = await Gallery.findOne({ _id: req.params.galleryId, adminId: req.admin._id });
+  if (
+    !UUID_RE.test(req.params.galleryId) ||
+    !UUID_RE.test(req.params.submissionId) ||
+    !UUID_RE.test(req.params.imageId)
+  ) {
+    return res.status(400).json({ message: 'Invalid ID format' });
+  }
+  const gallery = await Gallery.findOne({ _id: req.params.galleryId, adminId: req.admin.id });
   if (!gallery) return res.status(403).json({ message: 'Forbidden' });
-  const submission = await GallerySubmission.findOneAndUpdate(
-    { _id: req.params.submissionId, galleryId: req.params.galleryId },
-    { $pull: { selectedImageIds: req.params.imageId } },
-    { new: true },
-  ).populate('selectedImageIds');
+  const submission = await GallerySubmission.pullSelectedImage(
+    req.params.submissionId,
+    req.params.galleryId,
+    req.params.imageId
+  );
   if (!submission) return res.status(404).json({ message: 'Submission not found' });
   res.json(submission);
 }));

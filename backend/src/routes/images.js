@@ -13,6 +13,8 @@ const logger = require('../utils/logger');
 
 const router = express.Router({ mergeParams: true });
 
+const UUID_RE = /^[0-9a-f-]{36}$/i;
+
 const THUMB_DIR = path.join(__dirname, '../../uploads/thumbnails');
 if (!fs.existsSync(THUMB_DIR)) fs.mkdirSync(THUMB_DIR, { recursive: true });
 
@@ -23,35 +25,38 @@ router.get('/', asyncHandler(async (req, res) => {
   const limit = parseInt(req.query.limit);
   const page = Math.max(1, parseInt(req.query.page) || 1);
   const filter = { galleryId: req.params.galleryId };
-  const sort = { sortOrder: 1, createdAt: 1 };
 
   if (limit > 0) {
-    const [images, total] = await Promise.all([
-      GalleryImage.find(filter).sort(sort).skip((page - 1) * limit).limit(limit),
-      GalleryImage.countDocuments(filter),
-    ]);
+    const { images, total } = await GalleryImage.findPaginated(filter, {}, (page - 1) * limit, limit);
     return res.json({ images, total, page, totalPages: Math.ceil(total / limit) });
   }
 
-  const images = await GalleryImage.find(filter).sort(sort);
+  const images = await GalleryImage.find(filter);
   res.json(images);
 }));
 
 // POST /api/galleries/:galleryId/images  — ADMIN
 router.post('/', protect, checkQuota, upload.array('images', 1000), validateImageMagicBytes, asyncHandler(async (req, res) => {
   const { galleryId } = req.params;
+  if (!UUID_RE.test(galleryId))
+    return res.status(400).json({ message: 'Invalid gallery ID format' });
+
   const gallery = await Gallery.findById(galleryId);
   if (!gallery) return res.status(404).json({ message: 'Gallery not found' });
-  if (gallery.adminId.toString() !== req.admin._id.toString())
+  if (gallery.adminId !== req.admin.id)
     return res.status(403).json({ message: 'Forbidden' });
 
   // Build a map of originalImageId -> originalImage for delivery galleries
   let selectedImageMap = {};
   if (gallery.isDelivery && gallery.deliveryOf) {
     const submissions = await GallerySubmission.find({ galleryId: gallery.deliveryOf });
-    const selectedIds = [...new Set(submissions.flatMap((s) => s.selectedImageIds.map((id) => id.toString())))];
-    const originalImages = await GalleryImage.find({ _id: { $in: selectedIds } });
-    selectedImageMap = Object.fromEntries(originalImages.map((img) => [img._id.toString(), img]));
+    const selectedIds = [
+      ...new Set(submissions.flatMap((s) => (s.selectedImageIds || []).map((id) => id.toString()))),
+    ];
+    const originalImages = selectedIds.length
+      ? await GalleryImage.find({ _id: { $in: selectedIds } })
+      : [];
+    selectedImageMap = Object.fromEntries(originalImages.map((img) => [img.id, img]));
   }
 
   const imageDocs = await Promise.all(
@@ -91,9 +96,12 @@ router.post('/', protect, checkQuota, upload.array('images', 1000), validateImag
 
 // PATCH /api/galleries/:galleryId/images/:imageId/before  — ADMIN
 router.patch('/:imageId/before', protect, upload.single('before'), validateImageMagicBytes, asyncHandler(async (req, res) => {
+  if (!UUID_RE.test(req.params.imageId))
+    return res.status(400).json({ message: 'Invalid image ID format' });
+
   const image = await GalleryImage.findById(req.params.imageId);
   if (!image) return res.status(404).json({ message: 'Image not found' });
-  const gallery = await Gallery.findOne({ _id: image.galleryId, adminId: req.admin._id });
+  const gallery = await Gallery.findOne({ _id: image.galleryId, adminId: req.admin.id });
   if (!gallery) return res.status(403).json({ message: 'Forbidden' });
   if (!req.file) return res.status(400).json({ message: 'No file uploaded' });
 
@@ -105,15 +113,18 @@ router.patch('/:imageId/before', protect, upload.single('before'), validateImage
   }
 
   image.beforePath = `/uploads/${req.file.filename}`;
-  await image.save();
+  await GalleryImage.save(image);
   res.json(image);
 }));
 
 // DELETE /api/galleries/:galleryId/images/:imageId  — ADMIN
 router.delete('/:imageId', protect, asyncHandler(async (req, res) => {
+  if (!UUID_RE.test(req.params.imageId))
+    return res.status(400).json({ message: 'Invalid image ID format' });
+
   const image = await GalleryImage.findById(req.params.imageId);
   if (!image) return res.status(404).json({ message: 'Image not found' });
-  const gallery = await Gallery.findOne({ _id: image.galleryId, adminId: req.admin._id });
+  const gallery = await Gallery.findOne({ _id: image.galleryId, adminId: req.admin.id });
   if (!gallery) return res.status(403).json({ message: 'Forbidden' });
 
   const filePath = path.join(__dirname, '../../uploads', image.filename);

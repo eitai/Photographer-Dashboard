@@ -9,7 +9,6 @@ const cookieParser = require('cookie-parser');
 const compression = require('compression');
 const rateLimit = require('express-rate-limit');
 const morgan = require('morgan');
-const mongoose = require('mongoose');
 const path = require('path');
 
 const logger = require('./utils/logger');
@@ -154,11 +153,17 @@ app.use('/api',    v1); // backward compat — existing clients keep working
 
 // ── Health check — available at both /api/health and /api/v1/health ──────────
 app.get(['/api/health', '/api/v1/health'], async (req, res) => {
-  const dbState = mongoose.connection.readyState;
-  const dbStatus = { 0: 'disconnected', 1: 'connected', 2: 'connecting', 3: 'disconnecting' }[dbState] || 'unknown';
-  const status = dbState === 1 ? 'ok' : 'degraded';
-  res.status(dbState === 1 ? 200 : 503).json({
-    status,
+  let dbStatus = 'disconnected';
+  try {
+    const { pool } = require('./config/db');
+    await pool.query('SELECT 1');
+    dbStatus = 'connected';
+  } catch (_) {
+    // pool unavailable — status stays disconnected
+  }
+  const ok = dbStatus === 'connected';
+  res.status(ok ? 200 : 503).json({
+    status: ok ? 'ok' : 'degraded',
     timestamp: new Date().toISOString(),
     uptime: Math.floor(process.uptime()),
     database: dbStatus,
@@ -181,9 +186,6 @@ app.use((err, req, res, next) => {
   }
   if (err.name === 'ValidationError') {
     return res.status(400).json({ message: err.message });
-  }
-  if (err.name === 'CastError') {
-    return res.status(400).json({ message: 'Invalid ID format' });
   }
 
   const statusCode = err.status || err.statusCode || 500;

@@ -18,13 +18,16 @@ router.use(asyncHandler(async (req, res, next) => {
 
 // GET /api/p/:id
 router.get('/', (req, res) => {
-  const { _id, name, studioName, username } = req.photographerAdmin;
-  res.json({ id: _id, name, studioName, username });
+  const { id, name, studioName, username } = req.photographerAdmin;
+  res.json({ id, name, studioName, username });
 });
 
 // GET /api/p/:id/settings
 router.get('/settings', asyncHandler(async (req, res) => {
-  const settings = await SiteSettings.findOne({ adminId: req.photographerAdmin._id }).populate('featuredImageIds');
+  const settings = await SiteSettings.findOne(
+    { adminId: req.photographerAdmin.id },
+    { populate: true }
+  );
   const featuredImages = (settings?.featuredImageIds || []).filter(Boolean);
   res.json({
     featuredImages,
@@ -42,16 +45,17 @@ router.get('/settings', asyncHandler(async (req, res) => {
 
 // GET /api/p/:id/blog
 router.get('/blog', asyncHandler(async (req, res) => {
-  const posts = await BlogPost.find({ adminId: req.photographerAdmin._id, published: true })
-    .select('-content')
-    .sort({ publishedAt: -1, createdAt: -1 });
+  const posts = await BlogPost.find(
+    { adminId: req.photographerAdmin.id, published: true },
+    { selectContent: false }
+  );
   res.json(posts);
 }));
 
 // GET /api/p/:id/blog/:slug
 router.get('/blog/:slug', asyncHandler(async (req, res) => {
   const post = await BlogPost.findOne({
-    adminId: req.photographerAdmin._id,
+    adminId: req.photographerAdmin.id,
     slug: req.params.slug,
     published: true,
   });
@@ -67,9 +71,9 @@ router.post('/contact', asyncHandler(async (req, res) => {
 
   const submission = await ContactSubmission.create({
     name, phone, email, sessionType, message,
-    adminId: req.photographerAdmin._id,
+    adminId: req.photographerAdmin.id,
   });
-  res.status(201).json({ message: 'Message received', id: submission._id });
+  res.status(201).json({ message: 'Message received', id: submission.id });
 }));
 
 module.exports = router;

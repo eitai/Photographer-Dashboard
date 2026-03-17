@@ -11,7 +11,7 @@ router.use(superprotect);
 
 // GET /api/admins
 router.get('/', asyncHandler(async (req, res) => {
-  const admins = await Admin.find().select('-password').sort({ createdAt: 1 });
+  const admins = await Admin.find();
   res.json(admins);
 }));
 
@@ -32,13 +32,28 @@ router.post('/', asyncHandler(async (req, res) => {
     if (usernameTaken) return res.status(400).json({ message: 'Username already taken' });
   }
 
-  const admin = await Admin.create({ name, email, password, role: role || 'admin', username: username || undefined, studioName: studioName || undefined });
-  res.status(201).json({ id: admin._id, name: admin.name, email: admin.email, role: admin.role, username: admin.username || null, studioName: admin.studioName || null, createdAt: admin.createdAt });
+  const admin = await Admin.create({
+    name,
+    email,
+    password,
+    role: role || 'admin',
+    username: username || undefined,
+    studioName: studioName || undefined,
+  });
+  res.status(201).json({
+    id: admin.id,
+    name: admin.name,
+    email: admin.email,
+    role: admin.role,
+    username: admin.username || null,
+    studioName: admin.studioName || null,
+    createdAt: admin.createdAt,
+  });
 }));
 
 // DELETE /api/admins/:id
 router.delete('/:id', asyncHandler(async (req, res) => {
-  if (req.params.id === req.admin._id.toString())
+  if (req.params.id === req.admin.id)
     return res.status(400).json({ message: 'Cannot delete your own account' });
   await Admin.findByIdAndDelete(req.params.id);
   res.json({ message: 'Admin deleted' });
@@ -64,21 +79,18 @@ router.patch('/:id', asyncHandler(async (req, res) => {
   const { name, email, studioName, username } = req.body;
 
   if (username) {
-    const conflict = await Admin.findOne({ username: username.toLowerCase(), _id: { $ne: req.params.id } });
-    if (conflict) return res.status(400).json({ message: 'Username already taken' });
+    const conflict = await Admin.findOne({ username: username.toLowerCase() });
+    if (conflict && conflict.id !== req.params.id)
+      return res.status(400).json({ message: 'Username already taken' });
   }
 
-  const updated = await Admin.findByIdAndUpdate(
-    req.params.id,
-    {
-      ...(name !== undefined && { name }),
-      ...(email !== undefined && { email }),
-      ...(studioName !== undefined && { studioName: studioName || undefined }),
-      ...(username !== undefined && { username: username ? username.toLowerCase() : undefined }),
-    },
-    { new: true, runValidators: true }
-  ).select('-password');
+  const update = {};
+  if (name !== undefined) update.name = name;
+  if (email !== undefined) update.email = email;
+  if (studioName !== undefined) update.studioName = studioName || null;
+  if (username !== undefined) update.username = username ? username.toLowerCase() : null;
 
+  const updated = await Admin.findByIdAndUpdate(req.params.id, update);
   if (!updated) return res.status(404).json({ message: 'Admin not found' });
   res.json(updated);
 }));
@@ -87,21 +99,15 @@ router.patch('/:id', asyncHandler(async (req, res) => {
 router.put('/:id/landing', asyncHandler(async (req, res) => {
   const { bio, heroSubtitle, phone, contactEmail, instagramHandle, facebookUrl } = req.body;
 
-  const settings = await SiteSettings.findOneAndUpdate(
-    { adminId: req.params.id },
-    {
-      $set: {
-        ...(bio !== undefined && { bio }),
-        ...(heroSubtitle !== undefined && { heroSubtitle }),
-        ...(phone !== undefined && { phone }),
-        ...(contactEmail !== undefined && { contactEmail }),
-        ...(instagramHandle !== undefined && { instagramHandle }),
-        ...(facebookUrl !== undefined && { facebookUrl }),
-      },
-    },
-    { new: true, upsert: true, setDefaultsOnInsert: true }
-  );
+  const data = {};
+  if (bio !== undefined) data.bio = bio;
+  if (heroSubtitle !== undefined) data.heroSubtitle = heroSubtitle;
+  if (phone !== undefined) data.phone = phone;
+  if (contactEmail !== undefined) data.contactEmail = contactEmail;
+  if (instagramHandle !== undefined) data.instagramHandle = instagramHandle;
+  if (facebookUrl !== undefined) data.facebookUrl = facebookUrl;
 
+  const settings = await SiteSettings.upsert(req.params.id, data);
   res.json({ message: 'Landing page updated', settings });
 }));
 
@@ -109,11 +115,7 @@ router.put('/:id/landing', asyncHandler(async (req, res) => {
 router.post('/:id/hero-image', upload.single('image'), validateImageMagicBytes, asyncHandler(async (req, res) => {
   if (!req.file) return res.status(400).json({ message: 'No image uploaded' });
   const heroImagePath = `/uploads/${req.file.filename}`;
-  await SiteSettings.findOneAndUpdate(
-    { adminId: req.params.id },
-    { $set: { heroImagePath } },
-    { upsert: true, setDefaultsOnInsert: true }
-  );
+  await SiteSettings.upsert(req.params.id, { heroImagePath });
   res.json({ heroImagePath });
 }));
 
@@ -121,11 +123,7 @@ router.post('/:id/hero-image', upload.single('image'), validateImageMagicBytes, 
 router.post('/:id/profile-image', upload.single('image'), validateImageMagicBytes, asyncHandler(async (req, res) => {
   if (!req.file) return res.status(400).json({ message: 'No image uploaded' });
   const profileImagePath = `/uploads/${req.file.filename}`;
-  await SiteSettings.findOneAndUpdate(
-    { adminId: req.params.id },
-    { $set: { profileImagePath } },
-    { upsert: true, setDefaultsOnInsert: true }
-  );
+  await SiteSettings.upsert(req.params.id, { profileImagePath });
   res.json({ profileImagePath });
 }));
 

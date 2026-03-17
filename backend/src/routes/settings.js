@@ -10,7 +10,7 @@ const router = express.Router();
 
 // GET /api/settings  — ADMIN
 router.get('/', protect, asyncHandler(async (req, res) => {
-  const settings = await SiteSettings.findOne({ adminId: req.admin._id }).populate('featuredImageIds');
+  const settings = await SiteSettings.findOne({ adminId: req.admin.id }, { populate: true });
   const featuredImages = (settings?.featuredImageIds || []).filter(Boolean);
   res.json({
     featuredImages,
@@ -32,45 +32,51 @@ router.put('/featured', protect, asyncHandler(async (req, res) => {
 
   if (ids.length > 0) {
     // Verify every referenced image belongs to a gallery owned by this admin
-    const adminGalleries = await Gallery.find({ adminId: req.admin._id }).select('_id');
-    const adminGalleryIds = new Set(adminGalleries.map((g) => g._id.toString()));
-    const images = await GalleryImage.find({ _id: { $in: ids } }).select('galleryId');
+    const adminGalleries = await Gallery.find({ adminId: req.admin.id });
+    const adminGalleryIds = new Set(adminGalleries.map((g) => g.id));
+    const images = await GalleryImage.find({ _id: { $in: ids } });
     const allOwned =
       images.length === ids.length &&
-      images.every((img) => adminGalleryIds.has(img.galleryId.toString()));
+      images.every((img) => adminGalleryIds.has(img.galleryId));
     if (!allOwned) {
       return res.status(403).json({ message: 'One or more images do not belong to your galleries' });
     }
   }
 
-  const settings = await SiteSettings.findOneAndUpdate(
-    { adminId: req.admin._id },
-    { featuredImageIds: ids, adminId: req.admin._id },
-    { upsert: true, new: true, setDefaultsOnInsert: true }
-  ).populate('featuredImageIds');
+  const settings = await SiteSettings.upsert(req.admin.id, { featuredImageIds: ids }, { populate: true });
+  // After upsert with populate, featuredImageIds is the populated array
   res.json({ featuredImages: settings.featuredImageIds });
 }));
 
 // PUT /api/settings/landing  — ADMIN
 router.put('/landing', protect, asyncHandler(async (req, res) => {
   const { bio, phone, instagramHandle, facebookUrl, heroSubtitle, contactEmail, theme } = req.body;
-  const settings = await SiteSettings.findOneAndUpdate(
-    { adminId: req.admin._id },
-    { $set: { bio, phone, instagramHandle, facebookUrl, heroSubtitle, contactEmail, theme, adminId: req.admin._id } },
-    { upsert: true, new: true, setDefaultsOnInsert: true }
-  );
-  res.json({ bio: settings.bio, phone: settings.phone, instagramHandle: settings.instagramHandle, facebookUrl: settings.facebookUrl, heroSubtitle: settings.heroSubtitle, contactEmail: settings.contactEmail, theme: settings.theme });
+  const data = {};
+  if (bio !== undefined) data.bio = bio;
+  if (phone !== undefined) data.phone = phone;
+  if (instagramHandle !== undefined) data.instagramHandle = instagramHandle;
+  if (facebookUrl !== undefined) data.facebookUrl = facebookUrl;
+  if (heroSubtitle !== undefined) data.heroSubtitle = heroSubtitle;
+  if (contactEmail !== undefined) data.contactEmail = contactEmail;
+  if (theme !== undefined) data.theme = theme;
+
+  const settings = await SiteSettings.upsert(req.admin.id, data);
+  res.json({
+    bio: settings.bio,
+    phone: settings.phone,
+    instagramHandle: settings.instagramHandle,
+    facebookUrl: settings.facebookUrl,
+    heroSubtitle: settings.heroSubtitle,
+    contactEmail: settings.contactEmail,
+    theme: settings.theme,
+  });
 }));
 
 // POST /api/settings/hero-image  — ADMIN
 router.post('/hero-image', protect, upload.single('image'), validateImageMagicBytes, asyncHandler(async (req, res) => {
   if (!req.file) return res.status(400).json({ message: 'No image provided' });
   const heroImagePath = `/uploads/${req.file.filename}`;
-  await SiteSettings.findOneAndUpdate(
-    { adminId: req.admin._id },
-    { $set: { heroImagePath, adminId: req.admin._id } },
-    { upsert: true, new: true, setDefaultsOnInsert: true }
-  );
+  await SiteSettings.upsert(req.admin.id, { heroImagePath });
   res.json({ heroImagePath });
 }));
 
@@ -78,11 +84,7 @@ router.post('/hero-image', protect, upload.single('image'), validateImageMagicBy
 router.post('/profile-image', protect, upload.single('image'), validateImageMagicBytes, asyncHandler(async (req, res) => {
   if (!req.file) return res.status(400).json({ message: 'No image provided' });
   const profileImagePath = `/uploads/${req.file.filename}`;
-  await SiteSettings.findOneAndUpdate(
-    { adminId: req.admin._id },
-    { $set: { profileImagePath, adminId: req.admin._id } },
-    { upsert: true, new: true, setDefaultsOnInsert: true }
-  );
+  await SiteSettings.upsert(req.admin.id, { profileImagePath });
   res.json({ profileImagePath });
 }));
 

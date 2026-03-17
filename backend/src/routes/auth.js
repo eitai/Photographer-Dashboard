@@ -10,7 +10,14 @@ const router = express.Router();
 const signToken = (id) =>
   jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: process.env.JWT_EXPIRES_IN || '7d' });
 
-const formatAdmin = (a) => ({ id: a._id, name: a.name, email: a.email, role: a.role, username: a.username || null, studioName: a.studioName || null });
+const formatAdmin = (a) => ({
+  id: a.id,
+  name: a.name,
+  email: a.email,
+  role: a.role,
+  username: a.username || null,
+  studioName: a.studioName || null,
+});
 
 const COOKIE_OPTIONS = {
   httpOnly: true,
@@ -27,15 +34,15 @@ router.post('/login', asyncHandler(async (req, res) => {
   if (!identifier || !password)
     return res.status(400).json({ message: 'Credentials required' });
 
-  // Reject non-string values — prevents NoSQL injection via { "$gt": "" } objects
+  // Reject non-string values — prevents injection via { "$gt": "" } objects
   if (typeof identifier !== 'string' || typeof password !== 'string')
     return res.status(400).json({ message: 'Credentials must be strings' });
 
   const admin = await Admin.findOne({ $or: [{ email: identifier }, { username: identifier }] });
-  if (!admin || !(await admin.comparePassword(password)))
+  if (!admin || !(await Admin.comparePassword(admin, password)))
     return res.status(401).json({ message: 'Invalid credentials' });
 
-  const token = signToken(admin._id);
+  const token = signToken(admin.id);
   res.cookie('koral_token', token, COOKIE_OPTIONS);
   res.json({ admin: formatAdmin(admin) });
 }));
@@ -56,11 +63,13 @@ router.put('/password', protect, asyncHandler(async (req, res) => {
   const { current, next } = req.body;
   const pwErr = validatePassword(next);
   if (pwErr) return res.status(400).json({ message: pwErr });
-  const admin = await Admin.findById(req.admin._id);
-  if (!(await admin.comparePassword(current)))
+
+  // Re-fetch to get password hash
+  const admin = await Admin.findById(req.admin.id);
+  if (!(await Admin.comparePassword(admin, current)))
     return res.status(400).json({ message: 'Current password is incorrect' });
-  admin.password = next;
-  await admin.save();
+
+  await Admin.updatePassword(req.admin.id, next);
   res.json({ message: 'Password updated' });
 }));
 
@@ -70,7 +79,7 @@ router.post('/push-token', protect, asyncHandler(async (req, res) => {
   if (!token || typeof token !== 'string') {
     return res.status(400).json({ message: 'token is required and must be a string' });
   }
-  await Admin.findByIdAndUpdate(req.admin._id, { pushToken: token });
+  await Admin.findByIdAndUpdate(req.admin.id, { pushToken: token });
   res.json({ message: 'Push token saved' });
 }));
 
@@ -83,11 +92,13 @@ router.patch('/profile', protect, asyncHandler(async (req, res) => {
   if (username !== undefined) update.username = username.toLowerCase().trim();
 
   if (update.username) {
-    const conflict = await Admin.findOne({ username: update.username, _id: { $ne: req.admin._id } });
-    if (conflict) return res.status(409).json({ message: 'Username already taken' });
+    // Check for conflict with another admin
+    const conflict = await Admin.findOne({ username: update.username });
+    if (conflict && conflict.id !== req.admin.id)
+      return res.status(409).json({ message: 'Username already taken' });
   }
 
-  const updated = await Admin.findByIdAndUpdate(req.admin._id, update, { new: true, runValidators: true }).select('-password');
+  const updated = await Admin.findByIdAndUpdate(req.admin.id, update);
   res.json({ admin: formatAdmin(updated) });
 }));
 
@@ -95,9 +106,10 @@ router.patch('/profile', protect, asyncHandler(async (req, res) => {
 router.post('/seed', asyncHandler(async (req, res) => {
   const { name, email, username, password } = req.body;
   const count = await Admin.countDocuments();
-  if (count > 0) return res.status(400).json({ message: 'Admins already exist. Use superadmin panel to add more.' });
+  if (count > 0)
+    return res.status(400).json({ message: 'Admins already exist. Use superadmin panel to add more.' });
   const admin = await Admin.create({ name, email, username, password, role: 'superadmin' });
-  res.status(201).json({ message: 'Superadmin created', id: admin._id });
+  res.status(201).json({ message: 'Superadmin created', id: admin.id });
 }));
 
 module.exports = router;
