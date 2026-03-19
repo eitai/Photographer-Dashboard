@@ -1,0 +1,14 @@
+{
+  "name": "koral-light-studio-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "start": "concurrently --names \"db+api,frontend\" --prefix-colors \"cyan,magenta\" \"npm run start:backend\" \"npm run start:frontend\"",
+    "start:backend": "docker compose up --build",
+    "start:frontend": "npm --prefix koral-light-studio install && npm --prefix koral-light-studio run dev",
+    "stop": "docker compose down"
+  },
+  "devDependencies": {
+    "concurrently": "^9.0.1"
+  }
+}
