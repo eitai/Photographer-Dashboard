@@ -18,7 +18,8 @@
       "Bash(node -e \"require\\(''./src/middleware/upload''\\)\")",
       "Bash(node -e \"require\\(''./src/app''\\)\")",
       "Bash(find 'c:/Users/eitai/Desktop/codevalue/store test/koral-light-studio/src' -type f -name *gallery* -o -name *Gallery*)",
-      "Bash(node -e \":*)"
+      "Bash(node -e \":*)",
+      "Bash(curl -s http://localhost:5000/api/auth/seed -X POST -H \"Content-Type: application/json\" -d '{}')"
     ]
   }
 }
