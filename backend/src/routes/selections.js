@@ -44,7 +44,7 @@ router.post('/submit', asyncHandler(async (req, res) => {
   }
 
   let submission;
-  await withTransaction(async (client) => {
+  await withTransaction(async (txClient) => {
     submission = await GallerySubmission.findOneAndUpdate(
       { galleryId, sessionId },
       {
@@ -56,17 +56,19 @@ router.post('/submit', asyncHandler(async (req, res) => {
           submittedAt: new Date(),
         },
       },
-      { upsert: true, new: true, setDefaultsOnInsert: true }
+      { upsert: true, new: true, setDefaultsOnInsert: true },
+      txClient
     );
 
     gallery.status = 'selection_submitted';
-    await Gallery.save(gallery, client);
+    await Gallery.save(gallery, txClient);
 
     if (gallery.clientId) {
       await Client.findOneAndUpdate(
         { _id: gallery.clientId, status: { $in: ['gallery_sent', 'viewed'] } },
         { status: 'selection_submitted' },
-        {}
+        {},
+        txClient
       );
     }
   });

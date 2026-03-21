@@ -49,7 +49,7 @@ async function create(data) {
   return rowToCamel(rows[0]);
 }
 
-async function findOneAndUpdate(filter, update, opts = {}) {
+async function findOneAndUpdate(filter, update, opts = {}, pgClient = null) {
   const id = filter._id || filter.id;
   const adminId = filter.adminId || filter.admin_id;
 
@@ -90,7 +90,8 @@ async function findOneAndUpdate(filter, update, opts = {}) {
     }
   }
 
-  const { rows } = await pool.query(
+  const db = pgClient || pool;
+  const { rows } = await db.query(
     `UPDATE clients SET ${sets.join(', ')} WHERE ${whereParts.join(' AND ')} RETURNING *`,
     vals
   );
@@ -107,8 +108,8 @@ async function findOneAndDelete(filter) {
   return rows[0] ? rowToCamel(rows[0]) : null;
 }
 
-async function findByIdAndUpdate(id, update, opts = {}) {
-  return findOneAndUpdate({ _id: id }, update, opts);
+async function findByIdAndUpdate(id, update, opts = {}, pgClient = null) {
+  return findOneAndUpdate({ _id: id }, update, opts, pgClient);
 }
 
 module.exports = {

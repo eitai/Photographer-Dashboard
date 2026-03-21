@@ -6,13 +6,13 @@
 
 @layer base {
   :root {
-    --background: #faf8f4;
+    --background: #f5f0ea;
     --foreground: #3c3a38;
 
-    --card: #f5f0ea;
+    --card: #ffffff;
     --card-foreground: #3c3a38;
 
-    --popover: #faf8f4;
+    --popover: #ffffff;
     --popover-foreground: #3c3a38;
 
     --primary: #e7b8b5;
@@ -36,7 +36,7 @@
 
     --radius: 0.5rem;
 
-    --sidebar-background: #faf8f4;
+    --sidebar-background: #ffffff;
     --sidebar-foreground: #3c3a38;
     --sidebar-primary: #e7b8b5;
     --sidebar-primary-foreground: #3c3a38;
@@ -48,7 +48,7 @@
     /* Custom tokens */
     --blush: #e7b8b5;
     --beige: #ede5da;
-    --ivory: #faf8f4;
+    --ivory: #f5f0ea;
     --warm-gray: #8c8c8c;
     --charcoal: #3c3a38;
 

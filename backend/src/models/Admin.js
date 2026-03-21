@@ -2,7 +2,10 @@ const pool = require('../db');
 const bcrypt = require('bcryptjs');
 const { rowToCamel } = require('../db/utils');
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 async function findById(id) {
+  if (!id || !UUID_RE.test(id)) return null;
   const { rows } = await pool.query('SELECT * FROM admins WHERE id = $1', [id]);
   return rows[0] ? rowToCamel(rows[0]) : null;
 }

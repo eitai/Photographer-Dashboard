@@ -56,12 +56,12 @@ const ThemePicker = ({ value, onChange, themes, meta, label, getLabel }: ThemePi
           className='w-full flex items-center gap-3 px-3 py-2 rounded-lg bg-card border border-beige text-charcoal text-sm hover:border-blush/50 transition-colors'
         >
           <div
-            className='w-5 h-5 rounded-full border border-black/10 flex-shrink-0'
+            className='w-4 h-4 rounded-full border  flex-shrink-0'
             style={{ background: `linear-gradient(135deg, ${current?.bg} 50%, ${current?.primary} 50%)` }}
           />
           <span className='flex-1 text-left'>{getLabel(value)}</span>
           <svg width='12' height='12' viewBox='0 0 12 12' fill='currentColor' className='text-warm-gray'>
-            <path d='M2 4l4 4 4-4' stroke='currentColor' strokeWidth='1.5' fill='none' strokeLinecap='round'/>
+            <path d='M2 4l4 4 4-4' stroke='currentColor' strokeWidth='1.5' fill='none' strokeLinecap='round' />
           </svg>
         </button>
 
@@ -74,11 +74,14 @@ const ThemePicker = ({ value, onChange, themes, meta, label, getLabel }: ThemePi
                 <button
                   key={key}
                   type='button'
-                  onClick={() => { onChange(key); setOpen(false); }}
+                  onClick={() => {
+                    onChange(key);
+                    setOpen(false);
+                  }}
                   className={`w-full flex items-center gap-3 px-3 py-2 text-sm text-left hover:bg-ivory transition-colors ${isSelected ? 'text-charcoal font-medium' : 'text-warm-gray'}`}
                 >
                   <div
-                    className='w-5 h-5 rounded-full border border-black/10 flex-shrink-0'
+                    className='w-5 h-5 rounded-full border  flex-shrink-0'
                     style={{ background: `linear-gradient(135deg, ${m.bg} 50%, ${m.primary} 50%)` }}
                   />
                   {getLabel(key)}
@@ -342,7 +345,10 @@ export const AdminSettings = () => {
             {/* Theme picker */}
             <ThemePicker
               value={landing.theme}
-              onChange={(key) => { setLanding({ ...landing, theme: key }); setTheme(key); }}
+              onChange={(key) => {
+                setLanding({ ...landing, theme: key });
+                setTheme(key);
+              }}
               themes={THEMES}
               meta={THEME_META}
               label={t('admin.settings.theme_label')}

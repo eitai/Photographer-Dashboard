@@ -47,7 +47,7 @@ async function find(filter = {}, { populate } = {}) {
   return Promise.all(submissions.map(_populateSelectedImages));
 }
 
-async function findOneAndUpdate(filter, update, opts = {}) {
+async function findOneAndUpdate(filter, update, opts = {}, pgClient = null) {
   const galleryId = filter.galleryId;
   const sessionId = filter.sessionId;
 
@@ -59,8 +59,10 @@ async function findOneAndUpdate(filter, update, opts = {}) {
   const clientMessage = data.clientMessage || null;
   const submittedAt = data.submittedAt || new Date();
 
+  const db = pgClient || pool;
+
   if (opts.upsert) {
-    const { rows } = await pool.query(
+    const { rows } = await db.query(
       `INSERT INTO gallery_submissions
          (gallery_id, session_id, selected_image_ids, client_message, image_comments, hero_image_id, submitted_at)
        VALUES ($1, $2, $3::uuid[], $4, $5::jsonb, $6, $7)
@@ -87,7 +89,7 @@ async function findOneAndUpdate(filter, update, opts = {}) {
 
   // Non-upsert update
   const id = filter._id || filter.id;
-  const { rows } = await pool.query(
+  const { rows } = await db.query(
     `UPDATE gallery_submissions
      SET selected_image_ids = $1::uuid[], client_message = $2, image_comments = $3::jsonb,
          hero_image_id = $4, submitted_at = $5

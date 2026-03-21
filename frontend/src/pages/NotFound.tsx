@@ -1,4 +1,3 @@
-import { Link } from 'react-router-dom';
 import { useI18n } from '@/lib/i18n';
 
 export const NotFound = () => {
@@ -8,13 +7,7 @@ export const NotFound = () => {
       <div className='text-center max-w-sm'>
         <p className=' text-8xl text-blush mb-4'>404</p>
         <h1 className=' text-2xl text-charcoal mb-3'>{t('notfound.title')}</h1>
-        <p className='text-sm text-warm-gray mb-8 leading-relaxed'>{t('notfound.body')}</p>
-        <Link
-          to='/admin'
-          className='inline-block px-6 py-2.5 rounded-lg bg-blush text-primary-foreground text-sm font-medium hover:bg-blush/80 transition-colors'
-        >
-          {t('notfound.cta')}
-        </Link>
+        <p className='text-sm text-warm-gray leading-relaxed'>{t('notfound.body')}</p>
       </div>
     </div>
   );

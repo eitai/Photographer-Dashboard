@@ -68,14 +68,7 @@ export const App = () => (
               <Suspense fallback={null}>
                 <Routes>
                   {/* Public routes */}
-                  <Route
-                    path='/'
-                    element={
-                      <PublicLayout>
-                        <Index />
-                      </PublicLayout>
-                    }
-                  />
+                  <Route path='/' element={<Index />} />
                 <Route
                   path='/portfolio'
                   element={

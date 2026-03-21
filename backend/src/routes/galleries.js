@@ -21,14 +21,15 @@ router.get('/token/:token', asyncHandler(async (req, res) => {
     return res.status(410).json({ message: 'Gallery has expired' });
 
   if (gallery.status === 'gallery_sent') {
-    await withTransaction(async (client) => {
+    await withTransaction(async (txClient) => {
       gallery.status = 'viewed';
-      await Gallery.save(gallery, client);
+      await Gallery.save(gallery, txClient);
       if (gallery.clientId) {
         await Client.findOneAndUpdate(
           { _id: gallery.clientId, status: 'gallery_sent' },
           { status: 'viewed' },
-          {}
+          {},
+          txClient
         );
       }
     });
@@ -65,13 +66,17 @@ router.post('/', protect, asyncHandler(async (req, res) => {
     const client = await Client.findById(clientId);
     if (client?.email) {
       const galleryUrl = `${process.env.FRONTEND_URL}/gallery/${gallery.token}`;
-      emailSent = await sendGalleryLink({
-        clientName: client.name,
-        clientEmail: client.email,
-        galleryName: gallery.name,
-        galleryUrl,
-        headerMessage: gallery.headerMessage,
-      });
+      try {
+        emailSent = await sendGalleryLink({
+          clientName: client.name,
+          clientEmail: client.email,
+          galleryName: gallery.name,
+          galleryUrl,
+          headerMessage: gallery.headerMessage,
+        });
+      } catch (_) {
+        emailSent = false;
+      }
       if (emailSent) {
         gallery.lastEmailSentAt = new Date();
         await Gallery.save(gallery);
@@ -91,7 +96,7 @@ router.post('/:id/delivery', protect, asyncHandler(async (req, res) => {
   if (!original) return res.status(404).json({ message: 'Gallery not found' });
 
   let delivery;
-  await withTransaction(async (client) => {
+  await withTransaction(async (txClient) => {
     const clientIdValue = original.clientId?.id || original.clientId || null;
     const galleryData = {
       adminId: req.admin.id,
@@ -105,13 +110,14 @@ router.post('/:id/delivery', protect, asyncHandler(async (req, res) => {
       status: 'delivered',
     };
 
-    delivery = await Gallery.create(galleryData, client);
+    delivery = await Gallery.create(galleryData, txClient);
 
     if (clientIdValue) {
       await Client.findOneAndUpdate(
         { _id: clientIdValue },
         { status: 'delivered' },
-        {}
+        {},
+        txClient
       );
     }
   });
@@ -134,15 +140,20 @@ router.post('/:id/resend-email', protect, asyncHandler(async (req, res) => {
   if (!clientEmail) return res.status(400).json({ message: 'Client has no email address' });
 
   const galleryUrl = `${process.env.FRONTEND_URL}/gallery/${gallery.token}`;
-  const sent = await sendGalleryLink({
-    clientName,
-    clientEmail,
-    galleryName: gallery.name,
-    galleryUrl,
-    headerMessage: gallery.headerMessage,
-  });
+  let sent = false;
+  try {
+    sent = await sendGalleryLink({
+      clientName,
+      clientEmail,
+      galleryName: gallery.name,
+      galleryUrl,
+      headerMessage: gallery.headerMessage,
+    });
+  } catch (_) {
+    sent = false;
+  }
 
-  if (!sent) return res.status(503).json({ message: 'SMTP not configured' });
+  if (!sent) return res.status(503).json({ message: 'SMTP not configured or failed' });
   gallery.lastEmailSentAt = new Date();
   await Gallery.save(gallery);
   res.json({ message: 'Email sent', lastEmailSentAt: gallery.lastEmailSentAt });

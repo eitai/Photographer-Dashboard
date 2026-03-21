@@ -123,7 +123,7 @@ export const AdminClients = () => {
               >
                 {SESSION_TYPES.map((st) => (
                   <option key={st} value={st}>
-                    {st.charAt(0).toUpperCase() + st.slice(1)}
+                    {t(`admin.session.${st}`)}
                   </option>
                 ))}
               </select>
@@ -195,7 +195,7 @@ export const AdminClients = () => {
               {filtered.map((c) => (
                 <tr key={c._id} className='hover:bg-ivory transition-colors'>
                   <td className='px-4 py-3 text-charcoal font-medium truncate'>{c.name}</td>
-                  <td className='px-4 py-3 text-warm-gray capitalize'>{c.sessionType}</td>
+                  <td className='px-4 py-3 text-warm-gray'>{t(`admin.session.${c.sessionType}`)}</td>
                   <td className='px-4 py-3 text-warm-gray truncate'>{c.email || '—'}</td>
                   <td className='px-4 py-3 text-warm-gray whitespace-nowrap'>{c.phone || '—'}</td>
                   <td className='px-4 py-3'>

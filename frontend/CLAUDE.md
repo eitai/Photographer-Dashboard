@@ -3,6 +3,7 @@
 > Parent monorepo context: see `../CLAUDE.md`
 
 ## Commands
+
 ```bash
 npm run dev          # Vite dev server → http://localhost:8080
 npm run build        # Production build → dist/
@@ -12,6 +13,7 @@ npm run lint         # ESLint
 ```
 
 ## Project Structure
+
 ```
 src/
 ├── pages/
@@ -32,30 +34,35 @@ src/
 ```
 
 ## Agent Routing
-| Agent | When to use |
-|---|---|
-| `product-orchestrator` | New feature spanning design + code, unclear requirements |
-| `react-frontend-engineer` | Components, hooks, pages, forms, routing |
-| `product-design-architect` | Design system tokens, layout, UX patterns |
-| `fullstack-ts-reviewer` | Review, TypeScript, performance |
+
+| Agent                      | When to use                                              |
+| -------------------------- | -------------------------------------------------------- |
+| `product-orchestrator`     | New feature spanning design + code, unclear requirements |
+| `react-frontend-engineer`  | Components, hooks, pages, forms, routing                 |
+| `product-design-architect` | Design system tokens, layout, UX patterns                |
+| `fullstack-ts-reviewer`    | Review, TypeScript, performance                          |
 
 ## Key Patterns
 
 ### New Page
+
 1. Create file in `src/pages/`
 2. Add route in `src/App.tsx` (wrap with `<ProtectedRoute>` if admin-only)
 3. Add i18n keys for all display text
 
 ### New API Call
+
 Add to `src/lib/api.ts` — never call `axios` directly from components. Use React Query `useQuery`/`useMutation` in the component.
 
 ### New Component
+
 - Place in `src/components/<feature>/`
 - Use shadcn/ui primitives from `src/components/ui/` for base elements
 - Style with Tailwind only — no inline styles, no CSS modules
 - Must work in both LTR and RTL
 
 ### Zustand Store
+
 ```ts
 // src/store/exampleStore.ts
 import { create } from 'zustand'
@@ -64,6 +71,7 @@ export const useExampleStore = create<ExampleState>()((set) => ({ ... }))
 ```
 
 ### React Query Pattern
+
 ```ts
 // Query
 const { data, isLoading } = useQuery({
@@ -79,6 +87,7 @@ const mutation = useMutation({
 ```
 
 ### i18n Usage
+
 ```tsx
 const { t, dir } = useI18n()
 // Always add both he and en keys to src/lib/i18n.tsx
@@ -87,22 +96,24 @@ const { t, dir } = useI18n()
 
 ## Design System
 
-| Token | Value | Tailwind class |
-|---|---|---|
-| Primary accent | `#E7B8B5` | `blush` |
-| Background | `#FAF8F4` | `ivory` |
-| Heading | Playfair Display | `font-serif` |
-| Body | Inter | `font-sans` |
+| Token          | Value            | Tailwind class |
+| -------------- | ---------------- | -------------- |
+| Primary accent | `#E7B8B5`        | `blush`        |
+| Background     | `#FAF8F4`        | `ivory`        |
+| Heading        | Playfair Display | ``             |
+| Body           | Inter            | `font-sans`    |
 
 Themes for photographer landing pages: Soft, Luxury, Bold, Minimal, Warm, Ocean, Forest, Rose, Vintage, Midnight, B&W
 
 ## Auth Flow
+
 - Login → JWT stored in `localStorage` (`koral_admin_token`, `koral_admin_user`)
 - Axios interceptor in `api.ts` attaches token to every request
 - 401 response → clear storage → redirect to `/admin`
 - `<ProtectedRoute>` checks token presence at route level
 
 ## Testing
+
 - Framework: Vitest + Testing Library
 - Test files: `*.test.ts` / `*.test.tsx` alongside source
 - Run before committing: `npm run test`
