@@ -66,7 +66,7 @@ export const NotificationBell = () => {
     <div ref={ref} className="relative">
       <button
         onClick={() => setOpen((o) => !o)}
-        className="relative p-2 rounded-lg text-warm-gray hover:bg-card hover:text-charcoal transition-colors"
+        className="relative p-2 rounded-xl text-warm-gray hover:bg-card hover:text-charcoal transition-colors"
         aria-label="Notifications"
       >
         <Bell size={19} />

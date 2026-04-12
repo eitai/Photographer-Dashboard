@@ -1,11 +1,10 @@
-import { useEffect, useState } from 'react';
-import { Package, Trash2, ChevronDown, ChevronUp, Link2, Check as CheckIcon, Download } from 'lucide-react';
-import axios from 'axios';
-import JSZip from 'jszip';
+import { useState } from 'react';
+import { Package, Trash2, ChevronUp, Download, Plus } from 'lucide-react';
 import { useI18n } from '@/lib/i18n';
-
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-import { fetchProductOrders, createProductOrder, deleteProductOrder, type ProductOrder } from '@/services/productOrderService';
+import { API_BASE } from '@/lib/api';
+import { downloadZip } from '@/lib/downloadZip';
+import { createProductOrder, deleteProductOrder, type ProductOrder } from '@/services/productOrderService';
+import { useProductOrders, useAdminProducts, type AdminProduct } from '@/hooks/useQueries';
 import type { Gallery } from '@/types/gallery';
 
 interface Props {
@@ -13,8 +12,6 @@ interface Props {
   clientName: string;
   galleries: Gallery[];
 }
-
-const TYPES = ['album', 'print'] as const;
 
 const defaultForm = {
   name: '',
@@ -25,8 +22,8 @@ const defaultForm = {
 
 export const ProductOrdersSection = ({ clientId, clientName, galleries }: Props) => {
   const { t } = useI18n();
-  const [orders, setOrders] = useState<ProductOrder[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data: orders = [], isLoading: loading, refetch } = useProductOrders(clientId);
+  const { data: catalogProducts = [] } = useAdminProducts();
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ ...defaultForm });
   const [creating, setCreating] = useState(false);
@@ -43,27 +40,6 @@ export const ProductOrdersSection = ({ clientId, clientName, galleries }: Props)
       setLinkCopied(true);
       setTimeout(() => setLinkCopied(false), 2000);
     });
-  };
-
-  const load = async () => {
-    setLoading(true);
-    try {
-      const data = await fetchProductOrders(clientId);
-      setOrders(data);
-    } catch {
-      // silently ignore — section just shows empty
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    load();
-  }, [clientId]);
-
-  // When type changes, auto-set sensible maxPhotos default
-  const handleTypeChange = (type: 'album' | 'print') => {
-    setForm((f) => ({ ...f, type, maxPhotos: type === 'print' ? 1 : 20 }));
   };
 
   const toggleGallery = (galleryId: string) => {
@@ -97,7 +73,7 @@ export const ProductOrdersSection = ({ clientId, clientName, galleries }: Props)
       });
       setForm({ ...defaultForm });
       setShowForm(false);
-      load();
+      refetch();
     } catch {
       setError('Failed to create product order');
     } finally {
@@ -108,20 +84,15 @@ export const ProductOrdersSection = ({ clientId, clientName, galleries }: Props)
   const handleDownload = async (order: ProductOrder) => {
     setDownloadingId(order._id);
     try {
-      const zip = new JSZip();
-      const folder = zip.folder(order.name) ?? zip;
-      await Promise.all(
-        order.selectedPhotoIds.map(async (photo) => {
-          const res = await axios.get(`${API_BASE}${photo.path}`, { responseType: 'blob' });
-          const ext = photo.filename.includes('.') ? `.${photo.filename.split('.').pop()}` : '';
-          folder.file(`${photo.imageId}${ext}`, res.data);
-        }),
+      await downloadZip(
+        order.selectedPhotoIds.map((photo) => ({
+          _id: photo.imageId,
+          path: photo.path,
+          filename: photo.filename,
+        })),
+        order.name,
+        order.name.replace(/\s+/g, '-'),
       );
-      const content = await zip.generateAsync({ type: 'blob' });
-      const a = document.createElement('a');
-      a.href = URL.createObjectURL(content);
-      a.download = `${order.name.replace(/\s+/g, '-')}.zip`;
-      a.click();
     } catch {
       /* ignore */
     } finally {
@@ -133,7 +104,7 @@ export const ProductOrdersSection = ({ clientId, clientName, galleries }: Props)
     setDeletingId(orderId);
     try {
       await deleteProductOrder(orderId);
-      setOrders((prev) => prev.filter((o) => o._id !== orderId));
+      refetch();
     } catch {
       // ignore
     } finally {
@@ -152,25 +123,6 @@ export const ProductOrdersSection = ({ clientId, clientName, galleries }: Props)
           {t('admin.products.title')}
         </h2>
         <div className='flex items-center gap-2'>
-          {galleries.length > 0 && galleries[0]?.token && (
-            <button
-              onClick={handleCopyLink}
-              className='flex items-center gap-1.5 text-xs text-warm-gray border border-beige rounded-lg px-3 py-1.5 hover:border-blush hover:text-blush transition-colors'
-              title='Copy client product link'
-            >
-              {linkCopied ? (
-                <>
-                  <CheckIcon size={12} className='text-green-600' />
-                  <span className='text-green-600'>Copied!</span>
-                </>
-              ) : (
-                <>
-                  <Link2 size={12} />
-                  Client Link
-                </>
-              )}
-            </button>
-          )}
           <button
             onClick={() => {
               setShowForm((v) => !v);
@@ -178,7 +130,7 @@ export const ProductOrdersSection = ({ clientId, clientName, galleries }: Props)
             }}
             className='text-sm text-blush hover:text-charcoal transition-colors flex items-center gap-1'
           >
-            {showForm ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
+            {showForm ? <ChevronUp size={15} /> : <Plus size={15} />}
             {t('admin.products.add')}
           </button>
         </div>
@@ -187,39 +139,29 @@ export const ProductOrdersSection = ({ clientId, clientName, galleries }: Props)
       {/* Create form */}
       {showForm && (
         <form onSubmit={handleCreate} className='border border-beige rounded-xl p-4 space-y-4 bg-ivory'>
-          {/* Name */}
+          {/* Product — dropdown from catalog */}
           <div>
             <label className='block text-xs text-warm-gray mb-1'>{t('admin.products.name_label')}</label>
-            <input
-              type='text'
+            <select
               value={form.name}
-              onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-              placeholder={t('admin.products.name_ph')}
-              className='w-full border border-beige rounded-lg px-3 py-2 text-sm text-charcoal focus:outline-none focus:border-blush'
-            />
-          </div>
-
-          {/* Type */}
-          <div>
-            <label className='block text-xs text-warm-gray mb-1'>{t('admin.products.type_label')}</label>
-            <div className='flex gap-3'>
-              {TYPES.map((type) => (
-                <label key={type} className='flex items-center gap-2 text-sm text-charcoal cursor-pointer'>
-                  <input
-                    type='radio'
-                    name='product-type'
-                    value={type}
-                    checked={form.type === type}
-                    onChange={() => handleTypeChange(type)}
-                    className='accent-blush'
-                  />
-                  {typeLabel(type)}
-                </label>
+              onChange={(e) => {
+                const p = catalogProducts.find((p: AdminProduct) => p.name === e.target.value);
+                if (p) setForm((f) => ({ ...f, name: p.name, type: p.type, maxPhotos: p.maxPhotos }));
+                else setForm((f) => ({ ...f, name: e.target.value }));
+              }}
+              required
+              className='w-full border border-beige rounded-lg px-3 py-2 text-sm text-charcoal bg-card focus:outline-none focus:border-blush'
+            >
+              <option value='' disabled>{t('admin.products.catalog_pick')}</option>
+              {catalogProducts.map((p: AdminProduct) => (
+                <option key={p.id} value={p.name}>
+                  {p.name} — {t(`admin.products.type_${p.type}`)} · {p.maxPhotos} {t('admin.products.max_photos')}
+                </option>
               ))}
-            </div>
+            </select>
           </div>
 
-          {/* Max photos */}
+          {/* Max photos (editable override) */}
           <div>
             <label className='block text-xs text-warm-gray mb-1'>{t('admin.products.max_photos')}</label>
             <input
@@ -265,7 +207,7 @@ export const ProductOrdersSection = ({ clientId, clientName, galleries }: Props)
             <button
               type='submit'
               disabled={creating}
-              className='px-4 py-2 bg-blush text-white text-sm rounded-lg hover:opacity-90 transition-opacity disabled:opacity-60'
+              className='px-4 py-2 bg-blush text-white text-sm rounded-xl hover:opacity-90 transition-opacity disabled:opacity-60'
             >
               {creating ? t('admin.products.creating') : t('admin.products.create')}
             </button>
@@ -325,7 +267,7 @@ export const ProductOrdersSection = ({ clientId, clientName, galleries }: Props)
                       <button
                         onClick={() => handleDownload(order)}
                         disabled={downloadingId === order._id}
-                        className='flex items-center gap-1 text-xs bg-blush text-primary-foreground px-2.5 py-1 rounded-lg hover:bg-blush/80 transition-colors disabled:opacity-60'
+                        className='flex items-center gap-1 text-xs bg-blush text-primary-foreground px-2.5 py-1 rounded-xl hover:bg-blush/80 transition-colors disabled:opacity-60'
                       >
                         <Download size={11} />
                         {downloadingId === order._id ? 'Downloading...' : 'Download All'}

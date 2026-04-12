@@ -1,9 +1,7 @@
 import { useState } from 'react';
-import axios from 'axios';
 import { Download, Maximize2, Video } from 'lucide-react';
-
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-import JSZip from 'jszip';
+import { API_BASE } from '@/lib/api';
+import { downloadZip } from '@/lib/downloadZip';
 import Masonry from 'react-masonry-css';
 import { FadeIn } from '@/components/FadeIn';
 import { useI18n } from '@/lib/i18n';
@@ -34,19 +32,13 @@ export const DeliveryGallery = ({ gallery, images, getImageUrl }: Props) => {
 
   const handleDownloadAll = async () => {
     setPreparingZip(true);
-    const zip = new JSZip();
-    const folder = zip.folder('photos')!;
-    await Promise.all(
-      images.map(async (img) => {
-        const res = await axios.get(getImageUrl(img.path), { responseType: 'blob' });
-        folder.file(img.filename, res.data);
-      }),
-    );
-    const content = await zip.generateAsync({ type: 'blob' });
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(content);
-    a.download = `${gallery.name}.zip`;
-    a.click();
+    // Map GalleryImage to ZipImageEntry shape — use filename as _id for named files
+    const zipImages = images.map((img) => ({
+      _id: img.originalName || img.filename,
+      path: img.path,
+      filename: img.filename,
+    }));
+    await downloadZip(zipImages, 'photos', gallery.name);
     setPreparingZip(false);
   };
 

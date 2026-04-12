@@ -1,10 +1,12 @@
 const express = require('express');
+const fs = require('fs');
 const SiteSettings = require('../models/SiteSettings');
 const Gallery = require('../models/Gallery');
 const GalleryImage = require('../models/GalleryImage');
 const { protect } = require('../middleware/auth');
 const { uploadImage: upload, validateImageMagicBytes } = require('../middleware/upload');
 const asyncHandler = require('../middleware/asyncHandler');
+const replaceUploadedFile = require('../utils/replaceUploadedFile');
 
 const router = express.Router();
 
@@ -23,6 +25,26 @@ router.get('/', protect, asyncHandler(async (req, res) => {
     heroSubtitle: settings?.heroSubtitle || '',
     contactEmail: settings?.contactEmail || '',
     theme: settings?.theme || 'bw',
+    heroOverlayOpacity: settings?.heroOverlayOpacity || 'medium',
+    heroCtaPrimaryLabel: settings?.heroCtaPrimaryLabel || '',
+    heroCtaSecondaryLabel: settings?.heroCtaSecondaryLabel || '',
+    aboutSectionTitle: settings?.aboutSectionTitle || '',
+    tiktokUrl: settings?.tiktokUrl || '',
+    videoUrl: settings?.videoUrl || '',
+    videoSectionHeading: settings?.videoSectionHeading || '',
+    videoSectionSubheading: settings?.videoSectionSubheading || '',
+    videoSectionEnabled: settings?.videoSectionEnabled || false,
+    ctaBannerHeading: settings?.ctaBannerHeading || '',
+    ctaBannerSubtext: settings?.ctaBannerSubtext || '',
+    ctaBannerButtonLabel: settings?.ctaBannerButtonLabel || '',
+    ctaBannerEnabled: settings?.ctaBannerEnabled || false,
+    servicesEnabled: settings?.servicesEnabled || false,
+    services: settings?.services || [],
+    testimonialsEnabled: settings?.testimonialsEnabled || false,
+    testimonials: settings?.testimonials || [],
+    packagesEnabled: settings?.packagesEnabled || false,
+    packages: settings?.packages || [],
+    packagesDisclaimer: settings?.packagesDisclaimer || '',
   });
 }));
 
@@ -50,7 +72,10 @@ router.put('/featured', protect, asyncHandler(async (req, res) => {
 
 // PUT /api/settings/landing  — ADMIN
 router.put('/landing', protect, asyncHandler(async (req, res) => {
-  const { bio, phone, instagramHandle, facebookUrl, heroSubtitle, contactEmail, theme } = req.body;
+  const {
+    bio, phone, instagramHandle, facebookUrl, heroSubtitle, contactEmail, theme,
+    heroOverlayOpacity, heroCtaPrimaryLabel, heroCtaSecondaryLabel, aboutSectionTitle, tiktokUrl,
+  } = req.body;
   const data = {};
   if (bio !== undefined) data.bio = bio;
   if (phone !== undefined) data.phone = phone;
@@ -59,6 +84,11 @@ router.put('/landing', protect, asyncHandler(async (req, res) => {
   if (heroSubtitle !== undefined) data.heroSubtitle = heroSubtitle;
   if (contactEmail !== undefined) data.contactEmail = contactEmail;
   if (theme !== undefined) data.theme = theme;
+  if (heroOverlayOpacity !== undefined) data.heroOverlayOpacity = heroOverlayOpacity;
+  if (heroCtaPrimaryLabel !== undefined) data.heroCtaPrimaryLabel = heroCtaPrimaryLabel;
+  if (heroCtaSecondaryLabel !== undefined) data.heroCtaSecondaryLabel = heroCtaSecondaryLabel;
+  if (aboutSectionTitle !== undefined) data.aboutSectionTitle = aboutSectionTitle;
+  if (tiktokUrl !== undefined) data.tiktokUrl = tiktokUrl;
 
   const settings = await SiteSettings.upsert(req.admin.id, data);
   res.json({
@@ -69,22 +99,131 @@ router.put('/landing', protect, asyncHandler(async (req, res) => {
     heroSubtitle: settings.heroSubtitle,
     contactEmail: settings.contactEmail,
     theme: settings.theme,
+    heroOverlayOpacity: settings.heroOverlayOpacity,
+    heroCtaPrimaryLabel: settings.heroCtaPrimaryLabel,
+    heroCtaSecondaryLabel: settings.heroCtaSecondaryLabel,
+    aboutSectionTitle: settings.aboutSectionTitle,
+    tiktokUrl: settings.tiktokUrl,
+  });
+}));
+
+// PUT /api/settings/services  — ADMIN
+router.put('/services', protect, asyncHandler(async (req, res) => {
+  const { enabled, items } = req.body;
+  if (!Array.isArray(items)) {
+    return res.status(400).json({ message: 'items must be an array' });
+  }
+  if (items.length > 8) {
+    return res.status(400).json({ message: 'Maximum 8 service items allowed' });
+  }
+
+  const settings = await SiteSettings.upsert(req.admin.id, {
+    servicesEnabled: !!enabled,
+    services: items,
+  });
+  res.json({
+    servicesEnabled: settings.servicesEnabled,
+    services: settings.services,
+  });
+}));
+
+// PUT /api/settings/testimonials  — ADMIN
+router.put('/testimonials', protect, asyncHandler(async (req, res) => {
+  const { enabled, items } = req.body;
+  if (!Array.isArray(items)) {
+    return res.status(400).json({ message: 'items must be an array' });
+  }
+  if (items.length > 12) {
+    return res.status(400).json({ message: 'Maximum 12 testimonial items allowed' });
+  }
+
+  const settings = await SiteSettings.upsert(req.admin.id, {
+    testimonialsEnabled: !!enabled,
+    testimonials: items,
+  });
+  res.json({
+    testimonialsEnabled: settings.testimonialsEnabled,
+    testimonials: settings.testimonials,
+  });
+}));
+
+// PUT /api/settings/packages  — ADMIN
+router.put('/packages', protect, asyncHandler(async (req, res) => {
+  const { enabled, items, disclaimer } = req.body;
+  if (!Array.isArray(items)) {
+    return res.status(400).json({ message: 'items must be an array' });
+  }
+  if (items.length > 4) {
+    return res.status(400).json({ message: 'Maximum 4 package items allowed' });
+  }
+
+  const settings = await SiteSettings.upsert(req.admin.id, {
+    packagesEnabled: !!enabled,
+    packages: items,
+    packagesDisclaimer: disclaimer !== undefined ? String(disclaimer) : '',
+  });
+  res.json({
+    packagesEnabled: settings.packagesEnabled,
+    packages: settings.packages,
+    packagesDisclaimer: settings.packagesDisclaimer,
+  });
+}));
+
+// PUT /api/settings/video  — ADMIN
+router.put('/video', protect, asyncHandler(async (req, res) => {
+  const { enabled, url, heading, subheading } = req.body;
+
+  if (url) {
+    const isValidVideoUrl =
+      /^https?:\/\/(www\.)?(youtube\.com|youtu\.be|vimeo\.com)/.test(url);
+    if (!isValidVideoUrl) {
+      return res.status(400).json({ message: 'url must be a YouTube or Vimeo URL' });
+    }
+  }
+
+  const settings = await SiteSettings.upsert(req.admin.id, {
+    videoSectionEnabled: !!enabled,
+    videoUrl: url !== undefined ? String(url) : '',
+    videoSectionHeading: heading !== undefined ? String(heading) : '',
+    videoSectionSubheading: subheading !== undefined ? String(subheading) : '',
+  });
+  res.json({
+    videoSectionEnabled: settings.videoSectionEnabled,
+    videoUrl: settings.videoUrl,
+    videoSectionHeading: settings.videoSectionHeading,
+    videoSectionSubheading: settings.videoSectionSubheading,
+  });
+}));
+
+// PUT /api/settings/cta-banner  — ADMIN
+router.put('/cta-banner', protect, asyncHandler(async (req, res) => {
+  const { enabled, heading, subtext, buttonLabel } = req.body;
+
+  const settings = await SiteSettings.upsert(req.admin.id, {
+    ctaBannerEnabled: !!enabled,
+    ctaBannerHeading: heading !== undefined ? String(heading) : '',
+    ctaBannerSubtext: subtext !== undefined ? String(subtext) : '',
+    ctaBannerButtonLabel: buttonLabel !== undefined ? String(buttonLabel) : '',
+  });
+  res.json({
+    ctaBannerEnabled: settings.ctaBannerEnabled,
+    ctaBannerHeading: settings.ctaBannerHeading,
+    ctaBannerSubtext: settings.ctaBannerSubtext,
+    ctaBannerButtonLabel: settings.ctaBannerButtonLabel,
   });
 }));
 
 // POST /api/settings/hero-image  — ADMIN
 router.post('/hero-image', protect, upload.single('image'), validateImageMagicBytes, asyncHandler(async (req, res) => {
   if (!req.file) return res.status(400).json({ message: 'No image provided' });
-  const heroImagePath = `/uploads/${req.file.filename}`;
-  await SiteSettings.upsert(req.admin.id, { heroImagePath });
+  const heroImagePath = await replaceUploadedFile(req.admin.id, 'heroImagePath', `/uploads/${req.file.filename}`, { SiteSettings, fs });
   res.json({ heroImagePath });
 }));
 
 // POST /api/settings/profile-image  — ADMIN
 router.post('/profile-image', protect, upload.single('image'), validateImageMagicBytes, asyncHandler(async (req, res) => {
   if (!req.file) return res.status(400).json({ message: 'No image provided' });
-  const profileImagePath = `/uploads/${req.file.filename}`;
-  await SiteSettings.upsert(req.admin.id, { profileImagePath });
+  const profileImagePath = await replaceUploadedFile(req.admin.id, 'profileImagePath', `/uploads/${req.file.filename}`, { SiteSettings, fs });
   res.json({ profileImagePath });
 }));
 

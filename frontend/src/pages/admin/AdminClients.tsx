@@ -1,10 +1,12 @@
 import { useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { AdminLayout } from '@/components/admin/AdminLayout';
+import { InputField, TextareaField, SelectField } from '@/components/admin/InputField';
 import { StatusBadge } from '@/components/admin/StatusBadge';
 import { useI18n } from '@/lib/i18n';
 import { useClients, useCreateClient, useDeleteClient } from '@/hooks/useQueries';
 import { Plus, Search, Trash2 } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -13,6 +15,7 @@ import { Modal } from '@/components/ui/Modal';
 import { useSearch } from '@/hooks/useSearch';
 import type { Client } from '@/types/admin';
 import { useDeleteConfirmation } from '@/hooks/useDeleteConfirmation';
+import { Button } from '@/components/admin/Button';
 
 const SESSION_TYPES = ['family', 'maternity', 'newborn', 'branding', 'landscape'] as const;
 
@@ -69,19 +72,20 @@ export const AdminClients = () => {
       <div className='flex flex-wrap items-center gap-3 mb-6'>
         <div className='relative flex-1 max-w-sm'>
           <Search size={15} className='absolute start-3 top-1/2 -translate-y-1/2 text-warm-gray' />
-          <input
+          <InputField
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder={t('admin.clients.search')}
-            className='w-full ps-9 pe-4 py-2 min-h-[44px] rounded-lg border border-beige bg-card text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-blush/50'
+            className='ps-9 pe-4 min-h-[44px]'
           />
         </div>
-        <button
+        <Button
+          variant='ghost'
+          size='lg'
           onClick={form.toggle}
-          className='flex items-center gap-2 bg-transparent border border-black text-black px-4 py-2 min-h-[44px] rounded text-sm font-medium hover:bg-black/5 transition-colors'
         >
           <Plus size={15} /> {t('admin.clients.new')}
-        </button>
+        </Button>
       </div>
 
       {/* Create form */}
@@ -91,70 +95,72 @@ export const AdminClients = () => {
           <div className='grid grid-cols-1 sm:grid-cols-2 gap-4'>
             <div>
               <label className='block text-xs text-warm-gray mb-1'>{t('admin.common.name')}</label>
-              <input
+              <InputField
                 type='text'
                 {...register('name')}
-                className='w-full px-3 py-2.5 min-h-[44px] rounded-lg border border-beige bg-ivory text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-blush/50'
+                className='py-2.5 min-h-[44px]'
               />
               {errors.name && <p className='text-xs text-rose-500 mt-1'>{errors.name.message}</p>}
             </div>
             <div>
               <label className='block text-xs text-warm-gray mb-1'>{t('admin.common.phone')}</label>
-              <input
+              <InputField
                 type='tel'
                 {...register('phone')}
-                className='w-full px-3 py-2.5 min-h-[44px] rounded-lg border border-beige bg-ivory text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-blush/50'
+                className='py-2.5 min-h-[44px]'
               />
             </div>
             <div>
               <label className='block text-xs text-warm-gray mb-1'>{t('admin.common.email')}</label>
-              <input
+              <InputField
                 type='email'
                 {...register('email')}
-                className='w-full px-3 py-2.5 min-h-[44px] rounded-lg border border-beige bg-ivory text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-blush/50'
+                className='py-2.5 min-h-[44px]'
               />
               {errors.email && <p className='text-xs text-rose-500 mt-1'>{errors.email.message}</p>}
             </div>
             <div>
               <label className='block text-xs text-warm-gray mb-1'>{t('admin.common.session_type')}</label>
-              <select
+              <SelectField
                 {...register('sessionType')}
-                className='w-full px-3 py-2.5 min-h-[44px] rounded-lg border border-beige bg-ivory text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-blush/50'
+                className='py-2.5 min-h-[44px]'
               >
                 {SESSION_TYPES.map((st) => (
                   <option key={st} value={st}>
                     {t(`admin.session.${st}`)}
                   </option>
                 ))}
-              </select>
+              </SelectField>
             </div>
           </div>
           <div>
             <label className='block text-xs text-warm-gray mb-1'>{t('admin.common.notes')}</label>
-            <textarea
+            <TextareaField
               {...register('notes')}
               rows={2}
-              className='w-full px-3 py-2.5 min-h-[44px] rounded-lg border border-beige bg-ivory text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-blush/50 resize-none'
+              className='py-2.5 min-h-[44px]'
             />
           </div>
           <div className='flex gap-3'>
-            <button
+            <Button
               type='submit'
+              variant='primary'
+              size='lg'
               disabled={createClient.isPending}
-              className='bg-blush text-primary-foreground px-5 py-2 min-h-[44px] rounded-lg text-sm font-medium hover:bg-blush/80 transition-colors disabled:opacity-60'
             >
               {createClient.isPending ? t('admin.common.saving') : t('admin.clients.create')}
-            </button>
-            <button
+            </Button>
+            <Button
               type='button'
+              variant='ghost'
+              size='lg'
               onClick={() => {
                 form.close();
                 reset();
               }}
-              className='px-5 py-2 min-h-[44px] rounded-lg text-sm text-warm-gray hover:bg-ivory transition-colors border border-beige'
             >
               {t('admin.common.cancel')}
-            </button>
+            </Button>
           </div>
         </form>
       )}
@@ -162,7 +168,17 @@ export const AdminClients = () => {
       {/* Table */}
       <div className='bg-card rounded-xl border border-beige overflow-x-auto'>
         {isLoading ? (
-          <p className='text-sm text-warm-gray p-6'>{t('admin.common.loading')}</p>
+          <div className='p-6 space-y-3'>
+            {[0, 1, 2, 3, 4].map((i) => (
+              <div key={i} className='flex items-center gap-4'>
+                <Skeleton className='h-4 w-32' />
+                <Skeleton className='h-4 w-20' />
+                <Skeleton className='h-4 flex-1' />
+                <Skeleton className='h-4 w-24' />
+                <Skeleton className='h-5 w-20 rounded-full' />
+              </div>
+            ))}
+          </div>
         ) : filtered.length === 0 ? (
           <p className='text-sm text-warm-gray p-6'>{t('admin.clients.no_clients')}</p>
         ) : (
@@ -230,20 +246,24 @@ export const AdminClients = () => {
         </p>
         <p className='text-sm text-warm-gray mb-6'>{t('admin.clients.delete_body')}</p>
         <div className='flex gap-3'>
-          <button
+          <Button
+            variant='danger'
+            size='lg'
+            className='flex-1'
             onClick={deletion.confirm}
             disabled={deletion.deleting}
-            className='flex-1 bg-rose-500 text-white py-3 min-h-[44px] rounded-lg text-sm font-medium hover:bg-rose-600 transition-colors disabled:opacity-60'
           >
             {deletion.deleting ? t('admin.clients.deleting') : t('admin.clients.delete_btn')}
-          </button>
-          <button
+          </Button>
+          <Button
+            variant='ghost'
+            size='lg'
+            className='flex-1'
             onClick={deletion.cancel}
             disabled={deletion.deleting}
-            className='flex-1 py-3 min-h-[44px] rounded-lg text-sm text-warm-gray border border-beige hover:bg-ivory transition-colors'
           >
             {t('admin.common.cancel')}
-          </button>
+          </Button>
         </div>
       </Modal>
     </AdminLayout>

@@ -1,13 +1,16 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { usePhotographer } from './PhotographerLayout';
 import { FadeIn } from '@/components/FadeIn';
 import { useI18n } from '@/lib/i18n';
 import api from '@/lib/api';
 import heroFallback from '@/assets/hero-family.jpg';
 import aboutFallback from '@/assets/about-koral.jpg';
-import { Phone } from 'lucide-react';
+import { Phone, Camera, Heart, Users, Star, Baby, Diamond, Building2, Mountain, Play } from 'lucide-react';
 import { Helmet } from 'react-helmet-async';
+
+// ── Social icons ─────────────────────────────────────────────────────────────
 
 const InstagramIcon = () => (
   <svg viewBox='0 0 24 24' width='22' height='22' fill='currentColor'>
@@ -27,7 +30,88 @@ const WhatsAppIcon = () => (
   </svg>
 );
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+const TikTokIcon = () => (
+  <svg viewBox='0 0 24 24' width='22' height='22' fill='currentColor'>
+    <path d='M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-2.88 2.5 2.89 2.89 0 01-2.89-2.89 2.89 2.89 0 012.89-2.89c.28 0 .54.04.79.1V9.01a6.33 6.33 0 00-.79-.05 6.34 6.34 0 00-6.34 6.34 6.34 6.34 0 006.34 6.34 6.34 6.34 0 006.33-6.34V8.69a8.17 8.17 0 004.77 1.52V6.73a4.85 4.85 0 01-1-.04z'/>
+  </svg>
+);
+
+// ── Lucide icon lookup for services ─────────────────────────────────────────
+
+const ICON_MAP: Record<string, React.ElementType> = {
+  camera: Camera,
+  heart: Heart,
+  users: Users,
+  star: Star,
+  baby: Baby,
+  diamond: Diamond,
+  'building-2': Building2,
+  mountain: Mountain,
+};
+
+const ServiceIcon = ({ name }: { name: string }) => {
+  const Icon = ICON_MAP[name] || Camera;
+  return <Icon size={28} className='text-primary' />;
+};
+
+// ── Video embed helper ───────────────────────────────────────────────────────
+
+function toEmbedUrl(url: string): string | null {
+  try {
+    const u = new URL(url);
+    if (u.hostname.includes('youtu.be')) return `https://www.youtube.com/embed/${u.pathname.slice(1)}`;
+    if (u.hostname.includes('youtube.com')) {
+      const id = u.searchParams.get('v');
+      return id ? `https://www.youtube.com/embed/${id}` : null;
+    }
+    if (u.hostname.includes('vimeo.com')) return `https://player.vimeo.com/video${u.pathname}`;
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+// ── Star rating row ──────────────────────────────────────────────────────────
+
+const StarRating = ({ rating }: { rating: number }) => (
+  <div className='flex gap-0.5' aria-label={`${rating} out of 5 stars`}>
+    {Array.from({ length: 5 }, (_, i) =>
+      i < rating ? (
+        <Star key={i} size={14} className='text-primary fill-primary' />
+      ) : (
+        <Star key={i} size={14} className='text-muted-foreground/40' />
+      )
+    )}
+  </div>
+);
+
+// ── Types ────────────────────────────────────────────────────────────────────
+
+interface ServiceItem {
+  id: string;
+  icon: string;
+  title: string;
+  description: string;
+  startingPrice: string | null;
+  sessionTypeValue: string | null;
+}
+
+interface TestimonialItem {
+  id: string;
+  text: string;
+  clientName: string;
+  sessionType: string | null;
+  rating: number | null;
+}
+
+interface PackageItem {
+  id: string;
+  name: string;
+  price: string;
+  inclusions: string[];
+  isHighlighted: boolean;
+  ctaLabel: string | null;
+}
 
 interface PublicSettings {
   featuredImages: any[];
@@ -37,41 +121,71 @@ interface PublicSettings {
   phone: string;
   instagramHandle: string;
   facebookUrl: string;
+  tiktokUrl: string;
   heroSubtitle: string;
+  heroOverlayOpacity: 'light' | 'medium' | 'dark';
+  heroCtaPrimaryLabel: string;
+  heroCtaSecondaryLabel: string;
+  aboutSectionTitle: string;
+  servicesEnabled: boolean;
+  services: ServiceItem[];
+  testimonialsEnabled: boolean;
+  testimonials: TestimonialItem[];
+  packagesEnabled: boolean;
+  packagesDisclaimer: string;
+  packages: PackageItem[];
+  videoSectionEnabled: boolean;
+  videoUrl: string;
+  videoSectionHeading: string;
+  videoSectionSubheading: string;
+  ctaBannerEnabled: boolean;
+  ctaBannerHeading: string;
+  ctaBannerSubtext: string;
+  ctaBannerButtonLabel: string;
 }
+
+const OVERLAY_CLASS: Record<'light' | 'medium' | 'dark', string> = {
+  light: 'bg-background/10',
+  medium: 'bg-background/30',
+  dark: 'bg-background/60',
+};
+
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
+// ── Component ────────────────────────────────────────────────────────────────
 
 export const PhotographerHome = () => {
   const { t } = useI18n();
   const { username, photographer } = usePhotographer();
-  const [latestPosts, setLatestPosts] = useState<any[]>([]);
-  const [settings, setSettings] = useState<PublicSettings>({
-    featuredImages: [],
-    bio: '',
-    heroImagePath: '',
-    profileImagePath: '',
-    phone: '',
-    instagramHandle: '',
-    facebookUrl: '',
-    heroSubtitle: '',
+  const [videoActive, setVideoActive] = useState(false);
+
+  const { data: settings } = useQuery<PublicSettings>({
+    queryKey: ['photographerSettings', username],
+    queryFn: () => api.get(`/p/${username}/settings`).then((r) => r.data),
+    staleTime: 5 * 60 * 1000,
   });
 
-  useEffect(() => {
-    api
-      .get(`/p/${username}/blog`)
-      .then((r) => setLatestPosts(r.data.slice(0, 3)))
-      .catch(() => {});
-    api
-      .get(`/p/${username}/settings`)
-      .then((r) => setSettings(r.data))
-      .catch(() => {});
-  }, [username]);
+  const { data: latestPosts } = useQuery<any[]>({
+    queryKey: ['photographerBlog', username],
+    queryFn: () => api.get(`/p/${username}/blog`).then((r) => r.data.slice(0, 3)),
+    staleTime: 5 * 60 * 1000,
+  });
 
-  const heroSrc = settings.heroImagePath ? `${API_BASE}${settings.heroImagePath}` : heroFallback;
-  const profileSrc = settings.profileImagePath ? `${API_BASE}${settings.profileImagePath}` : aboutFallback;
-  const bio = settings.bio || t('about.text');
+  const heroSrc = settings?.heroImagePath ? `${API_BASE}${settings.heroImagePath}` : heroFallback;
+  const profileSrc = settings?.profileImagePath ? `${API_BASE}${settings.profileImagePath}` : aboutFallback;
+  const bio = settings?.bio || t('about.text');
+  const overlayClass = OVERLAY_CLASS[settings?.heroOverlayOpacity ?? 'medium'];
 
   const photographerName = photographer?.name || username;
   const canonicalUrl = `${window.location.origin}/${username}`;
+
+  const showServices = !!(settings?.servicesEnabled && settings.services?.length > 0);
+  const showTestimonials = !!(settings?.testimonialsEnabled && settings.testimonials?.length > 0);
+  const showPackages = !!(settings?.packagesEnabled && settings.packages?.length > 0);
+  const showVideo = !!(settings?.videoSectionEnabled && settings.videoUrl);
+  const showCtaBanner = !!(settings?.ctaBannerEnabled && settings.ctaBannerHeading);
+
+  const embedUrl = showVideo ? toEmbedUrl(settings!.videoUrl) : null;
 
   return (
     <main className='pt-16'>
@@ -81,7 +195,7 @@ export const PhotographerHome = () => {
         <meta property='og:title' content={`${photographerName} | Photography`} />
         <meta property='og:description' content={bio} />
         <meta property='og:url' content={canonicalUrl} />
-        {settings.profileImagePath && <meta property='og:image' content={`${API_BASE}${settings.profileImagePath}`} />}
+        {settings?.profileImagePath && <meta property='og:image' content={`${API_BASE}${settings.profileImagePath}`} />}
         <link rel='canonical' href={canonicalUrl} />
         <script type='application/ld+json'>
           {JSON.stringify({
@@ -93,18 +207,21 @@ export const PhotographerHome = () => {
           })}
         </script>
       </Helmet>
-      {/* Hero */}
+
+      {/* ── Hero ──────────────────────────────────────────────────────────── */}
       <section className='relative h-[85vh] min-h-[500px] flex items-center justify-center overflow-hidden'>
         <img src={heroSrc} alt='Photography' className='absolute inset-0 w-full h-full object-cover' />
-        <div className='absolute inset-0 bg-background/30' />
+        <div className={`absolute inset-0 ${overlayClass}`} />
         <div className='relative z-10 text-center px-4 sm:px-6 max-w-2xl w-full'>
           <FadeIn>
-            <h1 className=' text-3xl sm:text-4xl md:text-6xl text-foreground mb-4 leading-tight'>
+            <h1 className='text-3xl sm:text-4xl md:text-6xl text-foreground mb-4 leading-tight'>
               {photographer.studioName || photographer.name}
             </h1>
           </FadeIn>
           <FadeIn delay={0.15}>
-            <p className='text-lg md:text-2xl text-primary  mb-8'>{settings.heroSubtitle || t('hero.subtitle')}</p>
+            <p className='text-lg md:text-2xl text-primary mb-8'>
+              {settings?.heroSubtitle || t('hero.subtitle')}
+            </p>
           </FadeIn>
           <FadeIn delay={0.3}>
             <div className='flex flex-col sm:flex-row gap-4 justify-center'>
@@ -112,20 +229,20 @@ export const PhotographerHome = () => {
                 to={`/${username}/portfolio`}
                 className='inline-block px-8 py-3 rounded-lg bg-primary text-primary-foreground font-sans text-sm font-medium hover:opacity-90 transition-opacity'
               >
-                {t('hero.cta.gallery')}
+                {settings?.heroCtaPrimaryLabel || t('hero.cta.gallery')}
               </Link>
               <Link
                 to={`/${username}/contact`}
                 className='inline-block px-8 py-3 rounded-lg border border-foreground/30 text-foreground font-sans text-sm font-medium hover:bg-foreground/5 transition-colors'
               >
-                {t('hero.cta.book')}
+                {settings?.heroCtaSecondaryLabel || t('hero.cta.book')}
               </Link>
             </div>
           </FadeIn>
         </div>
       </section>
 
-      {/* About */}
+      {/* ── About ─────────────────────────────────────────────────────────── */}
       <section className='section-spacing'>
         <div className='container-narrow'>
           <div className='grid md:grid-cols-2 gap-12 md:gap-16 items-center'>
@@ -136,11 +253,13 @@ export const PhotographerHome = () => {
             </FadeIn>
             <FadeIn delay={0.15}>
               <div>
-                <h2 className=' text-3xl md:text-4xl text-foreground mb-6'>{t('about.title')}</h2>
+                <h2 className='text-3xl md:text-4xl text-foreground mb-6'>
+                  {settings?.aboutSectionTitle || t('about.title')}
+                </h2>
                 <p className='text-muted-foreground leading-relaxed text-base whitespace-pre-line'>{bio}</p>
-                {(settings.phone || settings.instagramHandle || settings.facebookUrl) && (
+                {(settings?.phone || settings?.instagramHandle || settings?.facebookUrl || settings?.tiktokUrl) && (
                   <div className='flex items-center gap-1 mt-6'>
-                    {settings.phone && (
+                    {settings?.phone && (
                       <a
                         href={`tel:${settings.phone}`}
                         aria-label='Phone'
@@ -149,7 +268,7 @@ export const PhotographerHome = () => {
                         <Phone size={22} />
                       </a>
                     )}
-                    {settings.phone && (
+                    {settings?.phone && (
                       <a
                         href={`https://wa.me/${settings.phone.replace(/\D/g, '').replace(/^0/, '972')}`}
                         target='_blank'
@@ -160,7 +279,7 @@ export const PhotographerHome = () => {
                         <WhatsAppIcon />
                       </a>
                     )}
-                    {settings.instagramHandle && (
+                    {settings?.instagramHandle && (
                       <a
                         href={`https://instagram.com/${settings.instagramHandle.replace('@', '')}`}
                         target='_blank'
@@ -171,7 +290,7 @@ export const PhotographerHome = () => {
                         <InstagramIcon />
                       </a>
                     )}
-                    {settings.facebookUrl && (
+                    {settings?.facebookUrl && (
                       <a
                         href={settings.facebookUrl}
                         target='_blank'
@@ -182,6 +301,17 @@ export const PhotographerHome = () => {
                         <FacebookIcon />
                       </a>
                     )}
+                    {settings?.tiktokUrl && (
+                      <a
+                        href={settings.tiktokUrl}
+                        target='_blank'
+                        rel='noopener noreferrer'
+                        aria-label='TikTok'
+                        className='p-3 text-primary hover:text-primary/70 transition-colors rounded-md hover:bg-primary/10'
+                      >
+                        <TikTokIcon />
+                      </a>
+                    )}
                   </div>
                 )}
               </div>
@@ -190,12 +320,47 @@ export const PhotographerHome = () => {
         </div>
       </section>
 
-      {/* Featured Images */}
-      {settings.featuredImages.length > 0 && (
+      {/* ── Services ──────────────────────────────────────────────────────── */}
+      {showServices && (
         <section className='section-spacing bg-card'>
           <div className='container-narrow'>
             <FadeIn>
-              <h2 className=' text-3xl md:text-4xl text-center text-foreground mb-12'>{t('showcase.title')}</h2>
+              <h2 className='text-3xl md:text-4xl text-center text-foreground mb-12'>
+                {t('services.title')}
+              </h2>
+            </FadeIn>
+            <div className='grid sm:grid-cols-2 lg:grid-cols-3 gap-6'>
+              {settings!.services.map((service, i) => (
+                <FadeIn key={service.id} delay={i * 0.07}>
+                  <div className='bg-card border border-beige rounded-xl p-6 flex flex-col gap-4'>
+                    <ServiceIcon name={service.icon} />
+                    <h3 className='text-lg text-foreground'>{service.title}</h3>
+                    <p className='text-muted-foreground text-sm leading-relaxed flex-1'>{service.description}</p>
+                    {service.startingPrice && (
+                      <span className='inline-block text-xs font-medium text-primary bg-primary/10 rounded-full px-3 py-1 self-start'>
+                        {t('services.starting_from')}{service.startingPrice}
+                      </span>
+                    )}
+                    <Link
+                      to={`/${username}/contact`}
+                      className='mt-auto text-sm text-primary hover:underline'
+                    >
+                      {t('services.book_session')} →
+                    </Link>
+                  </div>
+                </FadeIn>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* ── Featured Images ────────────────────────────────────────────────── */}
+      {settings?.featuredImages && settings.featuredImages.length > 0 && (
+        <section className='section-spacing bg-card'>
+          <div className='container-narrow'>
+            <FadeIn>
+              <h2 className='text-3xl md:text-4xl text-center text-foreground mb-12'>{t('showcase.title')}</h2>
             </FadeIn>
             <div className='columns-2 md:columns-3 lg:columns-4 gap-3 space-y-3'>
               {settings.featuredImages.map((img: any, i: number) => (
@@ -215,13 +380,124 @@ export const PhotographerHome = () => {
         </section>
       )}
 
-      {/* Blog Preview */}
-      {latestPosts.length > 0 && (
+      {/* ── Testimonials ──────────────────────────────────────────────────── */}
+      {showTestimonials && (
+        <section className='section-spacing bg-card'>
+          <div className='container-narrow'>
+            <FadeIn>
+              <h2 className='text-3xl md:text-4xl text-center text-foreground mb-12'>
+                {t('testimonials.title')}
+              </h2>
+            </FadeIn>
+            <div className='grid grid-cols-1 md:grid-cols-3 gap-6'>
+              {settings!.testimonials.map((testimonial, i) => (
+                <FadeIn key={testimonial.id} delay={i * 0.1}>
+                  <div className='bg-background border border-beige rounded-xl p-6 flex flex-col gap-4'>
+                    <span className='text-5xl leading-none text-primary font-serif select-none' aria-hidden='true'>&ldquo;</span>
+                    <p className='text-foreground leading-relaxed text-sm flex-1'>{testimonial.text}</p>
+                    {testimonial.rating != null && <StarRating rating={testimonial.rating} />}
+                    <div>
+                      <p className='text-sm font-medium text-foreground'>{testimonial.clientName}</p>
+                      {testimonial.sessionType && (
+                        <p className='text-xs text-muted-foreground mt-0.5'>{testimonial.sessionType}</p>
+                      )}
+                    </div>
+                  </div>
+                </FadeIn>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* ── CTA Banner ────────────────────────────────────────────────────── */}
+      {showCtaBanner && (
+        <FadeIn>
+          <section
+            className='relative section-spacing bg-cover bg-center overflow-hidden'
+            style={{ backgroundImage: `url(${heroSrc})` }}
+          >
+            <div className='absolute inset-0 bg-background/60' />
+            <div className='relative z-10 container-narrow text-center'>
+              <h2 className='text-3xl md:text-5xl text-foreground mb-4'>
+                {settings!.ctaBannerHeading}
+              </h2>
+              {settings!.ctaBannerSubtext && (
+                <p className='text-muted-foreground text-lg mb-8 max-w-xl mx-auto'>
+                  {settings!.ctaBannerSubtext}
+                </p>
+              )}
+              <Link
+                to={`/${username}/contact`}
+                className='inline-block px-8 py-3 rounded-lg bg-primary text-primary-foreground font-sans text-sm font-medium hover:opacity-90 transition-opacity'
+              >
+                {settings!.ctaBannerButtonLabel || t('hero.cta.book')}
+              </Link>
+            </div>
+          </section>
+        </FadeIn>
+      )}
+
+      {/* ── Packages / Pricing ────────────────────────────────────────────── */}
+      {showPackages && (
+        <section className='section-spacing'>
+          <div className='container-narrow'>
+            <FadeIn>
+              <h2 className='text-3xl md:text-4xl text-center text-foreground mb-12'>
+                {t('packages.title')}
+              </h2>
+            </FadeIn>
+            <div className='grid grid-cols-1 md:grid-cols-3 gap-6'>
+              {settings!.packages.map((pkg, i) => (
+                <FadeIn key={pkg.id} delay={i * 0.08}>
+                  <div
+                    className={`bg-card border rounded-xl p-8 flex flex-col relative ${
+                      pkg.isHighlighted ? 'border-primary ring-2 ring-primary' : 'border-beige'
+                    }`}
+                  >
+                    {pkg.isHighlighted && (
+                      <span className='absolute -top-3 start-1/2 -translate-x-1/2 text-xs font-medium bg-primary text-primary-foreground rounded-full px-3 py-1 whitespace-nowrap'>
+                        {t('packages.popular')}
+                      </span>
+                    )}
+                    <h3 className='text-xl text-foreground mb-2'>{pkg.name}</h3>
+                    <p className='text-3xl text-primary font-bold mb-6'>{pkg.price}</p>
+                    {pkg.inclusions.length > 0 && (
+                      <ul className='flex-1 space-y-2 mb-6'>
+                        {pkg.inclusions.map((item, idx) => (
+                          <li key={idx} className='flex items-start gap-2 text-sm text-muted-foreground'>
+                            <span className='text-primary mt-0.5' aria-hidden='true'>✓</span>
+                            {item}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                    <Link
+                      to={`/${username}/contact`}
+                      className='mt-auto inline-block text-center px-6 py-3 rounded-lg bg-primary text-primary-foreground font-sans text-sm font-medium hover:opacity-90 transition-opacity'
+                    >
+                      {pkg.ctaLabel || t('packages.book_now')}
+                    </Link>
+                  </div>
+                </FadeIn>
+              ))}
+            </div>
+            {settings!.packagesDisclaimer && (
+              <FadeIn delay={0.2}>
+                <p className='text-center text-xs text-muted-foreground mt-8'>{settings!.packagesDisclaimer}</p>
+              </FadeIn>
+            )}
+          </div>
+        </section>
+      )}
+
+      {/* ── Blog Preview ──────────────────────────────────────────────────── */}
+      {latestPosts && latestPosts.length > 0 && (
         <section className='section-spacing'>
           <div className='container-narrow'>
             <FadeIn>
               <div className='flex items-end justify-between mb-10'>
-                <h2 className=' text-3xl md:text-4xl text-foreground'>{t('blog.preview.title')}</h2>
+                <h2 className='text-3xl md:text-4xl text-foreground'>{t('blog.preview.title')}</h2>
                 <Link to={`/${username}/blog`} className='text-sm text-primary hover:underline'>
                   {t('blog.preview.cta')} →
                 </Link>
@@ -243,12 +519,70 @@ export const PhotographerHome = () => {
                     ) : (
                       <div className='aspect-[4/3] rounded-xl mb-4 bg-secondary' />
                     )}
-                    {post.category && <span className='text-xs text-primary uppercase tracking-wider'>{post.category}</span>}
-                    <h3 className=' text-lg text-foreground mt-1 group-hover:text-primary transition-colors'>{post.title}</h3>
+                    {post.category && (
+                      <span className='text-xs text-primary uppercase tracking-wider'>{post.category}</span>
+                    )}
+                    <h3 className='text-lg text-foreground mt-1 group-hover:text-primary transition-colors'>
+                      {post.title}
+                    </h3>
                   </Link>
                 </FadeIn>
               ))}
             </div>
+          </div>
+        </section>
+      )}
+
+      {/* ── Video Reel ────────────────────────────────────────────────────── */}
+      {showVideo && embedUrl && (
+        <section className='section-spacing bg-card'>
+          <div className='container-narrow'>
+            {(settings!.videoSectionHeading || settings!.videoSectionSubheading) && (
+              <FadeIn>
+                <div className='text-center mb-10'>
+                  {settings!.videoSectionHeading ? (
+                    <h2 className='text-3xl md:text-4xl text-foreground mb-3'>
+                      {settings!.videoSectionHeading}
+                    </h2>
+                  ) : (
+                    <h2 className='text-3xl md:text-4xl text-foreground mb-3'>{t('video.title')}</h2>
+                  )}
+                  {settings!.videoSectionSubheading && (
+                    <p className='text-muted-foreground text-lg'>{settings!.videoSectionSubheading}</p>
+                  )}
+                </div>
+              </FadeIn>
+            )}
+            {!settings!.videoSectionHeading && !settings!.videoSectionSubheading && (
+              <FadeIn>
+                <h2 className='text-3xl md:text-4xl text-center text-foreground mb-10'>{t('video.title')}</h2>
+              </FadeIn>
+            )}
+            <FadeIn delay={0.1}>
+              <div className='relative aspect-video rounded-xl overflow-hidden bg-black'>
+                {videoActive ? (
+                  <iframe
+                    src={`${embedUrl}?autoplay=1`}
+                    title='Video reel'
+                    allow='accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture'
+                    allowFullScreen
+                    className='w-full h-full border-0'
+                    loading='lazy'
+                  />
+                ) : (
+                  <button
+                    onClick={() => setVideoActive(true)}
+                    className='absolute inset-0 w-full h-full flex items-center justify-center bg-foreground/10 hover:bg-foreground/20 transition-colors group'
+                    aria-label='Play video'
+                    type='button'
+                  >
+                    <span className='w-16 h-16 rounded-full bg-primary flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform'>
+                      <Play size={28} className='text-primary-foreground ms-1' fill='currentColor' />
+                    </span>
+                  </button>
+                )}
+              </div>
+            </FadeIn>
           </div>
         </section>
       )}

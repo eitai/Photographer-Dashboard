@@ -8,10 +8,9 @@ const { protect } = require('../middleware/auth');
 const asyncHandler = require('../middleware/asyncHandler');
 const logger = require('../utils/logger');
 const { withTransaction } = require('../utils/transaction');
+const { UUID_RE } = require('../utils/uuid');
 
 const router = express.Router({ mergeParams: true });
-
-const UUID_RE = /^[0-9a-f-]{36}$/i;
 
 // POST /api/galleries/:galleryId/submit  — PUBLIC (client submits final selection)
 router.post('/submit', asyncHandler(async (req, res) => {
@@ -27,6 +26,11 @@ router.post('/submit', asyncHandler(async (req, res) => {
 
   const gallery = await Gallery.findById(galleryId);
   if (!gallery) return res.status(404).json({ message: 'Gallery not found' });
+
+  if (!gallery.isActive)
+    return res.status(410).json({ message: 'This gallery is no longer active.' });
+  if (gallery.expiresAt && new Date(gallery.expiresAt) < new Date())
+    return res.status(410).json({ message: 'This gallery has expired.' });
 
   if (selectedImageIds.length > gallery.maxSelections) {
     return res.status(400).json({ message: `You can only select up to ${gallery.maxSelections} photos.` });
@@ -75,13 +79,12 @@ router.post('/submit', asyncHandler(async (req, res) => {
 
   // Fire-and-forget push notification — must never block the client response
   try {
-    const admin = await Admin.findById(gallery.adminId);
+    const [admin, clientDoc] = await Promise.all([
+      Admin.findById(gallery.adminId),
+      gallery.clientId ? Client.findById(gallery.clientId) : Promise.resolve(null),
+    ]);
     if (admin?.pushToken) {
-      let clientName = 'A client';
-      if (gallery.clientId) {
-        const clientDoc = await Client.findById(gallery.clientId);
-        if (clientDoc) clientName = clientDoc.name;
-      }
+      const clientName = clientDoc?.name ?? 'A client';
       await fetch('https://exp.host/--/api/v2/push/send', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Accept: 'application/json' },

@@ -1,0 +1,19 @@
+/**
+ * Strips sensitive and internal fields before sending an admin record to the client.
+ * Used by auth.js and admins.js — keep in sync with each other via this shared util.
+ *
+ * @param {object} a - Admin row from the database
+ * @returns {object} Safe admin payload for API responses
+ */
+function formatAdmin(a) {
+  return {
+    id: a.id,
+    name: a.name,
+    email: a.email,
+    role: a.role,
+    username: a.username || null,
+    studioName: a.studioName || null,
+  };
+}
+
+module.exports = formatAdmin;

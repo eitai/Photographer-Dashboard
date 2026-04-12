@@ -43,14 +43,14 @@ export const ConfirmationModals = ({
           <button
             onClick={deleteSubmission}
             disabled={deletingSubmission}
-            className='flex-1 bg-rose-500 text-white py-3 min-h-[44px] rounded-lg text-sm font-medium hover:bg-rose-600 transition-colors disabled:opacity-60'
+            className='flex-1 bg-rose-500 text-white py-3 min-h-[44px] rounded-xl text-sm font-medium hover:bg-rose-600 transition-colors disabled:opacity-60'
           >
             {deletingSubmission ? t('admin.selections.deleting') : t('admin.selections.delete_submission')}
           </button>
           <button
             onClick={() => setDeleteSubTarget(null)}
             disabled={deletingSubmission}
-            className='flex-1 py-3 min-h-[44px] rounded-lg text-sm text-warm-gray border border-beige hover:bg-ivory transition-colors'
+            className='flex-1 py-3 min-h-[44px] rounded-xl text-sm text-warm-gray border border-beige hover:bg-ivory transition-colors'
           >
             {t('admin.common.cancel')}
           </button>
@@ -64,14 +64,14 @@ export const ConfirmationModals = ({
           <button
             onClick={deleteGallery}
             disabled={deletingGallery}
-            className='flex-1 bg-rose-500 text-white py-3 min-h-[44px] rounded-lg text-sm font-medium hover:bg-rose-600 transition-colors disabled:opacity-60'
+            className='flex-1 bg-rose-500 text-white py-3 min-h-[44px] rounded-xl text-sm font-medium hover:bg-rose-600 transition-colors disabled:opacity-60'
           >
             {deletingGallery ? t('admin.common.deleting') : t('admin.client.delete_gallery')}
           </button>
           <button
             onClick={() => setDeleteGalleryTarget(null)}
             disabled={deletingGallery}
-            className='flex-1 py-3 min-h-[44px] rounded-lg text-sm text-warm-gray border border-beige hover:bg-ivory transition-colors'
+            className='flex-1 py-3 min-h-[44px] rounded-xl text-sm text-warm-gray border border-beige hover:bg-ivory transition-colors'
           >
             {t('admin.common.cancel')}
           </button>
@@ -85,14 +85,14 @@ export const ConfirmationModals = ({
           <button
             onClick={deleteSubmissionImage}
             disabled={deletingImage}
-            className='flex-1 bg-rose-500 text-white py-3 min-h-[44px] rounded-lg text-sm font-medium hover:bg-rose-600 transition-colors disabled:opacity-60'
+            className='flex-1 bg-rose-500 text-white py-3 min-h-[44px] rounded-xl text-sm font-medium hover:bg-rose-600 transition-colors disabled:opacity-60'
           >
             {deletingImage ? t('admin.selections.deleting') : t('admin.selections.delete_image')}
           </button>
           <button
             onClick={() => setDeleteImageTarget(null)}
             disabled={deletingImage}
-            className='flex-1 py-3 min-h-[44px] rounded-lg text-sm text-warm-gray border border-beige hover:bg-ivory transition-colors'
+            className='flex-1 py-3 min-h-[44px] rounded-xl text-sm text-warm-gray border border-beige hover:bg-ivory transition-colors'
           >
             {t('admin.common.cancel')}
           </button>

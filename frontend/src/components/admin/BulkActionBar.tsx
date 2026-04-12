@@ -22,7 +22,7 @@ export const BulkActionBar = ({ count, onClear, onDelete }: Props) => {
       </button>
       <button
         onClick={onDelete}
-        className='flex items-center gap-1.5 bg-rose-500 text-white px-3 py-2.5 min-h-[44px] rounded-lg text-xs font-medium hover:bg-rose-600 transition-colors'
+        className='flex items-center gap-1.5 bg-rose-500 text-white px-3 py-2.5 min-h-[44px] rounded-xl text-xs font-medium hover:bg-rose-600 transition-colors'
       >
         <Trash2 size={12} />
         {t('admin.upload.delete_selected')}

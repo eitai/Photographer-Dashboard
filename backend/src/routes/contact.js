@@ -3,10 +3,9 @@ const ContactSubmission = require('../models/ContactSubmission');
 const { protect } = require('../middleware/auth');
 const asyncHandler = require('../middleware/asyncHandler');
 const validateContact = require('../utils/validateContact');
+const { UUID_RE } = require('../utils/uuid');
 
 const router = express.Router();
-
-const UUID_RE = /^[0-9a-f-]{36}$/i;
 
 // POST /api/contact  — PUBLIC
 router.post('/', asyncHandler(async (req, res) => {

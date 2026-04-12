@@ -1,14 +1,20 @@
 import { useEffect, useState, useMemo, useRef, useCallback } from 'react';
 import { AdminLayout } from '@/components/admin/AdminLayout';
-import api from '@/lib/api';
+import api, { API_BASE } from '@/lib/api';
+import { toast } from 'sonner';
 import { X, Check, Search, Maximize2 } from 'lucide-react';
+import { InputField } from '@/components/admin/InputField';
 import { Lightbox, type LightboxImage } from '@/components/gallery/Lightbox';
 import type { ShowcaseGallery } from '@/types/gallery';
+import { Button } from '@/components/admin/Button';
+import { useI18n } from '@/lib/i18n';
+import { useSettings } from '@/hooks/useQueries';
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 const PAGE_SIZE = 50;
 
 export const AdminShowcase = () => {
+  const { t } = useI18n();
+  const { data: settingsData } = useSettings();
   const [galleries, setGalleries] = useState<ShowcaseGallery[]>([]);
   const [featuredImages, setFeaturedImages] = useState<LightboxImage[]>([]);
   const [browseGalleryId, setBrowseGalleryId] = useState('');
@@ -17,26 +23,28 @@ export const AdminShowcase = () => {
   const [browsePage, setBrowsePage] = useState(1);
   const [loadingMore, setLoadingMore] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [msg, setMsg] = useState('');
   const [search, setSearch] = useState('');
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const [lightboxSource, setLightboxSource] = useState<'browse' | 'featured'>('browse');
 
   const sentinelRef = useRef<HTMLDivElement>(null);
 
+  // Populate featuredImages once settings load (shared cache with AdminSettings)
   useEffect(() => {
-    api
-      .get('/settings')
-      .then((r) => setFeaturedImages(r.data.featuredImages || []))
-      .catch(() => {});
+    if (settingsData) setFeaturedImages(settingsData.featuredImages || []);
+  }, [settingsData]);
+
+  // Load galleries list on mount
+  useEffect(() => {
     api
       .get('/galleries')
       .then((r) => setGalleries(r.data))
-      .catch(() => {});
+      .catch(() => toast.error(t('admin.showcase.load_error')));
   }, []);
 
   // Reset + load page 1 whenever gallery changes
   useEffect(() => {
+    setLightboxIndex(null);
     if (!browseGalleryId) {
       setBrowseImages([]);
       setBrowseTotal(0);
@@ -52,7 +60,7 @@ export const AdminShowcase = () => {
         setBrowseImages(r.data.images);
         setBrowseTotal(r.data.total);
       })
-      .catch(() => {});
+      .catch(() => toast.error(t('admin.showcase.load_error')));
   }, [browseGalleryId]);
 
   // Load next page
@@ -64,10 +72,12 @@ export const AdminShowcase = () => {
       const r = await api.get(`/galleries/${browseGalleryId}/images?page=${nextPage}&limit=${PAGE_SIZE}`);
       setBrowseImages((prev) => [...prev, ...r.data.images]);
       setBrowsePage(nextPage);
+    } catch {
+      toast.error(t('admin.showcase.load_error'));
     } finally {
       setLoadingMore(false);
     }
-  }, [loadingMore, browseImages.length, browseTotal, browsePage, browseGalleryId]);
+  }, [loadingMore, browseImages.length, browseTotal, browsePage, browseGalleryId, t]);
 
   // IntersectionObserver sentinel
   useEffect(() => {
@@ -94,7 +104,7 @@ export const AdminShowcase = () => {
     });
   }, [galleries, search]);
 
-  const toggleFeatured = (img: any) => {
+  const toggleFeatured = (img: LightboxImage) => {
     setFeaturedImages((prev) =>
       prev.some((f) => f._id === img._id) ? prev.filter((f) => f._id !== img._id) : prev.length < 20 ? [...prev, img] : prev,
     );
@@ -105,8 +115,9 @@ export const AdminShowcase = () => {
     try {
       const r = await api.put('/settings/featured', { imageIds: featuredImages.map((f) => f._id) });
       setFeaturedImages(r.data.featuredImages);
-      setMsg('נשמר בהצלחה ✓');
-      setTimeout(() => setMsg(''), 2500);
+      toast.success(t('admin.showcase.saved'));
+    } catch {
+      toast.error(t('admin.showcase.save_error'));
     } finally {
       setSaving(false);
     }
@@ -116,36 +127,36 @@ export const AdminShowcase = () => {
   const hasMore = browseImages.length < browseTotal;
 
   return (
-    <AdminLayout title='תמונות ראווה'>
+    <AdminLayout title={t('admin.showcase.title')}>
       <div className='max-w-5xl space-y-6'>
         {/* Search + gallery picker */}
         <div className='bg-card rounded-xl border border-beige p-6 space-y-4'>
           <div>
-            <label className='block text-xs text-warm-gray mb-1'>חיפוש לפי שם לקוח, אימייל או שם גלריה</label>
+            <label className='block text-xs text-warm-gray mb-1'>{t('admin.showcase.search_label')}</label>
             <div className='relative'>
-              <Search size={15} className='absolute right-3 top-1/2 -translate-y-1/2 text-warm-gray pointer-events-none' />
-              <input
+              <Search size={15} className='absolute end-3 top-1/2 -translate-y-1/2 text-warm-gray pointer-events-none' />
+              <InputField
                 type='text'
                 value={search}
                 onChange={(e) => {
                   setSearch(e.target.value);
                   setBrowseGalleryId('');
                 }}
-                placeholder='חפש...'
-                className='w-full pr-9 pl-3 py-2 rounded-lg border border-beige bg-ivory text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-blush/50'
+                placeholder={t('admin.showcase.search_placeholder')}
+                className='pr-9 pl-3'
               />
             </div>
           </div>
 
           {filteredGalleries.length === 0 ? (
-            <p className='text-sm text-warm-gray'>לא נמצאו גלריות</p>
+            <p className='text-sm text-warm-gray'>{t('admin.showcase.no_galleries')}</p>
           ) : (
             <div className='grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 max-h-64 overflow-y-auto pr-1'>
               {filteredGalleries.map((g) => (
                 <button
                   key={g._id}
                   onClick={() => setBrowseGalleryId(g._id === browseGalleryId ? '' : g._id)}
-                  className={`text-right px-4 py-3 rounded-lg border text-sm transition-colors ${
+                  className={`text-start px-4 py-3 rounded-xl border text-sm transition-colors ${
                     browseGalleryId === g._id
                       ? 'border-blush bg-blush/10 text-charcoal font-medium'
                       : 'border-beige hover:bg-ivory text-charcoal'
@@ -166,7 +177,7 @@ export const AdminShowcase = () => {
         {browseGalleryId && (
           <div className='bg-card rounded-xl border border-beige p-6 space-y-3'>
             <div className='flex items-center justify-between'>
-              <p className='text-sm font-medium text-charcoal'>{selectedGallery?.name} — בחר תמונות</p>
+              <p className='text-sm font-medium text-charcoal'>{selectedGallery?.name} — {t('admin.showcase.select_images')}</p>
               {browseTotal > 0 && (
                 <span className='text-xs text-warm-gray'>
                   {browseImages.length} / {browseTotal}
@@ -175,11 +186,11 @@ export const AdminShowcase = () => {
             </div>
 
             {browseImages.length === 0 && !loadingMore ? (
-              <p className='text-sm text-warm-gray'>אין תמונות בגלריה זו</p>
+              <p className='text-sm text-warm-gray'>{t('admin.showcase.no_images')}</p>
             ) : (
               <>
                 <div className='grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-2'>
-                  {browseImages.map((img: any, i: number) => {
+                  {browseImages.map((img, i) => {
                     const selected = featuredImages.some((f) => f._id === img._id);
                     return (
                       <div
@@ -230,15 +241,15 @@ export const AdminShowcase = () => {
         {/* Selected featured images + save */}
         <div className='bg-card rounded-xl border border-beige p-6 space-y-4'>
           <div className='flex items-center justify-between'>
-            <h2 className=' text-charcoal'>תמונות שנבחרו לדף הבית</h2>
+            <h2 className=' text-charcoal'>{t('admin.showcase.selected_title')}</h2>
             <span className='text-xs text-warm-gray'>{featuredImages.length}/20</span>
           </div>
 
           {featuredImages.length === 0 ? (
-            <p className='text-sm text-warm-gray'>טרם נבחרו תמונות</p>
+            <p className='text-sm text-warm-gray'>{t('admin.showcase.no_featured')}</p>
           ) : (
             <div className='grid grid-cols-4 sm:grid-cols-6 md:grid-cols-10 gap-2'>
-              {featuredImages.map((img: any, i: number) => (
+              {featuredImages.map((img, i) => (
                 <div
                   key={img._id}
                   className='relative aspect-square rounded-lg overflow-hidden group cursor-pointer'
@@ -269,14 +280,13 @@ export const AdminShowcase = () => {
           )}
 
           <div className='flex items-center gap-3 pt-1'>
-            <button
+            <Button
+              variant='primary'
               onClick={save}
               disabled={saving}
-              className='bg-blush text-primary-foreground px-5 py-2 rounded-lg text-sm font-medium hover:bg-blush/80 transition-colors disabled:opacity-60'
             >
-              {saving ? 'שומר...' : 'שמור'}
-            </button>
-            {msg && <span className='text-sm text-charcoal'>{msg}</span>}
+              {saving ? t('admin.common.saving') : t('admin.showcase.save')}
+            </Button>
           </div>
         </div>
       </div>

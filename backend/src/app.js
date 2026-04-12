@@ -64,8 +64,9 @@ if (process.env.NODE_ENV !== 'test') {
 }
 
 // ── Body parsing with size limits ────────────────────────────────────────────
-app.use(express.json({ limit: '10kb' }));
-app.use(express.urlencoded({ limit: '10kb', extended: true }));
+// 2mb to accommodate rich-text blog content (TipTap HTML can be several hundred KB)
+app.use(express.json({ limit: '2mb' }));
+app.use(express.urlencoded({ limit: '2mb', extended: true }));
 
 // ── Compression ───────────────────────────────────────────────────────────────
 app.use(compression({
@@ -109,12 +110,21 @@ const submissionLimiter = rateLimit({
   message: { message: 'Too many submissions, please try again later.' },
 });
 
+const galleryTokenLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: process.env.NODE_ENV === 'test' ? 10000 : 60,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { message: 'Too many requests, please try again later.' },
+});
+
 app.use('/api/auth/login', authLimiter);
 app.use('/api/auth/seed', authLimiter);
 app.use('/api/contact', contactLimiter);
 app.use('/api/p/:id/contact', contactLimiter);
 app.use('/api/galleries/:galleryId/submit', submissionLimiter);
 app.use('/api/product-orders/:id/selection', submissionLimiter);
+app.use('/api/galleries/token', galleryTokenLimiter);
 
 // ── Static files ──────────────────────────────────────────────────────────────
 // crossOriginResourcePolicy must be disabled here so browsers can load images
@@ -145,6 +155,7 @@ v1.use('/blog',                      require('./routes/blog'));
 v1.use('/contact',                   require('./routes/contact'));
 v1.use('/settings',                  require('./routes/settings'));
 v1.use('/admins',                    require('./routes/admins'));
+v1.use('/admin-products',            require('./routes/adminProducts'));
 v1.use('/product-orders',            require('./routes/productOrders'));
 v1.use('/p/:id',                     require('./routes/public'));
 

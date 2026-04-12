@@ -1,19 +1,20 @@
 import { Link } from 'react-router-dom';
 import { StatusBadge } from '@/components/admin/StatusBadge';
 import { Copy, Check, Mail, ExternalLink, Trash2 } from 'lucide-react';
+import { useI18n } from '@/lib/i18n';
+import type { Client } from '@/types/admin';
+import type { GalleryData } from '@/types/gallery';
 
 interface GalleryCardProps {
-  g: any;
-  client: any;
+  g: GalleryData;
+  client: Client;
   copiedId: string | null;
   resendingId: string | null;
   resentId: string | null;
   showDeliveryFormFor: string | null;
   deliveryHeaderMessage: string;
   creatingDeliveryFor: string | null;
-  markingInEditingId: string | null;
-  galleries: any[];
-  t: (key: string) => string;
+  galleries: GalleryData[];
   copyLink: (token: string, galleryId: string) => void;
   whatsAppLink: (token: string) => string;
   resendEmail: (galleryId: string) => void;
@@ -21,7 +22,6 @@ interface GalleryCardProps {
   setShowDeliveryFormFor: (id: string | null) => void;
   setDeliveryHeaderMessage: (msg: string) => void;
   createDeliveryGallery: (originalGalleryId: string) => void;
-  onMarkInEditing: (galleryId: string) => void;
 }
 
 export const GalleryCard = ({
@@ -33,9 +33,7 @@ export const GalleryCard = ({
   showDeliveryFormFor,
   deliveryHeaderMessage,
   creatingDeliveryFor,
-  markingInEditingId,
   galleries,
-  t,
   copyLink,
   whatsAppLink,
   resendEmail,
@@ -43,8 +41,8 @@ export const GalleryCard = ({
   setShowDeliveryFormFor,
   setDeliveryHeaderMessage,
   createDeliveryGallery,
-  onMarkInEditing,
 }: GalleryCardProps) => {
+  const { t } = useI18n();
   const hasDelivery = galleries.some((g2) => g2.deliveryOf === g._id);
 
   return (
@@ -62,7 +60,7 @@ export const GalleryCard = ({
           <StatusBadge status={g.status} />
           <button
             onClick={() => setDeleteGalleryTarget(g._id)}
-            className='p-1 rounded-lg text-warm-gray hover:text-rose-500 hover:bg-rose-50 transition-colors'
+            className='p-1 rounded-xl text-warm-gray hover:text-rose-500 hover:bg-rose-50 transition-colors'
             title={t('admin.client.delete_gallery')}
           >
             <Trash2 size={13} />
@@ -83,7 +81,7 @@ export const GalleryCard = ({
         </Link>
         <button
           onClick={() => copyLink(g.token, g._id)}
-          className='p-1.5 rounded-lg border border-beige bg-card text-warm-gray hover:text-charcoal hover:bg-beige transition-colors'
+          className='p-1.5 rounded-xl border border-beige bg-card text-warm-gray hover:text-charcoal hover:bg-beige transition-colors'
           title={t('admin.client.copy_link')}
         >
           {copiedId === g._id ? <Check size={13} className='text-green-500' /> : <Copy size={13} />}
@@ -92,7 +90,7 @@ export const GalleryCard = ({
           <button
             onClick={() => resendEmail(g._id)}
             disabled={resendingId === g._id}
-            className='p-1.5 rounded-lg border border-beige bg-card text-warm-gray hover:text-charcoal hover:bg-beige transition-colors disabled:opacity-50'
+            className='p-1.5 rounded-xl border border-beige bg-card text-warm-gray hover:text-charcoal hover:bg-beige transition-colors disabled:opacity-50'
             title={t('admin.galleries.resend_email')}
           >
             {resentId === g._id ? <Check size={13} className='text-green-500' /> : <Mail size={13} />}
@@ -128,20 +126,9 @@ export const GalleryCard = ({
         </p>
       )}
 
-      {/* Mark as In Editing — only for selection_submitted non-delivery galleries */}
-      {!g.isDelivery && g.status === 'selection_submitted' && (
-        <button
-          onClick={() => onMarkInEditing(g._id)}
-          disabled={markingInEditingId === g._id}
-          className="mt-3 w-full text-xs text-charcoal bg-amber-50 border border-amber-200 rounded-lg py-1.5 hover:bg-amber-100 transition-colors disabled:opacity-60"
-        >
-          {markingInEditingId === g._id ? t('admin.gallery.marking') : t('admin.gallery.mark_in_editing')}
-        </button>
-      )}
-
       {/* Create delivery gallery — only if none exists yet for this gallery */}
       {!g.isDelivery &&
-        g.status === 'selection_submitted' &&
+        (g.status === 'selection_submitted' || g.status === 'in_editing') &&
         !hasDelivery &&
         (showDeliveryFormFor === g._id ? (
           <div className='mt-3 pt-3 border-t border-beige space-y-2'>
@@ -155,13 +142,13 @@ export const GalleryCard = ({
               <button
                 onClick={() => createDeliveryGallery(g._id)}
                 disabled={creatingDeliveryFor === g._id}
-                className='flex-1 bg-blush text-primary-foreground px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-blush/80 transition-colors disabled:opacity-60'
+                className='flex-1 bg-blush text-primary-foreground px-3 py-1.5 rounded-xl text-xs font-medium hover:bg-blush/80 transition-colors disabled:opacity-60'
               >
                 {creatingDeliveryFor === g._id ? t('admin.client.creating_delivery') : t('admin.client.create_delivery')}
               </button>
               <button
                 onClick={() => setShowDeliveryFormFor(null)}
-                className='px-3 py-1.5 rounded-lg text-xs text-warm-gray border border-beige hover:bg-card transition-colors'
+                className='px-3 py-1.5 rounded-xl text-xs text-warm-gray border border-beige hover:bg-card transition-colors'
               >
                 {t('admin.common.cancel')}
               </button>
@@ -170,12 +157,11 @@ export const GalleryCard = ({
         ) : (
           <button
             onClick={() => setShowDeliveryFormFor(g._id)}
-            className='mt-3 w-full text-xs text-blush border border-blush/30 rounded-lg py-1.5 hover:bg-blush/10 transition-colors'
+            className='mt-3 w-full text-xs text-blush border border-blush/30 rounded-xl py-1.5 hover:bg-blush/10 transition-colors'
           >
             + {t('admin.client.create_delivery')}
           </button>
         ))}
-
     </div>
   );
 };

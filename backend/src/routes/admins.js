@@ -1,10 +1,14 @@
 const express = require('express');
+const fs = require('fs');
 const Admin = require('../models/Admin');
+const AdminProduct = require('../models/AdminProduct');
 const SiteSettings = require('../models/SiteSettings');
 const { superprotect } = require('../middleware/auth');
 const { uploadImage: upload, validateImageMagicBytes } = require('../middleware/upload');
 const asyncHandler = require('../middleware/asyncHandler');
 const validatePassword = require('../utils/validatePassword');
+const formatAdmin = require('../utils/formatAdmin');
+const replaceUploadedFile = require('../utils/replaceUploadedFile');
 
 const router = express.Router();
 router.use(superprotect);
@@ -12,7 +16,7 @@ router.use(superprotect);
 // GET /api/admins
 router.get('/', asyncHandler(async (req, res) => {
   const admins = await Admin.find();
-  res.json(admins);
+  res.json(admins.map(formatAdmin));
 }));
 
 // POST /api/admins
@@ -40,6 +44,10 @@ router.post('/', asyncHandler(async (req, res) => {
     username: username || undefined,
     studioName: studioName || undefined,
   });
+
+  // Seed default product catalog for the new admin
+  await AdminProduct.seedDefaults(admin.id);
+
   res.status(201).json({
     id: admin.id,
     name: admin.name,
@@ -76,6 +84,10 @@ router.get('/:id/settings', asyncHandler(async (req, res) => {
 
 // PATCH /api/admins/:id
 router.patch('/:id', asyncHandler(async (req, res) => {
+  // Destructure only the fields this endpoint is allowed to update.
+  // Password changes must go through PUT /api/auth/password — never handle them here
+  // so there is no risk of a partial update leaving the DB in an inconsistent state
+  // (profile updated but password not changed, or vice-versa).
   const { name, email, studioName, username } = req.body;
 
   if (username) {
@@ -92,7 +104,10 @@ router.patch('/:id', asyncHandler(async (req, res) => {
 
   const updated = await Admin.findByIdAndUpdate(req.params.id, update);
   if (!updated) return res.status(404).json({ message: 'Admin not found' });
-  res.json(updated);
+
+  // Apply the same field projection used in auth.js to avoid leaking
+  // pushToken, createdAt, updatedAt, and any future internal columns.
+  res.json(formatAdmin(updated));
 }));
 
 // PUT /api/admins/:id/landing
@@ -114,16 +129,14 @@ router.put('/:id/landing', asyncHandler(async (req, res) => {
 // POST /api/admins/:id/hero-image
 router.post('/:id/hero-image', upload.single('image'), validateImageMagicBytes, asyncHandler(async (req, res) => {
   if (!req.file) return res.status(400).json({ message: 'No image uploaded' });
-  const heroImagePath = `/uploads/${req.file.filename}`;
-  await SiteSettings.upsert(req.params.id, { heroImagePath });
+  const heroImagePath = await replaceUploadedFile(req.params.id, 'heroImagePath', `/uploads/${req.file.filename}`, { SiteSettings, fs });
   res.json({ heroImagePath });
 }));
 
 // POST /api/admins/:id/profile-image
 router.post('/:id/profile-image', upload.single('image'), validateImageMagicBytes, asyncHandler(async (req, res) => {
   if (!req.file) return res.status(400).json({ message: 'No image uploaded' });
-  const profileImagePath = `/uploads/${req.file.filename}`;
-  await SiteSettings.upsert(req.params.id, { profileImagePath });
+  const profileImagePath = await replaceUploadedFile(req.params.id, 'profileImagePath', `/uploads/${req.file.filename}`, { SiteSettings, fs });
   res.json({ profileImagePath });
 }));
 

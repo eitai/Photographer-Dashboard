@@ -8,10 +8,19 @@ const asyncHandler = require('../middleware/asyncHandler');
 const { sendGalleryLink } = require('../services/emailService');
 const { withTransaction } = require('../utils/transaction');
 const { uploadVideo } = require('../middleware/upload');
+const { UUID_RE } = require('../utils/uuid');
 
 const router = express.Router();
 
-const UUID_RE = /^[0-9a-f-]{36}$/i;
+// Valid status transitions for gallery pipeline
+const VALID_TRANSITIONS = {
+  draft:                ['gallery_sent'],
+  gallery_sent:         ['viewed', 'in_editing', 'delivered'],
+  viewed:               ['selection_submitted', 'in_editing', 'delivered'],
+  selection_submitted:  ['in_editing', 'delivered'],
+  in_editing:           ['delivered'],
+  delivered:            [],
+};
 
 // GET /api/galleries/token/:token  — PUBLIC (client gallery access)
 router.get('/token/:token', asyncHandler(async (req, res) => {
@@ -73,6 +82,7 @@ router.post('/', protect, asyncHandler(async (req, res) => {
           galleryName: gallery.name,
           galleryUrl,
           headerMessage: gallery.headerMessage,
+          lang: req.admin.lang || 'he',
         });
       } catch (_) {
         emailSent = false;
@@ -112,6 +122,9 @@ router.post('/:id/delivery', protect, asyncHandler(async (req, res) => {
 
     delivery = await Gallery.create(galleryData, txClient);
 
+    original.status = 'delivered';
+    await Gallery.save(original, txClient);
+
     if (clientIdValue) {
       await Client.findOneAndUpdate(
         { _id: clientIdValue },
@@ -148,6 +161,7 @@ router.post('/:id/resend-email', protect, asyncHandler(async (req, res) => {
       galleryName: gallery.name,
       galleryUrl,
       headerMessage: gallery.headerMessage,
+      lang: req.admin.lang || 'he',
     });
   } catch (_) {
     sent = false;
@@ -174,6 +188,19 @@ router.put('/:id', protect, asyncHandler(async (req, res) => {
     return res.status(400).json({ message: 'Invalid ID format' });
   // Whitelist updatable fields — never allow overwriting adminId, token, or internal flags
   const { name, clientName, headerMessage, isActive, expiresAt, status, maxSelections } = req.body;
+
+  // Validate status transition if status is being changed
+  if (status) {
+    const current = await Gallery.findOne({ _id: req.params.id, adminId: req.admin.id });
+    if (!current) return res.status(404).json({ message: 'Gallery not found' });
+    const allowed = VALID_TRANSITIONS[current.status] || [];
+    if (current.status !== status && !allowed.includes(status)) {
+      return res.status(400).json({
+        message: `Cannot transition gallery from '${current.status}' to '${status}'`,
+      });
+    }
+  }
+
   const gallery = await Gallery.findOneAndUpdate(
     { _id: req.params.id, adminId: req.admin.id },
     { name, clientName, headerMessage, isActive, expiresAt, status, maxSelections }
@@ -223,7 +250,8 @@ router.delete('/:id/video/:filename', protect, asyncHandler(async (req, res) => 
   const idx = currentVideos.findIndex((v) => v.filename === req.params.filename);
   if (idx === -1) return res.status(404).json({ message: 'Video not found' });
 
-  const filePath = path.join(__dirname, '../../uploads', req.params.filename);
+  const safeFilename = path.basename(req.params.filename);
+  const filePath = path.join(__dirname, '../../uploads', safeFilename);
   fs.unlink(filePath, () => {}); // non-fatal
 
   currentVideos.splice(idx, 1);

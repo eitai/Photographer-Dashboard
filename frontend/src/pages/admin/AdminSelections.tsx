@@ -1,14 +1,13 @@
 import { useState } from 'react';
 import { AdminLayout } from '@/components/admin/AdminLayout';
 import { useI18n } from '@/lib/i18n';
-import api from '@/lib/api';
+import { API_BASE } from '@/lib/api';
 import { toast } from 'sonner';
-import axios from 'axios';
 import { Download, Star, MessageCircle, Pencil } from 'lucide-react';
-import JSZip from 'jszip';
-import { useGalleries, useUpdateGallery, queryKeys } from '@/hooks/useQueries';
-
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+import { useGalleries, useUpdateGallery, useSubmissions, queryKeys } from '@/hooks/useQueries';
+import { Button } from '@/components/admin/Button';
+import { downloadZip } from '@/lib/downloadZip';
+import type { GallerySubmission } from '@/types/gallery';
 
 export const AdminSelections = () => {
   const { t } = useI18n();
@@ -17,17 +16,9 @@ export const AdminSelections = () => {
   const updateGallery = useUpdateGallery(queryKeys.galleries);
 
   const [selected, setSelected] = useState<string | null>(null);
-  const [submissions, setSubmissions] = useState<any[]>([]);
-  const [loadingSub, setLoadingSub] = useState(false);
   const [downloading, setDownloading] = useState(false);
 
-  const loadSubmissions = async (galleryId: string) => {
-    setSelected(galleryId);
-    setLoadingSub(true);
-    const r = await api.get(`/galleries/${galleryId}/submissions`);
-    setSubmissions(r.data);
-    setLoadingSub(false);
-  };
+  const { data: submissions = [], isLoading: loadingSub } = useSubmissions(selected ?? '');
 
   const markInEditing = (galleryId: string) => {
     updateGallery.mutate(
@@ -36,7 +27,6 @@ export const AdminSelections = () => {
         onSuccess: () => {
           if (selected === galleryId) {
             setSelected(null);
-            setSubmissions([]);
           }
         },
         onError: () => toast.error(t('admin.selections.mark_failed')),
@@ -44,25 +34,9 @@ export const AdminSelections = () => {
     );
   };
 
-  const downloadAsZip = async (submission: any) => {
+  const downloadAsZip = async (submission: GallerySubmission) => {
     setDownloading(true);
-    const zip = new JSZip();
-    const folder = zip.folder('selected-images')!;
-
-    await Promise.all(
-      submission.selectedImageIds.map(async (img: any) => {
-        const url = `${API_BASE}${img.path}`;
-        const res = await axios.get(url, { responseType: 'blob' });
-        const ext = img.filename.includes('.') ? `.${img.filename.split('.').pop()}` : '';
-        folder.file(`${img._id}${ext}`, res.data);
-      }),
-    );
-
-    const content = await zip.generateAsync({ type: 'blob' });
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(content);
-    a.download = `selection-${submission._id}.zip`;
-    a.click();
+    await downloadZip(submission.selectedImageIds, 'selected-images', `selection-${submission._id}`);
     setDownloading(false);
   };
 
@@ -82,8 +56,8 @@ export const AdminSelections = () => {
               {galleries.map((g) => (
                 <button
                   key={g._id}
-                  onClick={() => loadSubmissions(g._id)}
-                  className={`w-full text-left px-3 py-2.5 rounded-lg text-sm transition-colors ${
+                  onClick={() => setSelected(g._id)}
+                  className={`w-full text-left px-3 py-2.5 rounded-xl text-sm transition-colors ${
                     selected === g._id ? 'bg-blush/20 text-charcoal font-medium' : 'text-charcoal hover:bg-ivory'
                   }`}
                 >
@@ -121,7 +95,7 @@ export const AdminSelections = () => {
                   <button
                     onClick={() => markInEditing(currentGallery._id)}
                     disabled={markingInEditingId === currentGallery._id}
-                    className='flex items-center gap-2 bg-amber-50 border border-amber-200 text-charcoal px-4 py-2 rounded-lg text-xs font-medium hover:bg-amber-100 transition-colors disabled:opacity-60'
+                    className='flex items-center gap-2 bg-amber-50 border border-amber-200 text-charcoal px-4 py-2 rounded-xl text-xs font-medium hover:bg-amber-100 transition-colors disabled:opacity-60'
                   >
                     <Pencil size={13} />
                     {markingInEditingId === currentGallery._id ? t('admin.gallery.marking') : t('admin.gallery.mark_in_editing')}
@@ -140,19 +114,20 @@ export const AdminSelections = () => {
                       </p>
                       {sub.clientMessage && <p className='text-xs text-charcoal italic mt-1'>"{sub.clientMessage}"</p>}
                     </div>
-                    <button
+                    <Button
+                      variant='primary'
+                      size='sm'
                       onClick={() => downloadAsZip(sub)}
                       disabled={downloading}
-                      className='flex items-center gap-2 bg-blush text-primary-foreground px-4 py-2 rounded-lg text-xs font-medium hover:bg-blush/80 transition-colors disabled:opacity-60'
                     >
                       <Download size={13} />
                       {downloading ? t('admin.selections.preparing') : t('admin.selections.download')}
-                    </button>
+                    </Button>
                   </div>
 
                   {/* Thumbnail grid */}
                   <div className='grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-1.5'>
-                    {sub.selectedImageIds.map((img: any) => {
+                    {sub.selectedImageIds.map((img) => {
                       const isHero = (sub.heroImageId && img._id === sub.heroImageId.toString?.()) || img._id === sub.heroImageId;
                       const comment = sub.imageComments?.[img._id];
                       return (
@@ -170,8 +145,7 @@ export const AdminSelections = () => {
                           )}
                           {comment && (
                             <div
-                              className='absolute bottom-1 right-1 w-5 h-5 rounded-full flex items-center justify-center shadow'
-                              style={{ backgroundColor: '#E7B8B5' }}
+                              className='absolute bottom-1 right-1 w-5 h-5 rounded-full bg-blush flex items-center justify-center shadow'
                               title={comment}
                             >
                               <MessageCircle size={10} className='text-charcoal' />

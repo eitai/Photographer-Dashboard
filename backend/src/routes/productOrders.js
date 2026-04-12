@@ -3,15 +3,16 @@ const ProductOrder = require('../models/ProductOrder');
 const Gallery = require('../models/Gallery');
 const { protect } = require('../middleware/auth');
 const asyncHandler = require('../middleware/asyncHandler');
+const { UUID_RE } = require('../utils/uuid');
 
 const router = express.Router();
-
-const UUID_RE = /^[0-9a-f-]{36}$/i;
 
 // GET /api/product-orders/gallery/:token  — PUBLIC
 router.get('/gallery/:token', asyncHandler(async (req, res) => {
   const gallery = await Gallery.findOne({ token: req.params.token, isActive: true });
   if (!gallery) return res.status(404).json({ message: 'Gallery not found' });
+  if (gallery.expiresAt && new Date(gallery.expiresAt) < new Date())
+    return res.status(410).json({ message: 'Gallery has expired' });
 
   const clientId = typeof gallery.clientId === 'object' ? gallery.clientId?.id : gallery.clientId;
   const orders = await ProductOrder.find(

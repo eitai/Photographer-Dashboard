@@ -30,6 +30,7 @@ async function findOne(filter, { populate } = {}) {
 }
 
 async function upsert(adminId, data, { populate } = {}) {
+  // Scalar columns: camelCase key → snake_case DB column
   const colMap = {
     bio: 'bio',
     heroImagePath: 'hero_image_path',
@@ -41,6 +42,30 @@ async function upsert(adminId, data, { populate } = {}) {
     contactEmail: 'contact_email',
     theme: 'theme',
     featuredImageIds: 'featured_image_ids',
+    heroOverlayOpacity: 'hero_overlay_opacity',
+    heroCtaPrimaryLabel: 'hero_cta_primary_label',
+    heroCtaSecondaryLabel: 'hero_cta_secondary_label',
+    aboutSectionTitle: 'about_section_title',
+    tiktokUrl: 'tiktok_url',
+    videoUrl: 'video_url',
+    videoSectionHeading: 'video_section_heading',
+    videoSectionSubheading: 'video_section_subheading',
+    videoSectionEnabled: 'video_section_enabled',
+    ctaBannerHeading: 'cta_banner_heading',
+    ctaBannerSubtext: 'cta_banner_subtext',
+    ctaBannerButtonLabel: 'cta_banner_button_label',
+    ctaBannerEnabled: 'cta_banner_enabled',
+    servicesEnabled: 'services_enabled',
+    testimonialsEnabled: 'testimonials_enabled',
+    packagesEnabled: 'packages_enabled',
+    packagesDisclaimer: 'packages_disclaimer',
+  };
+
+  // JSONB columns: camelCase key → snake_case DB column
+  const jsonbColMap = {
+    services: 'services',
+    testimonials: 'testimonials',
+    packages: 'packages',
   };
 
   const sets = [];
@@ -59,7 +84,16 @@ async function upsert(adminId, data, { populate } = {}) {
         insertPlaceholders.push(`$${i}`);
         sets.push(`${col} = $${i++}`);
       }
-      vals.push(data[k] === undefined ? null : data[k]);
+      vals.push(data[k]);
+    }
+  }
+
+  for (const [k, col] of Object.entries(jsonbColMap)) {
+    if (data[k] !== undefined) {
+      insertCols.push(col);
+      insertPlaceholders.push(`$${i}::jsonb`);
+      sets.push(`${col} = $${i++}::jsonb`);
+      vals.push(JSON.stringify(data[k]));
     }
   }
 

@@ -12,9 +12,14 @@ export interface GalleryData {
   _id: string;
   name: string;
   clientName: string;
+  clientId: string;
+  token: string;
   headerMessage: string;
   maxSelections: number;
   isDelivery: boolean;
+  isActive: boolean;
+  deliveryOf?: string;
+  lastEmailSentAt?: string;
   status: 'gallery_sent' | 'viewed' | 'selection_submitted' | 'in_editing' | 'delivered';
   videos?: { path: string; filename: string; originalName: string }[];
 }
@@ -25,6 +30,15 @@ export interface Gallery {
   name: string;
   isDelivery: boolean;
   token?: string;
+}
+
+export interface GallerySubmission {
+  _id: string;
+  selectedImageIds: GalleryImage[];
+  submittedAt: string;
+  clientMessage?: string;
+  heroImageId?: string;
+  imageComments?: Record<string, string>;
 }
 
 /** Gallery shape returned by the showcase/listing endpoint */

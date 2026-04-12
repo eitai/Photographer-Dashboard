@@ -107,10 +107,11 @@ Themes for photographer landing pages: Soft, Luxury, Bold, Minimal, Warm, Ocean,
 
 ## Auth Flow
 
-- Login → JWT stored in `localStorage` (`koral_admin_token`, `koral_admin_user`)
-- Axios interceptor in `api.ts` attaches token to every request
-- 401 response → clear storage → redirect to `/admin`
-- `<ProtectedRoute>` checks token presence at route level
+- Auth is **cookie-first**: the server sets an httpOnly session cookie on login — the JWT never touches JavaScript
+- `koral_admin_user` in `localStorage` is a UI-only cache of the `AdminUser` profile object (name, email, role) used to hydrate the Zustand `authStore` for immediate render; `koral_admin_token` is a legacy key that `clearAuthAndRedirect()` removes but is never written by current code
+- The Axios instance in `api.ts` is created with `withCredentials: true`; there is **no** request interceptor attaching a Bearer header
+- 401 response interceptor calls `clearAuthAndRedirect()`, which removes both localStorage keys then calls `window.location.replace('/admin')` (replace, not push, so the login page is not on the history stack)
+- `<ProtectedRoute>` checks the `admin` object from `useAuthStore` (hydrated from the `koral_admin_user` cache); a missing or expired cookie surfaces as a 401 on the next API call, which triggers the redirect
 
 ## Testing
 

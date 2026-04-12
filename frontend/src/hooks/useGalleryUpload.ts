@@ -1,5 +1,7 @@
 import { useState, useRef, useCallback } from 'react';
 import api from '@/lib/api';
+import { useI18n } from '@/lib/i18n';
+import { toast } from 'sonner';
 
 export interface UploadFile {
   id: string;
@@ -9,14 +11,28 @@ export interface UploadFile {
   error: boolean;
 }
 
+const MAX_IMAGE_SIZE = 20 * 1024 * 1024; // 20 MB — matches backend Multer limit
+
 export function useGalleryUpload(galleryId: string | undefined, onUploadComplete: () => void) {
+  const { t } = useI18n();
   const [queue, setQueue] = useState<UploadFile[]>([]);
   const [dragging, setDragging] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const handleFiles = useCallback(
     async (files: FileList | File[]) => {
-      const arr = Array.from(files).filter((f) => f.type.startsWith('image/'));
+      const arr: File[] = [];
+      for (const f of Array.from(files)) {
+        if (!f.type.startsWith('image/')) {
+          toast.error(t('admin.upload.invalid_type').replace('{{name}}', f.name));
+          continue;
+        }
+        if (f.size > MAX_IMAGE_SIZE) {
+          toast.error(t('admin.upload.file_too_large').replace('{{name}}', f.name));
+          continue;
+        }
+        arr.push(f);
+      }
       const newItems: UploadFile[] = arr.map((f) => ({
         id: crypto.randomUUID(),
         file: f,
@@ -56,7 +72,7 @@ export function useGalleryUpload(galleryId: string | undefined, onUploadComplete
 
       setTimeout(() => setQueue([]), 1500);
     },
-    [galleryId, onUploadComplete],
+    [galleryId, onUploadComplete, t],
   );
 
   const onDrop = (e: React.DragEvent) => {

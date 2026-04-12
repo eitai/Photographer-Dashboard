@@ -1,16 +1,16 @@
 import { GalleryCard } from '@/components/admin/GalleryCard';
+import type { Client } from '@/types/admin';
+import type { GalleryData } from '@/types/gallery';
 
 interface GalleryGridProps {
-  galleries: any[];
-  client: any;
+  galleries: GalleryData[];
+  client: Client;
   copiedId: string | null;
   resendingId: string | null;
   resentId: string | null;
   showDeliveryFormFor: string | null;
   deliveryHeaderMessage: string;
   creatingDeliveryFor: string | null;
-  markingInEditingId: string | null;
-  t: (key: string) => string;
   copyLink: (token: string, galleryId: string) => void;
   whatsAppLink: (token: string) => string;
   resendEmail: (galleryId: string) => void;
@@ -18,7 +18,6 @@ interface GalleryGridProps {
   setShowDeliveryFormFor: (id: string | null) => void;
   setDeliveryHeaderMessage: (msg: string) => void;
   createDeliveryGallery: (originalGalleryId: string) => void;
-  onMarkInEditing: (galleryId: string) => void;
 }
 
 export const GalleryGrid = ({
@@ -30,8 +29,6 @@ export const GalleryGrid = ({
   showDeliveryFormFor,
   deliveryHeaderMessage,
   creatingDeliveryFor,
-  markingInEditingId,
-  t,
   copyLink,
   whatsAppLink,
   resendEmail,
@@ -42,14 +39,14 @@ export const GalleryGrid = ({
   onMarkInEditing,
 }: GalleryGridProps) => {
   // Build delivery map: originalId → delivery gallery (only for originals in this list)
-  const deliveryByOriginalId = new Map<string, any>();
+  const deliveryByOriginalId = new Map<string, GalleryData>();
   galleries.forEach((g) => {
     if (g.isDelivery && g.deliveryOf) {
       const originalExists = galleries.some((o) => o._id === g.deliveryOf);
       if (originalExists) deliveryByOriginalId.set(g.deliveryOf, g);
     }
   });
-  const pairedDeliveryIds = new Set([...deliveryByOriginalId.values()].map((d: any) => d._id));
+  const pairedDeliveryIds = new Set([...deliveryByOriginalId.values()].map((d) => d._id));
 
   // Groups: paired originals + their delivery, or standalone
   const groups = galleries
@@ -67,9 +64,7 @@ export const GalleryGrid = ({
     showDeliveryFormFor,
     deliveryHeaderMessage,
     creatingDeliveryFor,
-    markingInEditingId,
     galleries,
-    t,
     copyLink,
     whatsAppLink,
     resendEmail,
@@ -77,7 +72,6 @@ export const GalleryGrid = ({
     setShowDeliveryFormFor,
     setDeliveryHeaderMessage,
     createDeliveryGallery,
-    onMarkInEditing,
   };
 
   return (

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { AdminLayout } from '@/components/admin/AdminLayout';
 import { AdminGalleryLightbox } from '@/components/admin/AdminGalleryLightbox';
+import { StatusBadge } from '@/components/admin/StatusBadge';
 import { DeleteConfirmModal } from '@/components/admin/DeleteConfirmModal';
 import { ImageGrid } from '@/components/admin/ImageGrid';
 import { BulkActionBar } from '@/components/admin/BulkActionBar';
@@ -13,15 +14,14 @@ import { useBeforeImageUpload } from '@/hooks/useBeforeImageUpload';
 import { useVideoUpload } from '@/hooks/useVideoUpload';
 import { useI18n } from '@/lib/i18n';
 import { API_BASE } from '@/lib/api';
-import { ArrowLeft, CloudUpload, ChevronDown, Video, Trash2 } from 'lucide-react';
-
-const STATUSES = ['gallery_sent', 'viewed', 'selection_submitted', 'in_editing', 'delivered'] as const;
+import { ArrowLeft, CloudUpload, Video, Trash2 } from 'lucide-react';
+import { Button } from '@/components/admin/Button';
 
 export const AdminGalleryUpload = () => {
   const { id } = useParams();
   const { t } = useI18n();
 
-  const { gallery, setGallery, loadError, images, loadImages, updateStatus } = useGalleryData(id);
+  const { gallery, setGallery, loadError, images, loadImages } = useGalleryData(id);
   const { queue, dragging, setDragging, inputRef, handleFiles, onDrop } = useGalleryUpload(id, loadImages);
   const { toDelete, setToDelete, bulkDeleting, confirmDelete } = useImageDeletion(id, () => {
     setSelectedIds(new Set());
@@ -64,7 +64,7 @@ export const AdminGalleryUpload = () => {
         to={gallery.clientId ? `/admin/clients/${gallery.clientId._id || gallery.clientId}` : '/admin/galleries'}
         className='flex items-center gap-1 text-sm text-warm-gray hover:text-charcoal mb-6'
       >
-        <ArrowLeft size={14} /> {t('admin.common.back_clients')}
+        <ArrowLeft size={14} /> {gallery.clientId ? t('admin.common.back_client') : t('admin.common.back_clients')}
       </Link>
 
       <div className='flex flex-wrap items-start justify-between gap-3 mb-6'>
@@ -74,27 +74,23 @@ export const AdminGalleryUpload = () => {
             {gallery.clientName} · {images.length} {t('admin.upload.images')}
           </p>
         </div>
-        <div className='relative'>
-          <select
-            value={gallery.status}
-            onChange={(e) => updateStatus(e.target.value)}
-            className='appearance-none ps-3 pe-8 py-2.5 min-h-[44px] rounded-lg border border-beige bg-card text-xs text-charcoal focus:outline-none focus:ring-2 focus:ring-blush/50 cursor-pointer'
-          >
-            {STATUSES.map((s) => (
-              <option key={s} value={s}>
-                {t(`admin.status.${s}`)}
-              </option>
-            ))}
-          </select>
-          <ChevronDown size={12} className='absolute end-2 top-1/2 -translate-y-1/2 text-warm-gray pointer-events-none' />
-        </div>
+        <StatusBadge status={gallery.status} />
       </div>
 
       <div
+        role="button"
+        tabIndex={0}
+        aria-label={t('admin.upload.drop_images_label')}
         onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
         onDragLeave={() => setDragging(false)}
         onDrop={onDrop}
         onClick={() => inputRef.current?.click()}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            inputRef.current?.click();
+          }
+        }}
         className={`border-2 border-dashed rounded-xl p-6 sm:p-10 text-center cursor-pointer transition-colors mb-6 ${
           dragging ? 'border-blush bg-blush/10' : 'border-beige hover:border-blush/50 bg-card'
         }`}
@@ -156,14 +152,16 @@ export const AdminGalleryUpload = () => {
                 <video src={`${API_BASE}${v.path}`} controls className='w-full max-h-56' />
                 <div className='flex items-center gap-2 px-3 py-2 bg-card'>
                   <span className='text-xs text-warm-gray truncate flex-1'>{v.originalName || v.filename}</span>
-                  <button
+                  <Button
+                    variant='danger'
+                    size='sm'
+                    className='shrink-0'
                     onClick={() => handleVideoDelete(v.filename)}
                     disabled={deletingFilename === v.filename}
-                    className='flex items-center gap-1 text-xs text-rose-500 hover:text-rose-700 transition-colors disabled:opacity-50 shrink-0'
                   >
                     <Trash2 size={12} />
                     {deletingFilename === v.filename ? t('admin.common.deleting') : t('admin.gallery.delete_video')}
-                  </button>
+                  </Button>
                 </div>
               </div>
             ))}
@@ -203,7 +201,16 @@ export const AdminGalleryUpload = () => {
           }}
         />
         <div
+          role="button"
+          tabIndex={0}
+          aria-label={t('admin.gallery.drop_video_label')}
           onClick={() => videoInputRef.current?.click()}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              videoInputRef.current?.click();
+            }
+          }}
           className='border-2 border-dashed border-beige hover:border-blush/50 rounded-xl p-6 text-center cursor-pointer transition-colors bg-ivory'
         >
           <Video size={24} className='mx-auto text-warm-gray mb-2' />

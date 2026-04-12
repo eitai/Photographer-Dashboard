@@ -19,7 +19,11 @@
       "Bash(node -e \"require\\(''./src/app''\\)\")",
       "Bash(find 'c:/Users/eitai/Desktop/codevalue/store test/koral-light-studio/src' -type f -name *gallery* -o -name *Gallery*)",
       "Bash(node -e \":*)",
-      "Bash(curl -s http://localhost:5000/api/auth/seed -X POST -H \"Content-Type: application/json\" -d '{}')"
+      "Bash(curl -s http://localhost:5000/api/auth/seed -X POST -H \"Content-Type: application/json\" -d '{}')",
+      "Bash(node -e \"require\\(''''./src/app''''\\)\")",
+      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\(list\\(d.get\\(''''dependencies'''',{}\\).keys\\(\\)\\) + list\\(d.get\\(''''devDependencies'''',{}\\).keys\\(\\)\\)\\)\")",
+      "Bash(find \"c:\\\\Users\\\\eitai\\\\Desktop\\\\codevalue\\\\store test\\\\frontend\\\\src/components/admin\" -name \"*.tsx\" -exec wc -l {} +)",
+      "Bash(grep -rn '$gt\\\\|$ne\\\\|$in\\\\|$regex' 'c:\\\\Users\\\\eitai\\\\Desktop\\\\codevalue\\\\store test\\\\backend\\\\src' '--include=*.js')"
     ]
   }
 }

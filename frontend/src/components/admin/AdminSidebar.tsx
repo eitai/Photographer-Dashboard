@@ -1,7 +1,7 @@
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useI18n } from '@/lib/i18n';
-import { LayoutDashboard, Users, BookOpen, Settings, LogOut, Camera, Languages, Star, Shield, Mail } from 'lucide-react';
+import { LayoutDashboard, Users, BookOpen, Settings, LogOut, Languages, Star, Shield, Mail } from 'lucide-react';
 
 interface AdminSidebarProps {
   isOpen?: boolean;
@@ -10,7 +10,7 @@ interface AdminSidebarProps {
 
 export const AdminSidebar = ({ isOpen, onClose }: AdminSidebarProps) => {
   const { admin, logout } = useAuth();
-  const { t, lang, toggleLang } = useI18n();
+  const { t, lang, dir, toggleLang } = useI18n();
   const navigate = useNavigate();
 
   const NAV_ITEMS =
@@ -33,19 +33,16 @@ export const AdminSidebar = ({ isOpen, onClose }: AdminSidebarProps) => {
   return (
     <aside
       className={`
-      fixed inset-y-0 right-0 z-30 w-60 bg-card border-l border-beige flex flex-col
+      fixed inset-y-0 z-30 w-60 bg-white flex flex-col
       transition-transform duration-200
-      ${isOpen ? 'translate-x-0' : 'translate-x-full'}
-      md:static md:translate-x-0 md:border-r md:border-l-0
+      ${dir === 'rtl' ? 'right-0 border-l border-gray-200' : 'left-0 border-r border-gray-200'}
+      ${isOpen ? 'translate-x-0' : dir === 'rtl' ? 'translate-x-full' : '-translate-x-full'}
+      md:static md:translate-x-0
     `}
     >
       {/* Logo */}
-      <div className='p-6 border-b border-beige flex items-center gap-3'>
-        <Camera size={22} className='text-blush' />
-        <div>
-          <p className=' text-charcoal  text-sm font-semibold leading-tight'>Koral</p>
-          <p className='text-xs text-warm-gray'>{t('admin.sidebar.studio')}</p>
-        </div>
+      <div className='h-16 px-6 border-b border-gray-100 flex items-center'>
+        <img src='/logos/03_logo_horizontal_transparent.png' alt='Koral Light Studio' className='h-full w-full object-contain py-2 transition-transform duration-200 hover:scale-110' />
       </div>
 
       {/* Navigation */}
@@ -76,14 +73,14 @@ export const AdminSidebar = ({ isOpen, onClose }: AdminSidebarProps) => {
         {/* Language toggle */}
         <button
           onClick={toggleLang}
-          className='flex items-center gap-3 w-full px-3 py-2 rounded-lg text-sm font-sans text-warm-gray hover:bg-ivory hover:text-charcoal transition-colors duration-150 mb-1'
+          className='flex items-center gap-3 w-full px-3 py-2 rounded-xl text-sm font-sans text-warm-gray hover:bg-ivory hover:text-charcoal transition-colors duration-150 mb-1'
         >
           <Languages size={17} />
           {lang === 'he' ? 'English' : 'עברית'}
         </button>
         <button
           onClick={handleLogout}
-          className='flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm font-sans text-warm-gray hover:bg-ivory hover:text-charcoal transition-colors duration-150'
+          className='flex items-center gap-3 w-full px-3 py-2.5 rounded-xl text-sm font-sans text-warm-gray hover:bg-ivory hover:text-charcoal transition-colors duration-150'
         >
           <LogOut size={17} />
           {t('admin.nav.logout')}

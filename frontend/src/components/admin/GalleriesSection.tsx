@@ -2,12 +2,14 @@ import { useState } from 'react';
 import { Images, Mail, Plus } from 'lucide-react';
 import { createGallery as apiCreateGallery } from '@/services/galleryService';
 import { GalleryGrid } from '@/components/admin/GalleryGrid';
+import { useI18n } from '@/lib/i18n';
+import type { Client } from '@/types/admin';
+import type { GalleryData } from '@/types/gallery';
 
 interface GalleriesSectionProps {
-  galleries: any[];
-  client: any;
+  galleries: GalleryData[];
+  client: Client;
   onCreated: () => void;
-  t: (key: string) => string;
   // GalleryGrid passthrough
   copiedId: string | null;
   resendingId: string | null;
@@ -15,7 +17,6 @@ interface GalleriesSectionProps {
   showDeliveryFormFor: string | null;
   deliveryHeaderMessage: string;
   creatingDeliveryFor: string | null;
-  markingInEditingId: string | null;
   copyLink: (token: string, galleryId: string) => void;
   whatsAppLink: (token: string) => string;
   resendEmail: (id: string) => void;
@@ -23,21 +24,18 @@ interface GalleriesSectionProps {
   setShowDeliveryFormFor: (id: string | null) => void;
   setDeliveryHeaderMessage: (msg: string) => void;
   createDeliveryGallery: (id: string) => void;
-  onMarkInEditing: (galleryId: string) => void;
 }
 
 export const GalleriesSection = ({
   galleries,
   client,
   onCreated,
-  t,
   copiedId,
   resendingId,
   resentId,
   showDeliveryFormFor,
   deliveryHeaderMessage,
   creatingDeliveryFor,
-  markingInEditingId,
   copyLink,
   whatsAppLink,
   resendEmail,
@@ -45,8 +43,8 @@ export const GalleriesSection = ({
   setShowDeliveryFormFor,
   setDeliveryHeaderMessage,
   createDeliveryGallery,
-  onMarkInEditing,
 }: GalleriesSectionProps) => {
+  const { t } = useI18n();
   const [showGalleryForm, setShowGalleryForm] = useState(false);
   const [galleryForm, setGalleryForm] = useState({ name: '', headerMessage: '', maxSelections: 10 });
   const [savingGallery, setSavingGallery] = useState(false);
@@ -75,7 +73,7 @@ export const GalleriesSection = ({
         </div>
         <button
           onClick={() => setShowGalleryForm(!showGalleryForm)}
-          className='flex items-center gap-1.5 bg-blush text-primary-foreground px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-blush/80 transition-colors'
+          className='flex items-center gap-1.5 bg-blush text-primary-foreground px-3 py-1.5 rounded-xl text-xs font-medium hover:bg-blush/80 transition-colors'
         >
           <Plus size={13} /> {t('admin.galleries.new')}
         </button>
@@ -117,14 +115,14 @@ export const GalleriesSection = ({
             <button
               type='submit'
               disabled={savingGallery}
-              className='bg-blush text-primary-foreground px-4 py-1.5 rounded-lg text-xs font-medium hover:bg-blush/80 transition-colors disabled:opacity-60'
+              className='bg-blush text-primary-foreground px-4 py-1.5 rounded-xl text-xs font-medium hover:bg-blush/80 transition-colors disabled:opacity-60'
             >
               {savingGallery ? t('admin.galleries.creating') : t('admin.galleries.create')}
             </button>
             <button
               type='button'
               onClick={() => setShowGalleryForm(false)}
-              className='px-4 py-1.5 rounded-lg text-xs text-warm-gray border border-beige hover:bg-card transition-colors'
+              className='px-4 py-1.5 rounded-xl text-xs text-warm-gray border border-beige hover:bg-card transition-colors'
             >
               {t('admin.common.cancel')}
             </button>
@@ -158,8 +156,6 @@ export const GalleriesSection = ({
           showDeliveryFormFor={showDeliveryFormFor}
           deliveryHeaderMessage={deliveryHeaderMessage}
           creatingDeliveryFor={creatingDeliveryFor}
-          markingInEditingId={markingInEditingId}
-          t={t}
           copyLink={copyLink}
           whatsAppLink={whatsAppLink}
           resendEmail={resendEmail}
@@ -167,7 +163,6 @@ export const GalleriesSection = ({
           setShowDeliveryFormFor={setShowDeliveryFormFor}
           setDeliveryHeaderMessage={setDeliveryHeaderMessage}
           createDeliveryGallery={createDeliveryGallery}
-          onMarkInEditing={onMarkInEditing}
         />
       )}
     </div>

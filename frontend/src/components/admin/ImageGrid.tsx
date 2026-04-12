@@ -50,7 +50,7 @@ export const ImageGrid = ({
             ) : (
               <button
                 onClick={(e) => { e.stopPropagation(); onRequestDelete(img._id); }}
-                className='absolute top-1 end-1 bg-black/50 text-white p-1.5 rounded-md opacity-0 group-hover:opacity-100 [@media(hover:none)]:opacity-100 transition-opacity'
+                className='absolute top-1 end-1 bg-black/50 text-white p-1.5 rounded-xl opacity-0 group-hover:opacity-100 [@media(hover:none)]:opacity-100 transition-opacity'
                 title={t('admin.upload.delete_title')}
               >
                 <Trash2 size={11} />
@@ -59,7 +59,7 @@ export const ImageGrid = ({
 
             <button
               onClick={(e) => { e.stopPropagation(); onOpenLightbox(idx); }}
-              className='absolute top-1 start-1 bg-black/50 text-white p-1.5 rounded-md opacity-0 group-hover:opacity-100 [@media(hover:none)]:opacity-100 transition-opacity'
+              className='absolute top-1 start-1 bg-black/50 text-white p-1.5 rounded-xl opacity-0 group-hover:opacity-100 [@media(hover:none)]:opacity-100 transition-opacity'
               title={t('admin.upload.open_title')}
             >
               <Maximize2 size={11} />
@@ -68,7 +68,7 @@ export const ImageGrid = ({
             <button
               onClick={(e) => { e.stopPropagation(); onTriggerBeforeUpload(img._id); }}
               disabled={uploadingBefore === img._id}
-              className={`absolute bottom-1 start-1 p-1.5 rounded-md text-white transition-opacity ${
+              className={`absolute bottom-1 start-1 p-1.5 rounded-xl text-white transition-opacity ${
                 img.beforePath
                   ? 'bg-blush/80 opacity-100'
                   : 'bg-black/50 opacity-0 group-hover:opacity-100 [@media(hover:none)]:opacity-100'

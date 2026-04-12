@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useI18n } from '@/lib/i18n';
-import { Camera } from 'lucide-react';
 
 export const AdminLogin = () => {
   const { login, admin } = useAuth();
@@ -14,7 +13,7 @@ export const AdminLogin = () => {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (admin) navigate('/admin/dashboard', { replace: true });
+    if (admin) navigate(admin.role === 'superadmin' ? '/admin/users' : '/admin/dashboard', { replace: true });
   }, [admin, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -22,8 +21,8 @@ export const AdminLogin = () => {
     setError('');
     setLoading(true);
     try {
-      await login(identifier, password);
-      navigate('/admin/dashboard');
+      const loggedInAdmin = await login(identifier, password);
+      navigate(loggedInAdmin.role === 'superadmin' ? '/admin/users' : '/admin/dashboard');
     } catch {
       setError(t('admin.login.error'));
     } finally {
@@ -32,20 +31,13 @@ export const AdminLogin = () => {
   };
 
   return (
-    <div className='min-h-screen bg-ivory flex items-center justify-center px-4'>
+    <div className='min-h-screen bg-white flex flex-col items-center justify-center px-4'>
+      {/* Logo — large, outside the card */}
+      <img src='/logos/01_logo_horizontal_light.png' alt='Koral' className='h-48 w-auto ' />
       <div className='w-full max-w-sm'>
-        {/* Logo */}
-        <div className='text-center mb-8'>
-          <div className='flex items-center justify-center gap-2 mb-2'>
-            <Camera size={28} className='text-blush' />
-            <span className=' text-2xl text-charcoal'>Koral</span>
-          </div>
-          <p className='text-warm-gray text-sm'>{t('admin.login.subtitle')}</p>
-        </div>
-
-        <form onSubmit={handleSubmit} className='bg-card rounded-2xl shadow-sm border border-beige p-8 space-y-5'>
+        <form onSubmit={handleSubmit} className='border border-zinc-200 rounded-2xl p-8 space-y-5'>
           <div>
-            <label className='block text-sm text-charcoal mb-1.5'>{t('admin.login.email')}</label>
+            <label className='block text-zinc-900 text-xs uppercase tracking-widest mb-2'>{t('admin.login.email')}</label>
             <input
               type='text'
               value={identifier}
@@ -53,26 +45,28 @@ export const AdminLogin = () => {
               required
               autoFocus
               autoComplete='username'
-              className='w-full px-4 py-2.5 rounded-lg border border-beige bg-ivory text-charcoal text-sm focus:outline-none focus:ring-2 focus:ring-blush/50'
+              className='w-full bg-white border border-zinc-300 text-zinc-900 rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-black focus:border-black'
             />
           </div>
+
           <div>
-            <label className='block text-sm text-charcoal mb-1.5'>{t('admin.login.password')}</label>
+            <label className='block text-zinc-900 text-xs uppercase tracking-widest mb-2'>{t('admin.login.password')}</label>
             <input
               type='password'
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
-              className='w-full px-4 py-2.5 rounded-lg border border-beige bg-ivory text-charcoal text-sm focus:outline-none focus:ring-2 focus:ring-blush/50'
+              autoComplete='current-password'
+              className='w-full bg-white border border-zinc-300 text-zinc-900 rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-black focus:border-black'
             />
           </div>
 
-          {error && <p className='text-rose-500 text-sm'>{error}</p>}
+          {error && <p className='text-red-500 text-sm'>{error}</p>}
 
           <button
             type='submit'
             disabled={loading}
-            className='w-full bg-blush text-primary-foreground py-2.5 rounded-lg text-sm font-medium hover:bg-blush/80 transition-colors duration-150 disabled:opacity-60'
+            className='w-full bg-zinc-900 text-white font-medium rounded-xl py-3 hover:bg-black transition-colors disabled:opacity-50'
           >
             {loading ? t('admin.login.signing_in') : t('admin.login.sign_in')}
           </button>

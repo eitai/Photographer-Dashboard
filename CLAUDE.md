@@ -4,8 +4,8 @@
 
 ```
 Photographer-Dashboard/
-├── backend/              ← Express.js + MongoDB REST API (port 5000)
-├── koral-light-studio/   ← React + Vite + TypeScript web dashboard (port 8080)
+├── backend/              ← Express.js + PostgreSQL REST API (port 5000)
+├── frontend/             ← React + Vite + TypeScript web dashboard (port 8080)
 └── koral-mobile/         ← React Native monorepo (Expo apps + shared packages)
     ├── apps/admin/       ← Photographer admin app (Expo ~54)
     ├── apps/client/      ← Gallery viewer app (Expo ~55)
@@ -51,7 +51,7 @@ curl -X POST http://localhost:5000/api/auth/seed
 
 | Layer | Stack |
 |---|---|
-| Backend | Express 4, MongoDB (Mongoose), JWT, Multer, Sharp |
+| Backend | Express 4, PostgreSQL (pg), JWT, Multer, Sharp |
 | Web Frontend | React 18, Vite 5, TypeScript 5, Tailwind 3, shadcn/ui, Zustand, TanStack Query |
 | Mobile | React Native 0.81/0.83, Expo, Expo Router, Zustand, TanStack Query |
 | Shared | `@koral/api` (typed Axios client), `@koral/types`, `@koral/i18n` |
@@ -92,7 +92,7 @@ Go **direct** to a specialist for clearly scoped single-layer tasks.
 
 ### API Communication
 - Web API base URL: `VITE_API_URL` env var (defaults to `http://localhost:5000/api`)
-- All API logic lives in `koral-light-studio/src/lib/api.ts`
+- All API logic lives in `frontend/src/lib/api.ts`
 - Mobile API in `koral-mobile/packages/api/`
 
 ### State Management
@@ -126,20 +126,21 @@ Go **direct** to a specialist for clearly scoped single-layer tasks.
 
 ### Backend (`backend/.env`)
 ```
-MONGODB_URI=
+DATABASE_URL=
+FRONTEND_URL=
 JWT_SECRET=
 SMTP_USER=       # Gmail
 SMTP_PASS=
 PORT=5000
 ```
 
-### Frontend (`koral-light-studio/.env`)
+### Frontend (`frontend/.env`)
 ```
 VITE_API_URL=http://localhost:5000/api
 ```
 
 ## Critical Rules
-- **No mock data** — use real MongoDB connections; never fake API responses
+- **No mock data** — use real PostgreSQL connections; never fake API responses
 - **No console.log in commits** — clean up before committing
 - **Never commit .env files**
 - **Gallery tokens** are generated server-side; never generate client-side

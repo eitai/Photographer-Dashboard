@@ -2,7 +2,9 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '@/lib/api';
 import * as clientService from '@/services/clientService';
 import * as galleryService from '@/services/galleryService';
+import { fetchProductOrders } from '@/services/productOrderService';
 import { Client } from '@/types/admin';
+import type { GalleryData } from '@/types/gallery';
 
 // ---------------------------------------------------------------------------
 // Query keys
@@ -12,9 +14,16 @@ export const queryKeys = {
   clients: ['clients'] as const,
   client: (id: string) => ['clients', id] as const,
   galleries: ['galleries'] as const,
+  gallery: (id: string) => ['galleries', id] as const,
   galleriesByClient: (clientId: string) => ['galleries', 'client', clientId] as const,
   submissions: (galleryId: string) => ['submissions', galleryId] as const,
   blog: ['blog'] as const,
+  blogCount: ['blog', 'count'] as const,
+  blogPosts: (adminId?: string) => adminId ? ['blog', 'posts', adminId] : ['blog', 'posts'],
+  settings: ['settings'] as const,
+  admins: ['admins'] as const,
+  productOrders: (clientId: string) => ['product-orders', clientId] as const,
+  adminProducts: ['admin-products'] as const,
 };
 
 // ---------------------------------------------------------------------------
@@ -22,7 +31,11 @@ export const queryKeys = {
 // ---------------------------------------------------------------------------
 
 export function useClients() {
-  return useQuery({ queryKey: queryKeys.clients, queryFn: clientService.listClients });
+  return useQuery({
+    queryKey: queryKeys.clients,
+    queryFn: clientService.listClients,
+    staleTime: 30_000,
+  });
 }
 
 export function useClient(id: string) {
@@ -30,11 +43,16 @@ export function useClient(id: string) {
     queryKey: queryKeys.client(id),
     queryFn: () => clientService.getClient(id),
     enabled: !!id,
+    staleTime: 30_000,
   });
 }
 
 export function useGalleries() {
-  return useQuery({ queryKey: queryKeys.galleries, queryFn: galleryService.listGalleries });
+  return useQuery({
+    queryKey: queryKeys.galleries,
+    queryFn: galleryService.listGalleries,
+    staleTime: 30_000,
+  });
 }
 
 export function useGalleriesByClient(clientId: string) {
@@ -55,8 +73,64 @@ export function useSubmissions(galleryId: string) {
 
 export function useBlogCount() {
   return useQuery({
-    queryKey: queryKeys.blog,
-    queryFn: () => api.get('/blog?admin=1').then((r) => r.data.length as number),
+    queryKey: queryKeys.blogCount,
+    queryFn: () => api.get<{ count: number }>('/blog/count').then((r) => r.data.count),
+    staleTime: 60_000,
+  });
+}
+
+export function useBlogPosts(adminId?: string) {
+  return useQuery({
+    queryKey: queryKeys.blogPosts(adminId) as readonly string[],
+    queryFn: async () => {
+      const url = adminId ? `/blog?adminId=${adminId}` : '/blog?admin=1';
+      const r = await api.get(url);
+      return r.data;
+    },
+    staleTime: 60_000,
+  });
+}
+
+export function useSettings() {
+  return useQuery({
+    queryKey: queryKeys.settings,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    queryFn: () => api.get('/settings').then((r) => r.data as Record<string, any>),
+    staleTime: 120_000,
+  });
+}
+
+export function useAdmins() {
+  return useQuery({
+    queryKey: queryKeys.admins,
+    queryFn: () => api.get('/admins').then((r) => r.data),
+    staleTime: 30_000,
+  });
+}
+
+export function useProductOrders(clientId: string) {
+  return useQuery({
+    queryKey: queryKeys.productOrders(clientId),
+    queryFn: () => fetchProductOrders(clientId),
+    enabled: !!clientId,
+    staleTime: 30_000,
+  });
+}
+
+export interface AdminProduct {
+  id: string;
+  adminId: string;
+  name: string;
+  type: 'album' | 'print';
+  maxPhotos: number;
+  createdAt: string;
+}
+
+export function useAdminProducts() {
+  return useQuery({
+    queryKey: queryKeys.adminProducts,
+    queryFn: () => api.get<AdminProduct[]>('/admin-products').then((r) => r.data),
+    staleTime: 60_000,
   });
 }
 
@@ -95,9 +169,9 @@ export function useCreateDelivery(clientId: string) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: ({ galleryId, data }: { galleryId: string; data: Record<string, unknown> }) =>
-      galleryService.createDelivery(galleryId, data),
+      galleryService.createDelivery(galleryId, data as { headerMessage: string; name?: string }),
     onSuccess: () =>
-      queryClient.invalidateQueries({ queryKey: queryKeys.galleriesByClient(clientId) }),
+      queryClient.invalidateQueries({ queryKey: queryKeys.galleries }),
   });
 }
 
@@ -146,14 +220,29 @@ export function useDeleteSubmissionImage(clientId: string) {
   });
 }
 
-export function useUpdateGallery(invalidateKey?: readonly string[]) {
+export function useUpdateGallery() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: ({ id, data }: { id: string; data: Record<string, unknown> }) =>
-      galleryService.updateGallery(id, data),
+      galleryService.updateGallery(id, data as Partial<GalleryData>),
     onSuccess: () => {
-      if (invalidateKey) queryClient.invalidateQueries({ queryKey: invalidateKey });
       queryClient.invalidateQueries({ queryKey: queryKeys.galleries });
     },
+  });
+}
+
+export function useCreateAdmin() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data: Record<string, string>) => api.post('/admins', data).then((r) => r.data),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.admins }),
+  });
+}
+
+export function useDeleteAdmin() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.delete(`/admins/${id}`),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.admins }),
   });
 }

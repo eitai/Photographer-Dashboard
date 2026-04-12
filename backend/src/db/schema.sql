@@ -125,7 +125,37 @@ CREATE TABLE IF NOT EXISTS site_settings (
   facebook_url TEXT NOT NULL DEFAULT '',
   hero_subtitle TEXT NOT NULL DEFAULT '',
   contact_email TEXT NOT NULL DEFAULT '',
-  theme TEXT NOT NULL DEFAULT 'bw'
+  theme TEXT NOT NULL DEFAULT 'bw',
+  hero_overlay_opacity TEXT NOT NULL DEFAULT 'medium',
+  hero_cta_primary_label TEXT NOT NULL DEFAULT '',
+  hero_cta_secondary_label TEXT NOT NULL DEFAULT '',
+  about_section_title TEXT NOT NULL DEFAULT '',
+  tiktok_url TEXT NOT NULL DEFAULT '',
+  video_url TEXT NOT NULL DEFAULT '',
+  video_section_heading TEXT NOT NULL DEFAULT '',
+  video_section_subheading TEXT NOT NULL DEFAULT '',
+  video_section_enabled BOOLEAN NOT NULL DEFAULT FALSE,
+  cta_banner_heading TEXT NOT NULL DEFAULT '',
+  cta_banner_subtext TEXT NOT NULL DEFAULT '',
+  cta_banner_button_label TEXT NOT NULL DEFAULT '',
+  cta_banner_enabled BOOLEAN NOT NULL DEFAULT FALSE,
+  services_enabled BOOLEAN NOT NULL DEFAULT FALSE,
+  testimonials_enabled BOOLEAN NOT NULL DEFAULT FALSE,
+  packages_enabled BOOLEAN NOT NULL DEFAULT FALSE,
+  packages_disclaimer TEXT NOT NULL DEFAULT '',
+  services JSONB NOT NULL DEFAULT '[]',
+  testimonials JSONB NOT NULL DEFAULT '[]',
+  packages JSONB NOT NULL DEFAULT '[]'
+);
+
+CREATE TABLE IF NOT EXISTS admin_products (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  admin_id UUID NOT NULL REFERENCES admins(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  type TEXT NOT NULL CHECK (type IN ('album','print')),
+  max_photos INTEGER NOT NULL DEFAULT 1,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 -- Indexes
@@ -141,3 +171,4 @@ CREATE INDEX IF NOT EXISTS idx_blog_posts_admin ON blog_posts(admin_id, publishe
 CREATE INDEX IF NOT EXISTS idx_blog_posts_published_at ON blog_posts(admin_id, published_at DESC);
 CREATE INDEX IF NOT EXISTS idx_contact_submissions_admin ON contact_submissions(admin_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_product_orders_admin_client ON product_orders(admin_id, client_id);
+CREATE INDEX IF NOT EXISTS idx_admin_products_admin ON admin_products(admin_id);

@@ -6,7 +6,6 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { HelmetProvider } from 'react-helmet-async';
 import { I18nProvider } from '@/lib/i18n';
-import { AuthProvider } from '@/hooks/useAuth';
 import { ProtectedRoute } from '@/components/admin/ProtectedRoute';
 import { Navbar } from '@/components/Navbar';
 import { Footer } from '@/components/Footer';
@@ -61,7 +60,6 @@ export const App = () => (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <I18nProvider>
-          <AuthProvider>
             <Toaster />
             <Sonner />
             <BrowserRouter>
@@ -225,7 +223,6 @@ export const App = () => (
                 </Routes>
               </Suspense>
             </BrowserRouter>
-          </AuthProvider>
         </I18nProvider>
       </TooltipProvider>
     </QueryClientProvider>

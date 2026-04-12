@@ -4,6 +4,7 @@ import { Check, Send, ShoppingBag, Package } from 'lucide-react';
 import Masonry from 'react-masonry-css';
 import api from '@/lib/api';
 import { FadeIn } from '@/components/FadeIn';
+import { useI18n } from '@/lib/i18n';
 import {
   fetchProductOrdersByToken,
   submitProductOrderSelection,
@@ -336,6 +337,7 @@ const OrderPanel = ({ order, onSubmitted }: OrderPanelProps) => {
 
 export const ClientProductsPage = () => {
   const { token } = useParams<{ token: string }>();
+  const { t } = useI18n();
   const [orders, setOrders] = useState<ProductOrder[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -412,8 +414,8 @@ export const ClientProductsPage = () => {
         <FadeIn>
           <div className='text-center'>
             <ShoppingBag size={40} className='mx-auto mb-4 text-beige' />
-            <p className=' text-2xl text-charcoal mb-2'>No products yet</p>
-            <p className='text-sm text-warm-gray'>Your photographer hasn't set up any products for you yet.</p>
+            <p className=' text-2xl text-charcoal mb-2'>{t('products.no_products_title')}</p>
+            <p className='text-sm text-warm-gray'>{t('products.no_products_desc')}</p>
           </div>
         </FadeIn>
       </main>

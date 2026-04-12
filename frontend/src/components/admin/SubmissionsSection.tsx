@@ -1,12 +1,13 @@
 import { CheckSquare, Download, Trash2, Star, MessageCircle } from 'lucide-react';
+import { useI18n } from '@/lib/i18n';
+import type { GalleryData, GallerySubmission } from '@/types/gallery';
 
 interface SubmissionsSectionProps {
-  galleries: any[];
-  submissions: Record<string, any[]>;
+  galleries: GalleryData[];
+  submissions: Record<string, GallerySubmission[]>;
   downloading: boolean;
   API_BASE: string;
-  t: (key: string) => string;
-  downloadAsZip: (submission: any) => void;
+  downloadAsZip: (submission: GallerySubmission) => void;
   setDeleteSubTarget: (target: { galleryId: string; submissionId: string } | null) => void;
   setDeleteImageTarget: (target: { galleryId: string; submissionId: string; imageId: string } | null) => void;
 }
@@ -16,11 +17,11 @@ export const SubmissionsSection = ({
   submissions,
   downloading,
   API_BASE,
-  t,
   downloadAsZip,
   setDeleteSubTarget,
   setDeleteImageTarget,
 }: SubmissionsSectionProps) => {
+  const { t } = useI18n();
   const galleriesWithSubs = galleries.filter((g) => g.status === 'selection_submitted' && submissions[g._id]?.length > 0);
 
   if (galleriesWithSubs.length === 0) return null;
@@ -38,7 +39,7 @@ export const SubmissionsSection = ({
         {galleriesWithSubs.map((g) => (
           <div key={g._id}>
             <p className='text-xs font-medium text-warm-gray uppercase tracking-wide mb-3'>{g.name}</p>
-            {submissions[g._id]?.map((sub: any) => (
+            {submissions[g._id]?.map((sub) => (
               <div key={sub._id} className='bg-ivory rounded-xl border border-beige p-4 mb-3'>
                 <div className='flex items-start justify-between mb-3'>
                   <div>
@@ -54,14 +55,14 @@ export const SubmissionsSection = ({
                     <button
                       onClick={() => downloadAsZip(sub)}
                       disabled={downloading}
-                      className='flex items-center gap-2 bg-blush text-primary-foreground px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-blush/80 transition-colors disabled:opacity-60'
+                      className='flex items-center gap-2 bg-blush text-primary-foreground px-3 py-1.5 rounded-xl text-xs font-medium hover:bg-blush/80 transition-colors disabled:opacity-60'
                     >
                       <Download size={13} />
                       {downloading ? t('admin.selections.preparing') : t('admin.selections.download')}
                     </button>
                     <button
                       onClick={() => setDeleteSubTarget({ galleryId: g._id, submissionId: sub._id })}
-                      className='p-1.5 rounded-lg border border-beige bg-card text-warm-gray hover:text-rose-500 hover:border-rose-200 transition-colors'
+                      className='p-1.5 rounded-xl border border-beige bg-card text-warm-gray hover:text-rose-500 hover:border-rose-200 transition-colors'
                       title={t('admin.selections.delete_submission')}
                     >
                       <Trash2 size={13} />
@@ -69,7 +70,7 @@ export const SubmissionsSection = ({
                   </div>
                 </div>
                 <div className='grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 gap-1.5'>
-                  {sub.selectedImageIds.map((img: any) => {
+                  {sub.selectedImageIds.map((img) => {
                     const isHero = sub.heroImageId && (img._id === sub.heroImageId?.toString?.() || img._id === sub.heroImageId);
                     const comment = sub.imageComments?.[img._id];
                     return (
@@ -87,8 +88,7 @@ export const SubmissionsSection = ({
                         )}
                         {comment && (
                           <div
-                            className='absolute bottom-1 right-1 w-5 h-5 rounded-full flex items-center justify-center shadow pointer-events-none'
-                            style={{ backgroundColor: '#E7B8B5' }}
+                            className='absolute bottom-1 right-1 w-5 h-5 rounded-full bg-blush flex items-center justify-center shadow pointer-events-none'
                             title={comment}
                           >
                             <MessageCircle size={10} className='text-charcoal' />

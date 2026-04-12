@@ -23,14 +23,14 @@ export function DeleteConfirmModal({ count, deleting, onConfirm, onCancel }: Pro
         <button
           onClick={onConfirm}
           disabled={deleting}
-          className='flex-1 bg-rose-500 text-white py-3 min-h-[44px] rounded-lg text-sm font-medium hover:bg-rose-600 transition-colors disabled:opacity-60'
+          className='flex-1 bg-rose-500 text-white py-3 min-h-[44px] rounded-xl text-sm font-medium hover:bg-rose-600 transition-colors disabled:opacity-60'
         >
           {deleting ? t('admin.upload.deleting') : t('admin.common.delete')}
         </button>
         <button
           onClick={onCancel}
           disabled={deleting}
-          className='flex-1 py-3 min-h-[44px] rounded-lg text-sm text-warm-gray border border-beige hover:bg-ivory transition-colors'
+          className='flex-1 py-3 min-h-[44px] rounded-xl text-sm text-warm-gray border border-beige hover:bg-ivory transition-colors'
         >
           {t('admin.common.cancel')}
         </button>

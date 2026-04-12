@@ -1,9 +1,11 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { AdminLayout } from '@/components/admin/AdminLayout';
 import { useI18n } from '@/lib/i18n';
 import api from '@/lib/api';
 import { toast } from 'sonner';
+import { InputField, TextareaField, SelectField } from '@/components/admin/InputField';
+import { Button } from '@/components/admin/Button';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Image from '@tiptap/extension-image';
@@ -20,6 +22,8 @@ import {
   Link as LinkIcon,
   Image as ImageIcon,
   ArrowLeft,
+  Check,
+  X,
 } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -46,6 +50,18 @@ export const AdminBlogEditor = () => {
   const [saving, setSaving] = useState(false);
   const [featuredImage, setFeaturedImage] = useState<File | null>(null);
 
+  // I4 — inline URL inputs replacing window.prompt()
+  const [pendingLinkUrl, setPendingLinkUrl] = useState('');
+  const [pendingImageUrl, setPendingImageUrl] = useState('');
+  const [showLinkInput, setShowLinkInput] = useState(false);
+  const [showImageInput, setShowImageInput] = useState(false);
+  const linkInputRef = useRef<HTMLInputElement>(null);
+  const imageInputRef = useRef<HTMLInputElement>(null);
+
+  // I5 — unsaved-changes guard
+  const initialContentRef = useRef<string>('');
+  const [isDirty, setIsDirty] = useState(false);
+
   const {
     register,
     handleSubmit,
@@ -67,6 +83,10 @@ export const AdminBlogEditor = () => {
       Placeholder.configure({ placeholder: t('admin.editor.write_placeholder') }),
     ],
     content: '',
+    // I5 — track dirty state on every content change
+    onUpdate: ({ editor: e }) => {
+      setIsDirty(e.getHTML() !== initialContentRef.current);
+    },
     editorProps: {
       attributes: {
         class: 'prose prose-sm max-w-none focus:outline-none min-h-[300px] px-4 py-3 text-charcoal',
@@ -74,8 +94,9 @@ export const AdminBlogEditor = () => {
     },
   });
 
+  // C2 — `editor` removed from dep array; guard against destroyed instance on re-mount
   useEffect(() => {
-    if (!isEdit || !editor) return;
+    if (!isEdit || !editor || editor.isDestroyed) return;
     const load = async () => {
       try {
         const r = await api.get(`/blog/${id}`);
@@ -87,40 +108,94 @@ export const AdminBlogEditor = () => {
           category: p.category || '',
         });
         setPublished(p.published);
-        editor.commands.setContent(p.content || '');
+        const content = p.content || '';
+        editor.commands.setContent(content);
+        // I5 — record initial content so dirty tracking has a baseline
+        initialContentRef.current = editor.getHTML();
+        setIsDirty(false);
       } catch {
         toast.error(t('admin.blog.load_failed'));
       }
     };
     load();
-  }, [id, editor]);
+  }, [id]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // I5 — warn on browser/tab close when there are unsaved changes
+  useEffect(() => {
+    const handler = (e: BeforeUnloadEvent) => {
+      if (isDirty) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    };
+    window.addEventListener('beforeunload', handler);
+    return () => window.removeEventListener('beforeunload', handler);
+  }, [isDirty]);
+
+  // C1 — try/catch/finally so setSaving(false) always runs on failure
   const save = async (formValues: BlogFormValues, publish?: boolean) => {
     setSaving(true);
-    const content = editor?.getHTML() || '';
-    const data = new FormData();
-    Object.entries({ ...formValues, content, published: String(publish ?? published) }).forEach(([k, v]) =>
-      data.append(k, v as string),
-    );
-    if (featuredImage) data.append('featuredImage', featuredImage);
+    try {
+      const content = editor?.getHTML() || '';
+      const data = new FormData();
+      Object.entries({ ...formValues, content, published: String(publish ?? published) }).forEach(([k, v]) =>
+        data.append(k, v as string),
+      );
+      if (featuredImage) data.append('featuredImage', featuredImage);
 
-    if (isEdit) {
-      await api.put(`/blog/${id}`, data, { headers: { 'Content-Type': 'multipart/form-data' } });
-    } else {
-      await api.post('/blog', data, { headers: { 'Content-Type': 'multipart/form-data' } });
+      if (isEdit) {
+        await api.put(`/blog/${id}`, data, { headers: { 'Content-Type': 'multipart/form-data' } });
+      } else {
+        await api.post('/blog', data, { headers: { 'Content-Type': 'multipart/form-data' } });
+      }
+      // I5 — clear dirty flag so beforeunload guard doesn't fire after a successful save
+      setIsDirty(false);
+      navigate('/admin/blog');
+    } catch {
+      toast.error(t('admin.blog.save_failed'));
+    } finally {
+      setSaving(false);
     }
-    setSaving(false);
-    navigate('/admin/blog');
   };
 
-  const addImage = () => {
-    const url = prompt(t('admin.editor.prompt.image_url'));
-    if (url) editor?.chain().focus().setImage({ src: url }).run();
+  // I4 — inline link input handlers (replaces window.prompt)
+  const openLinkInput = () => {
+    setShowImageInput(false);
+    setPendingImageUrl('');
+    setShowLinkInput(true);
+    setTimeout(() => linkInputRef.current?.focus(), 0);
   };
 
-  const addLink = () => {
-    const url = prompt(t('admin.editor.prompt.url'));
+  const commitLink = () => {
+    const url = pendingLinkUrl.trim();
     if (url) editor?.chain().focus().setLink({ href: url }).run();
+    setShowLinkInput(false);
+    setPendingLinkUrl('');
+  };
+
+  const cancelLink = () => {
+    setShowLinkInput(false);
+    setPendingLinkUrl('');
+  };
+
+  // I4 — inline image input handlers (replaces window.prompt)
+  const openImageInput = () => {
+    setShowLinkInput(false);
+    setPendingLinkUrl('');
+    setShowImageInput(true);
+    setTimeout(() => imageInputRef.current?.focus(), 0);
+  };
+
+  const commitImage = () => {
+    const url = pendingImageUrl.trim();
+    if (url) editor?.chain().focus().setImage({ src: url }).run();
+    setShowImageInput(false);
+    setPendingImageUrl('');
+  };
+
+  const cancelImage = () => {
+    setShowImageInput(false);
+    setPendingImageUrl('');
   };
 
   const TOOLBAR = [
@@ -131,8 +206,8 @@ export const AdminBlogEditor = () => {
     { action: () => editor?.chain().focus().toggleBulletList().run(), icon: List, title: t('admin.editor.toolbar.bullet') },
     { action: () => editor?.chain().focus().toggleOrderedList().run(), icon: ListOrdered, title: t('admin.editor.toolbar.numbered') },
     { action: () => editor?.chain().focus().toggleBlockquote().run(), icon: Quote, title: t('admin.editor.toolbar.quote') },
-    { action: addLink, icon: LinkIcon, title: t('admin.editor.toolbar.link') },
-    { action: addImage, icon: ImageIcon, title: t('admin.editor.toolbar.image') },
+    { action: openLinkInput, icon: LinkIcon, title: t('admin.editor.toolbar.link') },
+    { action: openImageInput, icon: ImageIcon, title: t('admin.editor.toolbar.image') },
   ];
 
   return (
@@ -157,18 +232,68 @@ export const AdminBlogEditor = () => {
           </div>
 
           {/* Rich text toolbar */}
-          <div className='bg-card border border-beige rounded-t-lg flex flex-wrap gap-0.5 p-2'>
-            {TOOLBAR.map(({ action, icon: Icon, title }) => (
-              <button
-                key={title}
-                type='button'
-                onClick={action}
-                title={title}
-                className='p-2 rounded hover:bg-ivory text-warm-gray hover:text-charcoal transition-colors'
-              >
-                <Icon size={15} />
-              </button>
-            ))}
+          <div className='bg-card border border-beige rounded-t-lg'>
+            <div className='flex flex-wrap gap-0.5 p-2'>
+              {TOOLBAR.map(({ action, icon: Icon, title }) => (
+                <button
+                  key={title}
+                  type='button'
+                  onClick={action}
+                  title={title}
+                  className='p-2 rounded hover:bg-ivory text-warm-gray hover:text-charcoal transition-colors'
+                >
+                  <Icon size={15} />
+                </button>
+              ))}
+            </div>
+
+            {/* I4 — inline link URL input */}
+            {showLinkInput && (
+              <div className='flex items-center gap-2 px-3 pb-2'>
+                <input
+                  ref={linkInputRef}
+                  type='url'
+                  value={pendingLinkUrl}
+                  onChange={(e) => setPendingLinkUrl(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') { e.preventDefault(); commitLink(); }
+                    if (e.key === 'Escape') cancelLink();
+                  }}
+                  placeholder='https://'
+                  className='flex-1 text-xs border border-beige rounded px-2 py-1 bg-ivory focus:outline-none focus:border-blush'
+                />
+                <button type='button' onClick={commitLink} className='text-blush hover:text-charcoal' title='Apply'>
+                  <Check size={14} />
+                </button>
+                <button type='button' onClick={cancelLink} className='text-warm-gray hover:text-charcoal' title='Cancel'>
+                  <X size={14} />
+                </button>
+              </div>
+            )}
+
+            {/* I4 — inline image URL input */}
+            {showImageInput && (
+              <div className='flex items-center gap-2 px-3 pb-2'>
+                <input
+                  ref={imageInputRef}
+                  type='url'
+                  value={pendingImageUrl}
+                  onChange={(e) => setPendingImageUrl(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') { e.preventDefault(); commitImage(); }
+                    if (e.key === 'Escape') cancelImage();
+                  }}
+                  placeholder='https://'
+                  className='flex-1 text-xs border border-beige rounded px-2 py-1 bg-ivory focus:outline-none focus:border-blush'
+                />
+                <button type='button' onClick={commitImage} className='text-blush hover:text-charcoal' title='Apply'>
+                  <Check size={14} />
+                </button>
+                <button type='button' onClick={cancelImage} className='text-warm-gray hover:text-charcoal' title='Cancel'>
+                  <X size={14} />
+                </button>
+              </div>
+            )}
           </div>
 
           {/* Editor area */}
@@ -181,36 +306,35 @@ export const AdminBlogEditor = () => {
         <div className='space-y-4'>
           {/* Actions */}
           <div className='bg-card rounded-xl border border-beige p-4 space-y-3'>
-            <button
+            <Button
+              variant='ghost'
+              className='w-full'
               onClick={handleSubmit((data) => save(data, false))}
               disabled={saving}
-              className='w-full py-2 rounded-lg text-sm border border-beige text-charcoal hover:bg-ivory transition-colors disabled:opacity-60'
             >
               {saving ? t('admin.common.saving') : t('admin.editor.save_draft')}
-            </button>
-            <button
+            </Button>
+            <Button
+              variant='primary'
+              className='w-full'
               onClick={handleSubmit((data) => save(data, true))}
               disabled={saving}
-              className='w-full py-2 rounded-lg text-sm bg-blush text-primary-foreground font-medium hover:bg-blush/80 transition-colors disabled:opacity-60'
             >
               {saving ? t('admin.editor.publishing') : t('admin.editor.publish')}
-            </button>
+            </Button>
           </div>
 
           {/* Category */}
           <div className='bg-card rounded-xl border border-beige p-4'>
             <label className='block text-xs text-warm-gray mb-2'>{t('admin.editor.category')}</label>
-            <select
-              {...register('category')}
-              className='w-full px-3 py-2 rounded-lg border border-beige bg-ivory text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-blush/50'
-            >
+            <SelectField {...register('category')}>
               <option value=''>{t('admin.editor.select')}</option>
               {CATEGORIES.map((c) => (
                 <option key={c} value={c}>
                   {c}
                 </option>
               ))}
-            </select>
+            </SelectField>
           </div>
 
           {/* Featured image */}
@@ -229,19 +353,19 @@ export const AdminBlogEditor = () => {
             <p className='text-xs font-medium font-sans text-charcoal'>{t('admin.editor.seo')}</p>
             <div>
               <label className='block text-xs text-warm-gray mb-1'>{t('admin.editor.seo_title')}</label>
-              <input
+              <InputField
                 {...register('seoTitle')}
                 placeholder={titleValue}
-                className='w-full px-3 py-2 rounded-lg border border-beige bg-ivory text-xs text-charcoal focus:outline-none focus:ring-2 focus:ring-blush/50'
+                className='text-xs'
               />
             </div>
             <div>
               <label className='block text-xs text-warm-gray mb-1'>{t('admin.editor.meta_desc')}</label>
-              <textarea
+              <TextareaField
                 {...register('seoDescription')}
                 rows={3}
                 placeholder={t('admin.editor.meta_placeholder')}
-                className='w-full px-3 py-2 rounded-lg border border-beige bg-ivory text-xs text-charcoal focus:outline-none focus:ring-2 focus:ring-blush/50 resize-none'
+                className='text-xs'
               />
               {errors.seoDescription && <p className='text-xs text-rose-500 mt-1'>{errors.seoDescription.message}</p>}
             </div>

@@ -145,6 +145,19 @@ async function findOneAndDelete(filter) {
   return rows[0] ? rowToCamel(rows[0]) : null;
 }
 
+async function countDocuments(filter = {}) {
+  const conditions = [];
+  const vals = [];
+  let i = 1;
+
+  if (filter.adminId) { conditions.push(`admin_id = $${i++}`); vals.push(filter.adminId); }
+  if (filter.published !== undefined) { conditions.push(`published = $${i++}`); vals.push(filter.published); }
+
+  const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
+  const { rows } = await pool.query(`SELECT COUNT(*)::int AS count FROM blog_posts ${where}`, vals);
+  return rows[0].count;
+}
+
 module.exports = {
   findById,
   findOne,
@@ -152,4 +165,5 @@ module.exports = {
   create,
   findOneAndUpdate,
   findOneAndDelete,
+  countDocuments,
 };

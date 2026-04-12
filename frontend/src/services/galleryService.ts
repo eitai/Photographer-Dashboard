@@ -1,13 +1,15 @@
 import api from '@/lib/api';
+import type { GalleryData, GallerySubmission } from '@/types/gallery';
 
-export const listGalleries = () => api.get('/galleries').then((r) => r.data);
+export const listGalleries = (): Promise<GalleryData[]> => api.get('/galleries').then((r) => r.data);
 
-export const updateGallery = (id: string, data: any) => api.put(`/galleries/${id}`, data).then((r) => r.data);
+export const updateGallery = (id: string, data: Partial<GalleryData>): Promise<GalleryData> =>
+  api.put(`/galleries/${id}`, data).then((r) => r.data);
 
-export const fetchGalleries = (clientId: string) =>
+export const fetchGalleries = (clientId: string): Promise<GalleryData[]> =>
   api.get(`/galleries?clientId=${clientId}`).then((r) => r.data);
 
-export const fetchSubmissions = (galleryId: string) =>
+export const fetchSubmissions = (galleryId: string): Promise<GallerySubmission[]> =>
   api.get(`/galleries/${galleryId}/submissions`).then((r) => r.data);
 
 export const createGallery = (data: { name: string; headerMessage: string; maxSelections: number; clientId: string; clientName: string }) =>

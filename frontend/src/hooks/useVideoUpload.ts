@@ -4,6 +4,8 @@ import api from '@/lib/api';
 import { toast } from 'sonner';
 import type { GalleryDetail, GalleryVideo } from '@/types/admin';
 
+const MAX_VIDEO_SIZE = 2 * 1024 * 1024 * 1024; // 2 GB — matches backend Multer limit
+
 export interface VideoQueueItem {
   id: string;
   name: string;
@@ -25,7 +27,22 @@ export const useVideoUpload = (
     setVideoQueue((q) => q.map((item) => (item.id === itemId ? { ...item, ...patch } : item)));
 
   const handleVideoUpload = async (files: FileList) => {
-    const items: VideoQueueItem[] = Array.from(files).map((f) => ({
+    const validFiles: File[] = [];
+    for (const f of Array.from(files)) {
+      if (!f.type.startsWith('video/')) {
+        toast.error(t('admin.gallery.video_invalid_type').replace('{{name}}', f.name));
+        continue;
+      }
+      if (f.size > MAX_VIDEO_SIZE) {
+        toast.error(t('admin.gallery.video_too_large').replace('{{name}}', f.name));
+        continue;
+      }
+      validFiles.push(f);
+    }
+
+    if (validFiles.length === 0) return;
+
+    const items: VideoQueueItem[] = validFiles.map((f) => ({
       id: crypto.randomUUID(),
       name: f.name,
       progress: 0,
@@ -35,8 +52,8 @@ export const useVideoUpload = (
     setVideoQueue((q) => [...q, ...items]);
 
     // Upload one at a time so large files don't saturate the connection
-    for (let i = 0; i < files.length; i++) {
-      const file = files[i];
+    for (let i = 0; i < validFiles.length; i++) {
+      const file = validFiles[i];
       const item = items[i];
       const form = new FormData();
       form.append('videos', file);

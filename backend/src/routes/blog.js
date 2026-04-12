@@ -3,15 +3,22 @@ const BlogPost = require('../models/BlogPost');
 const { uploadImage: upload, validateImageMagicBytes } = require('../middleware/upload');
 const { protect } = require('../middleware/auth');
 const asyncHandler = require('../middleware/asyncHandler');
+const { UUID_RE } = require('../utils/uuid');
 
 const router = express.Router();
-
-const UUID_RE = /^[0-9a-f-]{36}$/i;
 
 // GET /api/blog  — ADMIN
 router.get('/', protect, asyncHandler(async (req, res) => {
   const posts = await BlogPost.find({ adminId: req.admin.id }, { selectContent: false });
   res.json(posts);
+}));
+
+// GET /api/blog/count  — ADMIN
+// Returns the total number of published blog posts owned by the requesting admin.
+// Must be declared before /:id to prevent Express treating "count" as an id param.
+router.get('/count', protect, asyncHandler(async (req, res) => {
+  const count = await BlogPost.countDocuments({ adminId: req.admin.id, published: true });
+  res.json({ count });
 }));
 
 // GET /api/blog/:id  — ADMIN

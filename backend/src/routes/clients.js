@@ -2,11 +2,16 @@ const express = require('express');
 const Client = require('../models/Client');
 const { protect } = require('../middleware/auth');
 const asyncHandler = require('../middleware/asyncHandler');
+const { UUID_RE } = require('../utils/uuid');
 
 const router = express.Router();
 router.use(protect);
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-const UUID_RE = /^[0-9a-f-]{36}$/i;
+function validateEmail(email) {
+  if (email && !EMAIL_RE.test(email)) return 'Invalid email address';
+  return null;
+}
 
 // GET /api/clients
 router.get('/', asyncHandler(async (req, res) => {
@@ -17,6 +22,8 @@ router.get('/', asyncHandler(async (req, res) => {
 // POST /api/clients
 router.post('/', asyncHandler(async (req, res) => {
   const { name, phone, email, sessionType, notes, status } = req.body;
+  const emailErr = validateEmail(email);
+  if (emailErr) return res.status(400).json({ message: emailErr });
   const client = await Client.create({
     name, phone, email, sessionType, notes, status,
     adminId: req.admin.id,
@@ -38,6 +45,8 @@ router.put('/:id', asyncHandler(async (req, res) => {
   if (!UUID_RE.test(req.params.id))
     return res.status(400).json({ message: 'Invalid ID format' });
   const { name, phone, email, sessionType, notes, status } = req.body;
+  const emailErr = validateEmail(email);
+  if (emailErr) return res.status(400).json({ message: emailErr });
   const client = await Client.findOneAndUpdate(
     { _id: req.params.id, adminId: req.admin.id },
     { name, phone, email, sessionType, notes, status }

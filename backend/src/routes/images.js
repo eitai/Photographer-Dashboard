@@ -10,10 +10,9 @@ const { protect } = require('../middleware/auth');
 const checkQuota = require('../middleware/checkQuota');
 const asyncHandler = require('../middleware/asyncHandler');
 const logger = require('../utils/logger');
+const { UUID_RE } = require('../utils/uuid');
 
 const router = express.Router({ mergeParams: true });
-
-const UUID_RE = /^[0-9a-f-]{36}$/i;
 
 const THUMB_DIR = path.join(__dirname, '../../uploads/thumbnails');
 if (!fs.existsSync(THUMB_DIR)) fs.mkdirSync(THUMB_DIR, { recursive: true });
@@ -22,11 +21,14 @@ if (!fs.existsSync(THUMB_DIR)) fs.mkdirSync(THUMB_DIR, { recursive: true });
 // Optional: ?page=1&limit=50 for paginated response { images, total, page, totalPages }
 // Without limit param: returns plain array (backwards compatible)
 router.get('/', asyncHandler(async (req, res) => {
-  const limit = parseInt(req.query.limit);
-  const page = Math.max(1, parseInt(req.query.page) || 1);
+  const rawLimit = parseInt(req.query.limit);
+  const rawPage = parseInt(req.query.page);
+  // Cap limit at 200 to prevent excessive result sets; require positive values
+  const limit = rawLimit > 0 ? Math.min(rawLimit, 200) : NaN;
+  const page = rawPage >= 1 ? rawPage : 1;
   const filter = { galleryId: req.params.galleryId };
 
-  if (limit > 0) {
+  if (!isNaN(limit)) {
     const { images, total } = await GalleryImage.findPaginated(filter, {}, (page - 1) * limit, limit);
     return res.json({ images, total, page, totalPages: Math.ceil(total / limit) });
   }

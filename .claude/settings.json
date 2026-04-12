@@ -25,7 +25,17 @@
       "Bash(git log *)",
       "Bash(git branch *)",
       "Bash(curl -s http://localhost:5000/api/health)",
-      "Bash(curl -s -X POST http://localhost:5000/api/auth/seed)"
+      "Bash(curl -s -X POST http://localhost:5000/api/auth/seed)",
+      "Bash(npm uninstall:*)",
+      "Bash(timeout 30 npx tsc --noEmit --skipLibCheck)",
+      "Bash(node src/app.js)",
+      "Bash(curl -s http://localhost:5000/api/auth/me)",
+      "Bash(echo \"EXIT: $?\")",
+      "Bash(node --check src/app.js)",
+      "Bash(echo \"app.js check done: $?\")",
+      "Bash(netstat -ano)",
+      "Bash(del \"c:\\\\Users\\\\eitai\\\\Desktop\\\\codevalue\\\\store test\\\\frontend\\\\src\\\\pages\\\\admin\\\\dashboard\\\\StatusBadge.tsx\")",
+      "Bash(xargs grep:*)"
     ],
     "deny": [
       "Bash(taskkill *)",

@@ -2,18 +2,22 @@ import { useEffect, useRef, useState } from 'react';
 import { AdminLayout } from '@/components/admin/AdminLayout';
 import { useAuth } from '@/hooks/useAuth';
 import { useI18n } from '@/lib/i18n';
-import api from '@/lib/api';
+import api, { API_BASE } from '@/lib/api';
 import { toast } from 'sonner';
-import { Trash2, Plus, Shield, User, Pencil, ExternalLink, X, Check } from 'lucide-react';
+import { Trash2, Plus, Shield, User, Pencil, ExternalLink, X, Check, Search } from 'lucide-react';
 import type { AdminRecord, AdminSettings } from '@/types/admin';
-
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+import { InputField, TextareaField, SelectField } from '@/components/admin/InputField';
+import { Button } from '@/components/admin/Button';
+import { Modal } from '@/components/ui/Modal';
+import { useAdmins, useCreateAdmin, useDeleteAdmin } from '@/hooks/useQueries';
 
 interface ProfileForm {
   name: string;
   email: string;
   studioName: string;
   username: string;
+  role: 'admin' | 'superadmin';
+  newPassword: string;
 }
 
 interface LandingForm {
@@ -27,22 +31,22 @@ interface LandingForm {
 
 const EMPTY_FORM = { name: '', email: '', password: '', role: 'admin' as const, username: '', studioName: '' };
 
-const inputClass =
-  'w-full px-3 py-2 rounded-lg border border-beige bg-ivory text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-blush/50';
 const labelClass = 'block text-xs text-warm-gray mb-1';
 
 export const AdminUsers = () => {
   const { admin: me } = useAuth();
   const { t } = useI18n();
-  const [admins, setAdmins] = useState<AdminRecord[]>([]);
+  const { data: admins = [], isError: adminsError } = useAdmins();
+  const createAdminMutation = useCreateAdmin();
+  const deleteAdminMutation = useDeleteAdmin();
+  const [search, setSearch] = useState('');
   const [form, setForm] = useState(EMPTY_FORM);
-  const [creating, setCreating] = useState(false);
   const [msg, setMsg] = useState({ text: '', error: false });
-  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
 
   // Edit panel state
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [profileForm, setProfileForm] = useState<ProfileForm>({ name: '', email: '', studioName: '', username: '' });
+  const [profileForm, setProfileForm] = useState<ProfileForm>({ name: '', email: '', studioName: '', username: '', role: 'admin', newPassword: '' });
   const [landingForm, setLandingForm] = useState<LandingForm>({
     heroSubtitle: '',
     bio: '',
@@ -61,41 +65,36 @@ export const AdminUsers = () => {
   const profileFileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    api
-      .get('/admins')
-      .then((r) => setAdmins(r.data))
-      .catch(() => toast.error(t('admin.users.load_failed')));
-  }, []);
+    if (adminsError) toast.error(t('admin.users.load_failed'));
+  }, [adminsError, t]);
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.name || !form.email || !form.password) return;
-    setCreating(true);
-    try {
-      const r = await api.post('/admins', form);
-      setAdmins((prev) => [...prev, r.data]);
-      setForm(EMPTY_FORM);
-      setMsg({ text: t('admin.users.created'), error: false });
-      setTimeout(() => setMsg({ text: '', error: false }), 3000);
-    } catch (err: any) {
-      setMsg({ text: err.response?.data?.message || t('admin.users.create_error'), error: true });
-    } finally {
-      setCreating(false);
-    }
+    createAdminMutation.mutate(form, {
+      onSuccess: () => {
+        setForm(EMPTY_FORM);
+        setMsg({ text: t('admin.users.created'), error: false });
+        setTimeout(() => setMsg({ text: '', error: false }), 3000);
+      },
+      onError: (err: unknown) => {
+        const message = (err as { response?: { data?: { message?: string } } }).response?.data?.message;
+        setMsg({ text: message || t('admin.users.create_error'), error: true });
+      },
+    });
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm(t('admin.users.delete_confirm'))) return;
-    setDeletingId(id);
-    try {
-      await api.delete(`/admins/${id}`);
-      setAdmins((prev) => prev.filter((a) => a._id !== id));
-      if (editingId === id) setEditingId(null);
-    } catch (err: any) {
-      alert(err.response?.data?.message || t('admin.users.delete_error'));
-    } finally {
-      setDeletingId(null);
-    }
+  const handleDelete = (id: string) => {
+    setDeleteConfirmId(null);
+    deleteAdminMutation.mutate(id, {
+      onSuccess: () => {
+        if (editingId === id) setEditingId(null);
+      },
+      onError: (err: unknown) => {
+        const message = (err as { response?: { data?: { message?: string } } }).response?.data?.message;
+        toast.error(message || t('admin.users.delete_error'));
+      },
+    });
   };
 
   const openEdit = async (a: AdminRecord) => {
@@ -105,7 +104,7 @@ export const AdminUsers = () => {
     }
     setEditingId(a._id);
     setEditMsg({ text: '', error: false });
-    setProfileForm({ name: a.name, email: a.email, studioName: a.studioName || '', username: a.username || '' });
+    setProfileForm({ name: a.name, email: a.email, studioName: a.studioName || '', username: a.username || '', role: a.role, newPassword: '' });
     setSettings(null);
     try {
       const r = await api.get(`/admins/${a._id}/settings`);
@@ -129,8 +128,17 @@ export const AdminUsers = () => {
     setSavingProfile(true);
     setEditMsg({ text: '', error: false });
     try {
-      const r = await api.patch(`/admins/${editingId}`, profileForm);
+      const payload: Record<string, string> = {
+        name: profileForm.name,
+        email: profileForm.email,
+        studioName: profileForm.studioName,
+        username: profileForm.username,
+        role: profileForm.role,
+      };
+      if (profileForm.newPassword) payload.password = profileForm.newPassword;
+      const r = await api.patch(`/admins/${editingId}`, payload);
       setAdmins((prev) => prev.map((a) => (a._id === editingId ? { ...a, ...r.data } : a)));
+      setProfileForm((f) => ({ ...f, newPassword: '' }));
       setEditMsg({ text: t('admin.users.profile_saved'), error: false });
       setTimeout(() => setEditMsg({ text: '', error: false }), 3000);
     } catch (err: any) {
@@ -183,16 +191,34 @@ export const AdminUsers = () => {
     }
   };
 
-  const editingAdmin = admins.find((a) => a._id === editingId);
+  const creating = createAdminMutation.isPending;
+  const deletingId = deleteAdminMutation.isPending ? deleteAdminMutation.variables ?? null : null;
+  const editingAdmin = (admins as AdminRecord[]).find((a) => a._id === editingId);
+  const visibleAdmins = search.trim()
+    ? admins.filter((a) => a.name.toLowerCase().includes(search.toLowerCase()) || a.email.toLowerCase().includes(search.toLowerCase()))
+    : admins;
+
+  const searchBar = (
+    <div className='relative flex-1 max-w-xs'>
+      <Search size={14} className='absolute top-1/2 -translate-y-1/2 start-3 text-warm-gray pointer-events-none' />
+      <InputField
+        type='text'
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+        placeholder={t('admin.users.search_placeholder')}
+        className='ps-8'
+      />
+    </div>
+  );
 
   return (
-    <AdminLayout title={t('admin.users.title')}>
+    <AdminLayout title={t('admin.users.title')} actions={searchBar}>
       <div className='max-w-3xl space-y-6'>
         {/* Existing admins */}
         <div className='bg-card rounded-xl border border-beige p-6 space-y-4'>
           <h2 className=' text-charcoal'>{t('admin.users.existing')}</h2>
           <div className='space-y-2'>
-            {admins.map((a) => (
+            {visibleAdmins.map((a) => (
               <div key={a._id} className='space-y-0'>
                 <div className='flex items-center justify-between px-4 py-3 rounded-lg border border-beige bg-ivory'>
                   <div className='flex items-center gap-3'>
@@ -244,7 +270,7 @@ export const AdminUsers = () => {
                     </button>
                     {a._id !== me?.id && (
                       <button
-                        onClick={() => handleDelete(a._id)}
+                        onClick={() => setDeleteConfirmId(a._id)}
                         disabled={deletingId === a._id}
                         className='w-7 h-7 rounded-full flex items-center justify-center text-warm-gray hover:text-red-500 hover:bg-red-50 transition-colors disabled:opacity-40'
                         title={t('admin.clients.delete_btn')}
@@ -286,52 +312,70 @@ export const AdminUsers = () => {
                       <div className='grid grid-cols-1 sm:grid-cols-2 gap-3'>
                         <div>
                           <label className={labelClass}>{t('admin.common.name')}</label>
-                          <input
+                          <InputField
                             type='text'
                             value={profileForm.name}
                             onChange={(e) => setProfileForm((f) => ({ ...f, name: e.target.value }))}
-                            className={inputClass}
                           />
                         </div>
                         <div>
                           <label className={labelClass}>{t('admin.common.email')}</label>
-                          <input
+                          <InputField
                             type='email'
                             value={profileForm.email}
                             onChange={(e) => setProfileForm((f) => ({ ...f, email: e.target.value }))}
-                            className={inputClass}
                           />
                         </div>
                         <div>
                           <label className={labelClass}>{t('admin.users.username_url')}</label>
-                          <input
+                          <InputField
                             type='text'
                             value={profileForm.username}
                             onChange={(e) =>
                               setProfileForm((f) => ({ ...f, username: e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, '') }))
                             }
-                            className={`${inputClass} font-mono`}
+                            className='font-mono'
                             placeholder='user123'
                           />
                         </div>
                         <div>
                           <label className={labelClass}>{t('admin.settings.studio_name')}</label>
-                          <input
+                          <InputField
                             type='text'
                             value={profileForm.studioName}
                             onChange={(e) => setProfileForm((f) => ({ ...f, studioName: e.target.value }))}
-                            className={inputClass}
                           />
                         </div>
+                        <div>
+                          <label className={labelClass}>{t('admin.users.role')}</label>
+                          <SelectField
+                            value={profileForm.role}
+                            onChange={(e) => setProfileForm((f) => ({ ...f, role: e.target.value as 'admin' | 'superadmin' }))}
+                          >
+                            <option value='admin'>{t('admin.users.admin_label')}</option>
+                            <option value='superadmin'>{t('admin.users.superadmin_label')}</option>
+                          </SelectField>
+                        </div>
+                        <div>
+                          <label className={labelClass}>{t('admin.users.new_password')}</label>
+                          <InputField
+                            type='password'
+                            value={profileForm.newPassword}
+                            onChange={(e) => setProfileForm((f) => ({ ...f, newPassword: e.target.value }))}
+                            placeholder={t('admin.users.password_unchanged')}
+                          />
+                          <p className='text-[10px] text-warm-gray mt-0.5'>{t('admin.users.password_hint_full')}</p>
+                        </div>
                       </div>
-                      <button
+                      <Button
+                        variant='primary'
+                        size='sm'
                         onClick={handleSaveProfile}
                         disabled={savingProfile}
-                        className='flex items-center gap-1.5 bg-blush text-primary-foreground px-4 py-1.5 rounded-lg text-xs font-medium hover:bg-blush/80 transition-colors disabled:opacity-60'
                       >
                         <Check size={13} />
                         {savingProfile ? t('admin.common.saving') : t('admin.users.save_profile')}
-                      </button>
+                      </Button>
                     </div>
 
                     <div className='border-t border-beige' />
@@ -343,70 +387,65 @@ export const AdminUsers = () => {
                       </h4>
                       <div className='grid grid-cols-1 sm:grid-cols-2 gap-3'>
                         <div className='sm:col-span-2'>
-                          <label className={labelClass}>כותרת משנה (hero)</label>
-                          <input
+                          <label className={labelClass}>{t('admin.users.landing_hero_subtitle')}</label>
+                          <InputField
                             type='text'
                             value={landingForm.heroSubtitle}
                             onChange={(e) => setLandingForm((f) => ({ ...f, heroSubtitle: e.target.value }))}
-                            className={inputClass}
                           />
                         </div>
                         <div className='sm:col-span-2'>
-                          <label className={labelClass}>ביו</label>
-                          <textarea
+                          <label className={labelClass}>{t('admin.users.landing_bio')}</label>
+                          <TextareaField
                             value={landingForm.bio}
                             onChange={(e) => setLandingForm((f) => ({ ...f, bio: e.target.value }))}
                             rows={3}
-                            className={`${inputClass} resize-none`}
                           />
                         </div>
                         <div>
-                          <label className={labelClass}>טלפון</label>
-                          <input
+                          <label className={labelClass}>{t('admin.users.landing_phone')}</label>
+                          <InputField
                             type='tel'
                             value={landingForm.phone}
                             onChange={(e) => setLandingForm((f) => ({ ...f, phone: e.target.value }))}
-                            className={inputClass}
                           />
                         </div>
                         <div>
-                          <label className={labelClass}>אימייל ליצירת קשר</label>
-                          <input
+                          <label className={labelClass}>{t('admin.users.landing_contact_email')}</label>
+                          <InputField
                             type='email'
                             value={landingForm.contactEmail}
                             onChange={(e) => setLandingForm((f) => ({ ...f, contactEmail: e.target.value }))}
-                            className={inputClass}
                           />
                         </div>
                         <div>
                           <label className={labelClass}>Instagram</label>
-                          <input
+                          <InputField
                             type='text'
                             value={landingForm.instagramHandle}
                             onChange={(e) => setLandingForm((f) => ({ ...f, instagramHandle: e.target.value }))}
-                            className={inputClass}
                             placeholder='@username'
                           />
                         </div>
                         <div>
                           <label className={labelClass}>Facebook URL</label>
-                          <input
+                          <InputField
                             type='url'
                             value={landingForm.facebookUrl}
                             onChange={(e) => setLandingForm((f) => ({ ...f, facebookUrl: e.target.value }))}
-                            className={inputClass}
                             placeholder='https://facebook.com/...'
                           />
                         </div>
                       </div>
-                      <button
+                      <Button
+                        variant='primary'
+                        size='sm'
                         onClick={handleSaveLanding}
                         disabled={savingLanding}
-                        className='flex items-center gap-1.5 bg-blush text-primary-foreground px-4 py-1.5 rounded-lg text-xs font-medium hover:bg-blush/80 transition-colors disabled:opacity-60'
                       >
                         <Check size={13} />
                         {savingLanding ? t('admin.common.saving') : t('admin.users.save_landing')}
-                      </button>
+                      </Button>
                     </div>
 
                     <div className='border-t border-beige' />
@@ -438,17 +477,19 @@ export const AdminUsers = () => {
                               e.target.value = '';
                             }}
                           />
-                          <button
+                          <Button
+                            variant='ghost'
+                            size='sm'
+                            className='w-full'
                             onClick={() => heroFileRef.current?.click()}
                             disabled={uploadingHero}
-                            className='w-full px-3 py-1.5 rounded-lg border border-beige text-xs text-warm-gray hover:bg-beige/50 transition-colors disabled:opacity-60'
                           >
                             {uploadingHero
                               ? t('admin.common.uploading')
                               : settings?.heroImagePath
                                 ? t('admin.users.replace_image')
                                 : t('admin.users.upload_image')}
-                          </button>
+                          </Button>
                         </div>
 
                         {/* Profile image */}
@@ -472,17 +513,19 @@ export const AdminUsers = () => {
                               e.target.value = '';
                             }}
                           />
-                          <button
+                          <Button
+                            variant='ghost'
+                            size='sm'
+                            className='w-full'
                             onClick={() => profileFileRef.current?.click()}
                             disabled={uploadingProfile}
-                            className='w-full px-3 py-1.5 rounded-lg border border-beige text-xs text-warm-gray hover:bg-beige/50 transition-colors disabled:opacity-60'
                           >
                             {uploadingProfile
                               ? t('admin.common.uploading')
                               : settings?.profileImagePath
                                 ? t('admin.users.replace_image')
                                 : t('admin.users.upload_image')}
-                          </button>
+                          </Button>
                         </div>
                       </div>
                     </div>
@@ -490,7 +533,7 @@ export const AdminUsers = () => {
                 )}
               </div>
             ))}
-            {admins.length === 0 && <p className='text-sm text-warm-gray text-center py-4'>{t('admin.users.no_users')}</p>}
+            {visibleAdmins.length === 0 && <p className='text-sm text-warm-gray text-center py-4'>{t('admin.users.no_users')}</p>}
           </div>
         </div>
 
@@ -501,84 +544,103 @@ export const AdminUsers = () => {
             <div className='grid grid-cols-1 sm:grid-cols-2 gap-4'>
               <div>
                 <label className={labelClass}>{t('admin.common.name')}</label>
-                <input
+                <InputField
                   type='text'
                   value={form.name}
                   onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
                   required
-                  placeholder='שם מלא'
-                  className={inputClass}
+                  placeholder={t('admin.common.full_name_ph')}
                 />
               </div>
               <div>
                 <label className={labelClass}>{t('admin.common.email')}</label>
-                <input
+                <InputField
                   type='email'
                   value={form.email}
                   onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
                   required
                   placeholder='email@example.com'
-                  className={inputClass}
                 />
               </div>
               <div>
                 <label className={labelClass}>{t('admin.users.password')}</label>
-                <input
+                <InputField
                   type='password'
                   value={form.password}
                   onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))}
                   required
                   placeholder={t('admin.users.password_hint')}
-                  className={inputClass}
                 />
+                <p className='text-[10px] text-warm-gray mt-0.5'>{t('admin.users.password_hint_full')}</p>
               </div>
               <div>
                 <label className={labelClass}>{t('admin.users.role')}</label>
-                <select
+                <SelectField
                   value={form.role}
                   onChange={(e) => setForm((f) => ({ ...f, role: e.target.value as 'admin' | 'superadmin' }))}
-                  className={inputClass}
                 >
                   <option value='admin'>{t('admin.users.admin_label')}</option>
                   <option value='superadmin'>{t('admin.users.superadmin_label')}</option>
-                </select>
+                </SelectField>
               </div>
               <div>
                 <label className={labelClass}>{t('admin.users.username_url')}</label>
-                <input
+                <InputField
                   type='text'
                   value={form.username}
                   onChange={(e) => setForm((f) => ({ ...f, username: e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, '') }))}
                   placeholder='user123'
-                  className={`${inputClass} font-mono`}
+                  className='font-mono'
                 />
                 <p className='text-[10px] text-warm-gray mt-0.5'>{t('admin.users.username_hint')}</p>
               </div>
               <div>
                 <label className={labelClass}>{t('admin.settings.studio_name')}</label>
-                <input
+                <InputField
                   type='text'
                   value={form.studioName}
                   onChange={(e) => setForm((f) => ({ ...f, studioName: e.target.value }))}
                   placeholder='Studio Name'
-                  className={inputClass}
                 />
               </div>
             </div>
 
             {msg.text && <p className={`text-sm ${msg.error ? 'text-red-500' : 'text-charcoal'}`}>{msg.text}</p>}
 
-            <button
+            <Button
               type='submit'
+              variant='primary'
               disabled={creating}
-              className='flex items-center gap-2 bg-blush text-primary-foreground px-5 py-2 rounded-lg text-sm font-medium hover:bg-blush/80 transition-colors disabled:opacity-60'
             >
               <Plus size={15} />
               {creating ? t('admin.users.creating') : t('admin.users.create')}
-            </button>
+            </Button>
           </form>
         </div>
       </div>
+
+      {deleteConfirmId && (
+        <Modal isOpen onClose={() => setDeleteConfirmId(null)}>
+          <h3 className='text-lg text-charcoal mb-2'>{t('admin.users.delete_confirm')}</h3>
+          <p className='text-sm text-warm-gray mb-6'>{t('admin.common.action_irreversible')}</p>
+          <div className='flex gap-3'>
+            <button
+              onClick={() => handleDelete(deleteConfirmId)}
+              disabled={!!deletingId}
+              className='flex-1 bg-rose-500 text-white py-3 rounded-xl text-sm font-medium hover:bg-rose-600 transition-colors disabled:opacity-60'
+            >
+              {deletingId ? t('admin.common.deleting') : t('admin.common.delete')}
+            </button>
+            <button
+              onClick={() => setDeleteConfirmId(null)}
+              disabled={!!deletingId}
+              className='flex-1 py-3 rounded-xl text-sm text-warm-gray border border-beige hover:bg-ivory transition-colors'
+            >
+              {t('admin.common.cancel')}
+            </button>
+          </div>
+        </Modal>
+      )}
     </AdminLayout>
   );
 };

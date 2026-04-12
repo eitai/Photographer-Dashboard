@@ -4,20 +4,12 @@ const Admin = require('../models/Admin');
 const { protect } = require('../middleware/auth');
 const asyncHandler = require('../middleware/asyncHandler');
 const validatePassword = require('../utils/validatePassword');
+const formatAdmin = require('../utils/formatAdmin');
 
 const router = express.Router();
 
 const signToken = (id) =>
   jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: process.env.JWT_EXPIRES_IN || '7d' });
-
-const formatAdmin = (a) => ({
-  id: a.id,
-  name: a.name,
-  email: a.email,
-  role: a.role,
-  username: a.username || null,
-  studioName: a.studioName || null,
-});
 
 const COOKIE_OPTIONS = {
   httpOnly: true,
