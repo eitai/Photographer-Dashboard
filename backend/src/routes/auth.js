@@ -11,12 +11,18 @@ const router = express.Router();
 const signToken = (id) =>
   jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: process.env.JWT_EXPIRES_IN || '7d' });
 
-const COOKIE_OPTIONS = {
+// secure=true whenever the request arrives over HTTPS (x-forwarded-proto set by proxy/CDN)
+// or when NODE_ENV is explicitly production — whichever is true first.
+const isSecure = (req) =>
+  process.env.NODE_ENV === 'production' ||
+  req?.headers?.['x-forwarded-proto'] === 'https';
+
+const cookieOptions = (req) => ({
   httpOnly: true,
-  secure: process.env.NODE_ENV === 'production',
-  sameSite: 'strict',
+  secure: isSecure(req),
+  sameSite: isSecure(req) ? 'strict' : 'lax',
   maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-};
+});
 
 // POST /api/auth/login
 // Accepts { email, password } or { username, password } — identifier checked against both fields
@@ -35,13 +41,13 @@ router.post('/login', asyncHandler(async (req, res) => {
     return res.status(401).json({ message: 'Invalid credentials' });
 
   const token = signToken(admin.id);
-  res.cookie('koral_token', token, COOKIE_OPTIONS);
+  res.cookie('koral_token', token, cookieOptions(req));
   res.json({ admin: formatAdmin(admin) });
 }));
 
 // POST /api/auth/logout
 router.post('/logout', (req, res) => {
-  res.clearCookie('koral_token', COOKIE_OPTIONS);
+  res.clearCookie('koral_token', cookieOptions(req));
   res.json({ message: 'Logged out' });
 });
 

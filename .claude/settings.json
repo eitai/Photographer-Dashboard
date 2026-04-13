@@ -36,7 +36,12 @@
       "Bash(netstat -ano)",
       "Bash(del \"c:\\\\Users\\\\eitai\\\\Desktop\\\\codevalue\\\\store test\\\\frontend\\\\src\\\\pages\\\\admin\\\\dashboard\\\\StatusBadge.tsx\")",
       "Bash(xargs grep:*)",
-      "Bash(psql \"postgresql://postgres:postgres@localhost:5432/koral\" -f backend/src/db/migrations/004_storage_quota.sql)"
+      "Bash(psql \"postgresql://postgres:postgres@localhost:5432/koral\" -f backend/src/db/migrations/004_storage_quota.sql)",
+      "Bash(curl -s -X POST https://photographer-dashboard.arxentra.app/api/auth/seed -H \"Content-Type: application/json\")",
+      "Bash(curl -s -X POST https://photographer-dashboard.arxentra.app/api/auth/seed -H 'Content-Type: application/json' -d '{\"name\":\"Admin\",\"email\":\"admin@koral.app\",\"username\":\"admin\",\"password\":\"Admin1234!\"}')",
+      "Bash(curl -s -X OPTIONS https://photographer-dashboard.arxentra.app/api/auth/login -H 'Origin: https://photographer-dashboard.arxentra.app' -H 'Access-Control-Request-Method: POST' -H 'Access-Control-Request-Headers: content-type' -v)",
+      "Bash(curl -s -X POST https://photographer-dashboard.arxentra.app/api/auth/login -H 'Content-Type: application/json' -H 'Origin: https://photographer-dashboard.arxentra.app' -d '{\"username\":\"admin\",\"password\":\"Admin1234!\"}' -v)",
+      "Bash(curl -s https://photographer-dashboard.arxentra.app/api/health)"
     ],
     "deny": [
       "Bash(taskkill *)",
