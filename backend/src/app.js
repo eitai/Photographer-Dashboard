@@ -34,20 +34,29 @@ app.use(helmet());
 app.use(cookieParser());
 
 // ── CORS ──────────────────────────────────────────────────────────────────────
+// FRONTEND_URL may be a single URL or comma-separated list of URLs.
+// Trailing slashes are stripped so http://example.com/ and http://example.com both match.
+const parseOrigins = (raw) =>
+  (raw || '')
+    .split(',')
+    .map((s) => s.trim().replace(/\/$/, ''))
+    .filter(Boolean);
+
 const allowedOrigins = [
-  process.env.FRONTEND_URL,
+  ...parseOrigins(process.env.FRONTEND_URL),
   ...(process.env.NODE_ENV !== 'production'
     ? ['http://localhost:8080', 'http://localhost:5173', 'http://localhost:3000']
     : []),
-].filter(Boolean);
+];
 
 app.use(
   cors({
     origin: (origin, callback) => {
       // No origin = non-browser client (curl, mobile app, server-to-server).
-      // CORS is a browser-only restriction; non-browser callers are protected by JWT auth.
       if (!origin) return callback(null, true);
-      if (allowedOrigins.includes(origin)) return callback(null, true);
+      const normalised = origin.replace(/\/$/, '');
+      if (allowedOrigins.includes(normalised)) return callback(null, true);
+      logger.warn(`CORS blocked: ${origin} — allowed: ${allowedOrigins.join(', ')}`);
       callback(new Error(`CORS: origin ${origin} not allowed`));
     },
     credentials: true,
