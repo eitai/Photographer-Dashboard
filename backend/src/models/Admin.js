@@ -35,7 +35,21 @@ async function findOne(filter) {
 }
 
 async function find() {
-  const { rows } = await pool.query('SELECT * FROM admins ORDER BY created_at ASC');
+  const { rows } = await pool.query(
+    `SELECT
+       a.*,
+       COALESCE(SUM(gi.size), 0)::bigint
+       + COALESCE((
+           SELECT SUM((v->>'size')::bigint)
+           FROM galleries g2, jsonb_array_elements(g2.videos) v
+           WHERE g2.admin_id = a.id AND (v->>'size') IS NOT NULL
+         ), 0)::bigint AS storage_used_bytes
+     FROM admins a
+     LEFT JOIN galleries g  ON g.admin_id = a.id
+     LEFT JOIN gallery_images gi ON gi.gallery_id = g.id
+     GROUP BY a.id
+     ORDER BY a.created_at ASC`
+  );
   return rows.map((r) => {
     const a = rowToCamel(r);
     delete a.password;

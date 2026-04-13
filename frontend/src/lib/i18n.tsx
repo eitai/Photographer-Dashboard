@@ -244,8 +244,8 @@ const translations: Record<string, Record<Lang, string>> = {
   'admin.upload.images': { he: 'תמונות', en: 'images' },
   'admin.upload.drag': { he: 'גרור ושחרר תמונות כאן', en: 'Drag & drop images here' },
   'admin.upload.browse': {
-    he: 'או לחץ לעיון — עד 1000 תמונות, 20MB לכל תמונה',
-    en: 'or click to browse — up to 1000 images, 20MB each',
+    he: 'או לחץ לעיון — עד 5000 תמונות, 40MB לכל תמונה',
+    en: 'or click to browse — up to 5000 images, 40MB each',
   },
   'admin.upload.error': { he: 'שגיאה', en: 'Error' },
   'admin.upload.done': { he: 'הושלם', en: 'Done' },
@@ -253,10 +253,12 @@ const translations: Record<string, Record<Lang, string>> = {
   'admin.upload.load_failed': { he: 'טעינת הגלריה נכשלה', en: 'Failed to load gallery' },
   'admin.upload.images_load_failed': { he: 'טעינת התמונות נכשלה', en: 'Failed to load images' },
   'admin.upload.status_update_failed': { he: 'עדכון הסטטוס נכשל', en: 'Failed to update status' },
-  'admin.upload.file_too_large': { he: 'הקובץ "{{name}}" גדול מדי (מקסימום 20MB)', en: 'File "{{name}}" exceeds the 20MB limit' },
+  'admin.upload.file_too_large': { he: 'הקובץ "{{name}}" גדול מדי (מקסימום 40MB)', en: 'File "{{name}}" exceeds the 40MB limit' },
   'admin.upload.invalid_type': { he: 'הקובץ "{{name}}" אינו תמונה נתמכת', en: 'File "{{name}}" is not a supported image type' },
   'admin.upload.drop_images_label': { he: 'גרור ושחרר תמונות כאן, או לחץ לבחירה', en: 'Drag and drop images here, or press to browse' },
   'admin.upload.selected': { he: 'נבחרו', en: 'selected' },
+  'admin.upload.select_all': { he: 'בחר הכל', en: 'Select all' },
+  'admin.upload.deselect_all': { he: 'בטל בחירת הכל', en: 'Deselect all' },
   'admin.upload.clear_selection': { he: 'נקה בחירה', en: 'Clear selection' },
   'admin.upload.delete_selected': { he: 'מחק נבחרים', en: 'Delete selected' },
   'admin.upload.delete_confirm': { he: 'מחיקת תמונות', en: 'Delete images' },
@@ -360,12 +362,16 @@ const translations: Record<string, Record<Lang, string>> = {
   // ── Admin: Gallery in-editing action ────────────────────────────────────────
   'admin.gallery.mark_in_editing': { he: 'סמן כבעריכה', en: 'Mark as In Editing' },
   'admin.gallery.marking': { he: 'מעדכן…', en: 'Updating…' },
+  'admin.gallery.tab_images': { he: 'תמונות', en: 'Images' },
+  'admin.gallery.tab_videos': { he: 'וידאו', en: 'Videos' },
   'admin.gallery.upload_video': { he: 'העלה וידאו', en: 'Upload Video' },
   'admin.gallery.uploading_video': { he: 'מעלה…', en: 'Uploading…' },
   'admin.gallery.delete_video': { he: 'מחק וידאו', en: 'Delete Video' },
   'admin.gallery.video_uploaded': { he: 'הוידאו הועלה בהצלחה', en: 'Video uploaded successfully' },
   'admin.gallery.video_deleted': { he: 'הוידאו נמחק', en: 'Video deleted' },
   'admin.gallery.video_error': { he: 'שגיאה בהעלאת הוידאו', en: 'Video upload failed' },
+  'admin.gallery.video_cancelled': { he: 'ההעלאה בוטלה', en: 'Upload cancelled' },
+  'admin.gallery.cancel_upload': { he: 'בטל העלאה', en: 'Cancel' },
   'admin.gallery.upload_video_multi': { he: 'ניתן לבחור מספר קבצים', en: 'select multiple files' },
   'admin.gallery.video_too_large': { he: 'הקובץ "{{name}}" גדול מדי (מקסימום 2GB)', en: 'File "{{name}}" exceeds the 2GB limit' },
   'admin.gallery.video_invalid_type': { he: 'הקובץ "{{name}}" אינו קובץ וידאו נתמך', en: 'File "{{name}}" is not a supported video type' },
@@ -540,6 +546,10 @@ const translations: Record<string, Record<Lang, string>> = {
   'admin.settings.sections.save_packages': { he: 'שמור חבילות', en: 'Save Packages' },
   'admin.settings.sections.save_video': { he: 'שמור סרטון', en: 'Save Video' },
   'admin.settings.sections.save_cta': { he: 'שמור באנר', en: 'Save Banner' },
+  'admin.settings.sections.instagram_feed': { he: 'פיד אינסטגרם', en: 'Instagram Feed' },
+  'admin.settings.sections.save_instagram_feed': { he: 'שמור פיד', en: 'Save Instagram Feed' },
+  'admin.settings.sections.add_instagram_image': { he: 'הוסף תמונה', en: 'Add Photo' },
+  'admin.settings.sections.instagram_feed_max': { he: 'עד 9 תמונות. רחף מעל תמונה להסרתה.', en: 'Up to 9 photos. Hover a photo to remove it.' },
 
   // ── Admin: Dashboard (addition) ──────────────────────────────────────────────
   'admin.dashboard.view_landing': { he: 'צפה בדף הנחיתה שלך', en: 'View Your Landing Page' },
@@ -825,6 +835,19 @@ const translations: Record<string, Record<Lang, string>> = {
 
   // ── Public: Video Reel section ───────────────────────────────────────────────
   'video.title': { he: 'צפו בעבודות שלי', en: 'See My Work' },
+  'instagram.feed.title': { he: 'עקבו אחרי', en: 'Follow Along' },
+  'instagram.feed.follow': { he: 'עקבו באינסטגרם', en: 'Follow on Instagram' },
+
+  // ── Admin: Storage ──────────────────────────────────────────────────────────
+  'storage.used': { he: 'שימוש באחסון', en: 'Storage Used' },
+  'storage.of': { he: 'מתוך', en: 'of' },
+  'storage.quota': { he: 'מכסה', en: 'Quota' },
+  'storage.nearLimit': { he: 'האחסון שלך עומד להתמלא', en: 'Storage is almost full' },
+  'storage.quotaExceeded': { he: 'מכסת האחסון חורגה. מחק תמונות כדי להמשיך להעלות.', en: 'Storage quota exceeded. Delete images to continue uploading.' },
+  'admin.users.storage_section': { he: 'מכסת אחסון', en: 'Storage Quota' },
+  'admin.users.storage_quota_label': { he: 'מכסה (GB)', en: 'Quota (GB)' },
+  'admin.users.storage_quota_hint': { he: 'הגדר את כמות האחסון המרבית לצלם זה', en: 'Set the maximum storage this photographer may use' },
+  'admin.users.quota_saved': { he: 'מכסת האחסון עודכנה', en: 'Storage quota updated' },
 
   // ── Admin: Status labels ────────────────────────────────────────────────────
   'admin.status.gallery_sent': { he: 'גלריה נשלחה', en: 'Gallery Sent' },

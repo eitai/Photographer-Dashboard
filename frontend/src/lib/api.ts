@@ -35,4 +35,14 @@ api.interceptors.response.use(
 export const verifyAuth = (): Promise<{ admin: import('@/store/authStore').AdminUser }> =>
   api.get('/auth/me').then((r) => r.data);
 
+// ---- Storage ----
+export const getMyStorage = (): Promise<import('@/types/admin').StorageStats> =>
+  api.get('/storage/me').then((r) => r.data);
+
+export const getAdminStorage = (adminId: string): Promise<import('@/types/admin').StorageStats> =>
+  api.get(`/admins/${adminId}/storage`).then((r) => r.data);
+
+export const setAdminQuota = (adminId: string, quotaGB: number): Promise<{ adminId: string; quotaBytes: number; quotaGB: number }> =>
+  api.patch(`/admins/${adminId}/quota`, { quotaGB }).then((r) => r.data);
+
 export default api;

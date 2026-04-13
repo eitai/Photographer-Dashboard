@@ -60,6 +60,8 @@ router.get('/settings', asyncHandler(async (req, res) => {
     packagesEnabled: settings?.packagesEnabled || false,
     packages: settings?.packages || [],
     packagesDisclaimer: settings?.packagesDisclaimer || '',
+    instagramFeedEnabled: settings?.instagramFeedEnabled || false,
+    instagramFeedImages: settings?.instagramFeedImages || [],
   });
 }));
 

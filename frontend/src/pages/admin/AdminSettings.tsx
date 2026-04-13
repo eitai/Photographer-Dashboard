@@ -198,10 +198,10 @@ const SectionCard = ({ title, enabled, onToggle, enabledLabel, children, onSave,
           role='switch'
           aria-checked={enabled}
           onClick={onToggle}
-          className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-blush ${enabled ? 'bg-blush' : 'bg-beige'}`}
+          className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus-visible:outline focus-visible:outline-2 focus-visible:outline-blush ${enabled ? 'bg-blush' : 'bg-beige'}`}
         >
           <span
-            className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform ${enabled ? 'translate-x-[18px]' : 'translate-x-[2px]'}`}
+            className={`pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow-md ring-0 transition-transform duration-200 ease-in-out ${enabled ? 'translate-x-5' : 'translate-x-0'}`}
           />
         </button>
       </label>
@@ -350,6 +350,13 @@ export const AdminSettings = () => {
   const [cta, setCta] = useState({ heading: '', subtext: '', buttonLabel: '' });
   const [savingCta, setSavingCta] = useState(false);
 
+  // Instagram Feed
+  const [igFeedEnabled, setIgFeedEnabled] = useState(false);
+  const [igFeedImages, setIgFeedImages] = useState<string[]>([]);
+  const [savingIgFeed, setSavingIgFeed] = useState(false);
+  const [uploadingIgImage, setUploadingIgImage] = useState(false);
+  const igFeedInputRef = useRef<HTMLInputElement>(null);
+
   // ── Populate from settings cache ────────────────────────────────────────────
   useEffect(() => {
     if (!settingsData) return;
@@ -388,6 +395,8 @@ export const AdminSettings = () => {
     setVideo({ url: s.videoUrl || '', heading: s.videoSectionHeading || '', subheading: s.videoSectionSubheading || '' });
     setCtaEnabled(s.ctaBannerEnabled ?? false);
     setCta({ heading: s.ctaBannerHeading || '', subtext: s.ctaBannerSubtext || '', buttonLabel: s.ctaBannerButtonLabel || '' });
+    setIgFeedEnabled(s.instagramFeedEnabled ?? false);
+    setIgFeedImages(s.instagramFeedImages ?? []);
   }, [settingsData]);
 
   // ── Handlers: Identity ──────────────────────────────────────────────────────
@@ -698,6 +707,52 @@ export const AdminSettings = () => {
       toast.error(t('admin.settings.landing_failed'));
     } finally {
       setSavingCta(false);
+    }
+  };
+
+  // ── Handlers: Instagram Feed ────────────────────────────────────────────────
+  const handleSaveIgFeed = async () => {
+    setSavingIgFeed(true);
+    try {
+      await api.put('/settings/instagram-feed', { enabled: igFeedEnabled, images: igFeedImages });
+      toast.success(t('admin.settings.sections.save_instagram_feed'));
+      queryClient.invalidateQueries({ queryKey: queryKeys.settings });
+    } catch {
+      toast.error(t('admin.settings.landing_failed'));
+    } finally {
+      setSavingIgFeed(false);
+    }
+  };
+
+  const handleIgImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (igFeedImages.length >= 9) {
+      toast.error(t('admin.settings.sections.instagram_feed_max'));
+      return;
+    }
+    setUploadingIgImage(true);
+    try {
+      const form = new FormData();
+      form.append('image', file);
+      const res = await api.post('/settings/instagram-feed-image', form, { headers: { 'Content-Type': 'multipart/form-data' } });
+      setIgFeedImages(res.data.instagramFeedImages);
+      queryClient.invalidateQueries({ queryKey: queryKeys.settings });
+    } catch {
+      toast.error(t('admin.settings.hero_upload_failed'));
+    } finally {
+      setUploadingIgImage(false);
+      if (igFeedInputRef.current) igFeedInputRef.current.value = '';
+    }
+  };
+
+  const handleIgImageDelete = async (index: number) => {
+    try {
+      const res = await api.delete(`/settings/instagram-feed-image/${index}`);
+      setIgFeedImages(res.data.instagramFeedImages);
+      queryClient.invalidateQueries({ queryKey: queryKeys.settings });
+    } catch {
+      toast.error(t('admin.common.error'));
     }
   };
 
@@ -1358,6 +1413,46 @@ export const AdminSettings = () => {
                 <label className='block text-xs text-warm-gray mb-1'>{t('admin.settings.sections.banner_button')}</label>
                 <input className={fieldClass} value={cta.buttonLabel} onChange={(e) => setCta((c) => ({ ...c, buttonLabel: e.target.value }))} />
               </div>
+            </div>
+          </SectionCard>
+
+          {/* 4f: Instagram Feed */}
+          <SectionCard
+            title={t('admin.settings.sections.instagram_feed')}
+            enabled={igFeedEnabled}
+            onToggle={() => setIgFeedEnabled((v) => !v)}
+            enabledLabel={t('admin.settings.sections.enabled')}
+            onSave={handleSaveIgFeed}
+            saveLabel={t('admin.settings.sections.save_instagram_feed')}
+            saving={savingIgFeed}
+          >
+            <div className='space-y-3'>
+              <p className='text-xs text-warm-gray'>{t('admin.settings.sections.instagram_feed_max')}</p>
+              {igFeedImages.length > 0 && (
+                <div className='grid grid-cols-3 gap-2'>
+                  {igFeedImages.map((path, idx) => (
+                    <div key={idx} className='relative aspect-square rounded-lg overflow-hidden bg-beige group'>
+                      <img src={`${API_BASE}${path}`} alt='' className='w-full h-full object-cover' />
+                      <button
+                        type='button'
+                        onClick={() => handleIgImageDelete(idx)}
+                        className='absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white'
+                        aria-label='Remove'
+                      >
+                        <X size={18} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {igFeedImages.length < 9 && (
+                <>
+                  <input ref={igFeedInputRef} type='file' accept='image/*' className='hidden' onChange={handleIgImageUpload} />
+                  <Button type='button' variant='ghost' size='sm' onClick={() => igFeedInputRef.current?.click()} disabled={uploadingIgImage}>
+                    {uploadingIgImage ? t('admin.common.uploading') : t('admin.settings.sections.add_instagram_image')}
+                  </Button>
+                </>
+              )}
             </div>
           </SectionCard>
         </div>

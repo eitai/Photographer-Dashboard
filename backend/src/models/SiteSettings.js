@@ -59,6 +59,8 @@ async function upsert(adminId, data, { populate } = {}) {
     testimonialsEnabled: 'testimonials_enabled',
     packagesEnabled: 'packages_enabled',
     packagesDisclaimer: 'packages_disclaimer',
+    instagramFeedEnabled: 'instagram_feed_enabled',
+    instagramFeedImages: 'instagram_feed_images',
   };
 
   // JSONB columns: camelCase key → snake_case DB column
@@ -80,6 +82,9 @@ async function upsert(adminId, data, { populate } = {}) {
       if (col === 'featured_image_ids') {
         insertPlaceholders.push(`$${i}::uuid[]`);
         sets.push(`featured_image_ids = $${i++}::uuid[]`);
+      } else if (col === 'instagram_feed_images') {
+        insertPlaceholders.push(`$${i}::text[]`);
+        sets.push(`instagram_feed_images = $${i++}::text[]`);
       } else {
         insertPlaceholders.push(`$${i}`);
         sets.push(`${col} = $${i++}`);

@@ -32,3 +32,7 @@ ALTER TABLE site_settings ADD COLUMN IF NOT EXISTS packages_disclaimer TEXT NOT 
 ALTER TABLE site_settings ADD COLUMN IF NOT EXISTS services JSONB NOT NULL DEFAULT '[]';
 ALTER TABLE site_settings ADD COLUMN IF NOT EXISTS testimonials JSONB NOT NULL DEFAULT '[]';
 ALTER TABLE site_settings ADD COLUMN IF NOT EXISTS packages JSONB NOT NULL DEFAULT '[]';
+
+-- Instagram feed
+ALTER TABLE site_settings ADD COLUMN IF NOT EXISTS instagram_feed_enabled BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE site_settings ADD COLUMN IF NOT EXISTS instagram_feed_images TEXT[] NOT NULL DEFAULT '{}';

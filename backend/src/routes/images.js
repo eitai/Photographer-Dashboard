@@ -38,7 +38,7 @@ router.get('/', asyncHandler(async (req, res) => {
 }));
 
 // POST /api/galleries/:galleryId/images  — ADMIN
-router.post('/', protect, checkQuota, upload.array('images', 1000), validateImageMagicBytes, asyncHandler(async (req, res) => {
+router.post('/', protect, checkQuota, upload.array('images', 5000), validateImageMagicBytes, asyncHandler(async (req, res) => {
   const { galleryId } = req.params;
   if (!UUID_RE.test(galleryId))
     return res.status(400).json({ message: 'Invalid gallery ID format' });
@@ -97,7 +97,7 @@ router.post('/', protect, checkQuota, upload.array('images', 1000), validateImag
 }));
 
 // PATCH /api/galleries/:galleryId/images/:imageId/before  — ADMIN
-router.patch('/:imageId/before', protect, upload.single('before'), validateImageMagicBytes, asyncHandler(async (req, res) => {
+router.patch('/:imageId/before', protect, checkQuota, upload.single('before'), validateImageMagicBytes, asyncHandler(async (req, res) => {
   if (!UUID_RE.test(req.params.imageId))
     return res.status(400).json({ message: 'Invalid image ID format' });
 

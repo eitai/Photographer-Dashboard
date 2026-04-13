@@ -9,7 +9,8 @@ import type { AdminRecord, AdminSettings } from '@/types/admin';
 import { InputField, TextareaField, SelectField } from '@/components/admin/InputField';
 import { Button } from '@/components/admin/Button';
 import { Modal } from '@/components/ui/Modal';
-import { useAdmins, useCreateAdmin, useDeleteAdmin } from '@/hooks/useQueries';
+import { useAdmins, useCreateAdmin, useDeleteAdmin, useAdminStorage, useSetAdminQuota } from '@/hooks/useQueries';
+import { StorageBar } from '@/components/admin/StorageBar';
 
 interface ProfileForm {
   name: string;
@@ -105,6 +106,7 @@ export const AdminUsers = () => {
     setEditingId(a._id);
     setEditMsg({ text: '', error: false });
     setProfileForm({ name: a.name, email: a.email, studioName: a.studioName || '', username: a.username || '', role: a.role, newPassword: '' });
+    setQuotaInputGB(a.storageQuotaBytes ? (a.storageQuotaBytes / 1024 ** 3).toFixed(1) : '');
     setSettings(null);
     try {
       const r = await api.get(`/admins/${a._id}/settings`);
@@ -190,6 +192,10 @@ export const AdminUsers = () => {
       setter(false);
     }
   };
+
+  const [quotaInputGB, setQuotaInputGB] = useState<string>('');
+  const setAdminQuotaMutation = useSetAdminQuota();
+  const { data: editingAdminStorage } = useAdminStorage(editingId ?? '');
 
   const creating = createAdminMutation.isPending;
   const deletingId = deleteAdminMutation.isPending ? deleteAdminMutation.variables ?? null : null;
@@ -445,6 +451,60 @@ export const AdminUsers = () => {
                       >
                         <Check size={13} />
                         {savingLanding ? t('admin.common.saving') : t('admin.users.save_landing')}
+                      </Button>
+                    </div>
+
+                    <div className='border-t border-beige' />
+
+                    {/* Storage Quota section */}
+                    <div className='space-y-3'>
+                      <h4 className='text-xs font-semibold text-warm-gray uppercase tracking-wide'>
+                        {t('admin.users.storage_section')}
+                      </h4>
+                      {editingAdminStorage && (
+                        <StorageBar
+                          usedGB={editingAdminStorage.usedGB}
+                          quotaGB={editingAdminStorage.quotaGB}
+                          percentUsed={editingAdminStorage.percentUsed}
+                        />
+                      )}
+                      <div>
+                        <label className={labelClass}>{t('admin.users.storage_quota_label')}</label>
+                        <InputField
+                          type='number'
+                          value={quotaInputGB}
+                          onChange={(e) => setQuotaInputGB(e.target.value)}
+                          placeholder='10'
+                          min='1'
+                          step='0.5'
+                        />
+                        <p className='text-[10px] text-warm-gray mt-0.5'>{t('admin.users.storage_quota_hint')}</p>
+                      </div>
+                      <Button
+                        variant='primary'
+                        size='sm'
+                        disabled={setAdminQuotaMutation.isPending || !quotaInputGB}
+                        onClick={() => {
+                          if (!editingId || !quotaInputGB) return;
+                          const gb = parseFloat(quotaInputGB);
+                          if (isNaN(gb) || gb <= 0) return;
+                          setAdminQuotaMutation.mutate(
+                            { adminId: editingId, quotaGB: gb },
+                            {
+                              onSuccess: () => {
+                                setEditMsg({ text: t('admin.users.quota_saved'), error: false });
+                                setTimeout(() => setEditMsg({ text: '', error: false }), 3000);
+                              },
+                              onError: (err: unknown) => {
+                                const message = (err as { response?: { data?: { message?: string } } }).response?.data?.message;
+                                setEditMsg({ text: message || t('admin.users.save_error'), error: true });
+                              },
+                            },
+                          );
+                        }}
+                      >
+                        <Check size={13} />
+                        {setAdminQuotaMutation.isPending ? t('admin.common.saving') : t('admin.showcase.save')}
                       </Button>
                     </div>
 

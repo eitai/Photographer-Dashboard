@@ -142,6 +142,8 @@ interface PublicSettings {
   ctaBannerHeading: string;
   ctaBannerSubtext: string;
   ctaBannerButtonLabel: string;
+  instagramFeedEnabled: boolean;
+  instagramFeedImages: string[];
 }
 
 const OVERLAY_CLASS: Record<'light' | 'medium' | 'dark', string> = {
@@ -183,6 +185,7 @@ export const PhotographerHome = () => {
   const showTestimonials = !!(settings?.testimonialsEnabled && settings.testimonials?.length > 0);
   const showPackages = !!(settings?.packagesEnabled && settings.packages?.length > 0);
   const showVideo = !!(settings?.videoSectionEnabled && settings.videoUrl);
+  const showInstagramFeed = !!(settings?.instagramFeedEnabled && settings.instagramFeedImages?.length > 0);
   const showCtaBanner = !!(settings?.ctaBannerEnabled && settings.ctaBannerHeading);
 
   const embedUrl = showVideo ? toEmbedUrl(settings!.videoUrl) : null;
@@ -583,6 +586,50 @@ export const PhotographerHome = () => {
                 )}
               </div>
             </FadeIn>
+          </div>
+        </section>
+      )}
+
+      {/* Instagram Feed Strip */}
+      {showInstagramFeed && (
+        <section className='section-spacing bg-card'>
+          <div className='container-narrow'>
+            <FadeIn>
+              <h2 className='text-3xl md:text-4xl text-center text-foreground mb-10'>{t('instagram.feed.title')}</h2>
+            </FadeIn>
+            <div className='grid grid-cols-3 gap-2 sm:gap-3'>
+              {settings!.instagramFeedImages.map((path, i) => (
+                <FadeIn key={path} delay={i * 0.05}>
+                  <a
+                    href={settings?.instagramHandle ? `https://instagram.com/${settings.instagramHandle.replace('@', '')}` : undefined}
+                    target='_blank'
+                    rel='noopener noreferrer'
+                    className='block aspect-square rounded-xl overflow-hidden bg-secondary'
+                  >
+                    <img
+                      src={`${API_BASE}${path}`}
+                      alt={`${photographerName} Instagram`}
+                      className='w-full h-full object-cover hover:scale-105 transition-transform duration-300'
+                      loading='lazy'
+                    />
+                  </a>
+                </FadeIn>
+              ))}
+            </div>
+            {settings?.instagramHandle && (
+              <FadeIn delay={0.3}>
+                <div className='text-center mt-8'>
+                  <a
+                    href={`https://instagram.com/${settings.instagramHandle.replace('@', '')}`}
+                    target='_blank'
+                    rel='noopener noreferrer'
+                    className='inline-flex items-center gap-2 px-6 py-3 rounded-lg border border-foreground/30 text-foreground text-sm font-medium hover:bg-foreground/5 transition-colors'
+                  >
+                    {t('instagram.feed.follow')}
+                  </a>
+                </div>
+              </FadeIn>
+            )}
           </div>
         </section>
       )}

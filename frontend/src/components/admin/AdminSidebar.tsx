@@ -2,6 +2,8 @@ import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useI18n } from '@/lib/i18n';
 import { LayoutDashboard, Users, BookOpen, Settings, LogOut, Languages, Star, Shield, Mail } from 'lucide-react';
+import { useMyStorage } from '@/hooks/useQueries';
+import { StorageBar } from '@/components/admin/StorageBar';
 
 interface AdminSidebarProps {
   isOpen?: boolean;
@@ -12,6 +14,7 @@ export const AdminSidebar = ({ isOpen, onClose }: AdminSidebarProps) => {
   const { admin, logout } = useAuth();
   const { t, lang, dir, toggleLang } = useI18n();
   const navigate = useNavigate();
+  const { data: storage } = useMyStorage();
 
   const NAV_ITEMS =
     admin?.role === 'superadmin'
@@ -70,6 +73,17 @@ export const AdminSidebar = ({ isOpen, onClose }: AdminSidebarProps) => {
           <p className='text-xs font-medium text-charcoal truncate'>{admin?.name}</p>
           <p className='text-xs text-warm-gray truncate'>{admin?.email}</p>
         </div>
+        {/* Storage bar — only for non-superadmin users */}
+        {admin?.role === 'admin' && storage && (
+          <div className='px-3 mb-3'>
+            <StorageBar
+              usedGB={storage.usedGB}
+              quotaGB={storage.quotaGB}
+              percentUsed={storage.percentUsed}
+              compact
+            />
+          </div>
+        )}
         {/* Language toggle */}
         <button
           onClick={toggleLang}

@@ -6,7 +6,7 @@
  * @returns {object} Safe admin payload for API responses
  */
 function formatAdmin(a) {
-  return {
+  const result = {
     id: a.id,
     name: a.name,
     email: a.email,
@@ -14,6 +14,9 @@ function formatAdmin(a) {
     username: a.username || null,
     studioName: a.studioName || null,
   };
+  if (a.storageQuotaBytes !== undefined) result.storageQuotaBytes = Number(a.storageQuotaBytes);
+  if (a.storageUsedBytes  !== undefined) result.storageUsedBytes  = Number(a.storageUsedBytes);
+  return result;
 }
 
 module.exports = formatAdmin;

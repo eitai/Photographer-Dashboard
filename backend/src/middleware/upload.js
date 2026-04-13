@@ -28,7 +28,7 @@ const imageFilter = (req, file, cb) => {
 const uploadImage = multer({
   storage: makeStorage(),
   fileFilter: imageFilter,
-  limits: { fileSize: 20 * 1024 * 1024 }, // 20 MB
+  limits: { fileSize: 40 * 1024 * 1024 }, // 40 MB
 });
 
 // ── Video upload ─────────────────────────────────────────────────────────────
@@ -45,7 +45,6 @@ const videoFilter = (req, file, cb) => {
 const uploadVideo = multer({
   storage: makeStorage(),
   fileFilter: videoFilter,
-  limits: { fileSize: 2048 * 1024 * 1024 }, // 2 GB
 });
 
 // ── Magic bytes validation ────────────────────────────────────────────────────

@@ -45,6 +45,8 @@ router.get('/', protect, asyncHandler(async (req, res) => {
     packagesEnabled: settings?.packagesEnabled || false,
     packages: settings?.packages || [],
     packagesDisclaimer: settings?.packagesDisclaimer || '',
+    instagramFeedEnabled: settings?.instagramFeedEnabled || false,
+    instagramFeedImages: settings?.instagramFeedImages || [],
   });
 }));
 
@@ -211,6 +213,58 @@ router.put('/cta-banner', protect, asyncHandler(async (req, res) => {
     ctaBannerSubtext: settings.ctaBannerSubtext,
     ctaBannerButtonLabel: settings.ctaBannerButtonLabel,
   });
+}));
+
+// PUT /api/settings/instagram-feed  — ADMIN (toggle enabled + reorder)
+router.put('/instagram-feed', protect, asyncHandler(async (req, res) => {
+  const { enabled, images } = req.body;
+  const data = { instagramFeedEnabled: !!enabled };
+  if (Array.isArray(images)) {
+    if (images.length > 9) return res.status(400).json({ message: 'Maximum 9 Instagram feed images allowed' });
+    data.instagramFeedImages = images.filter((p) => typeof p === 'string');
+  }
+  const settings = await SiteSettings.upsert(req.admin.id, data);
+  res.json({
+    instagramFeedEnabled: settings.instagramFeedEnabled,
+    instagramFeedImages: settings.instagramFeedImages || [],
+  });
+}));
+
+// POST /api/settings/instagram-feed-image  — ADMIN (upload one image, append to array)
+router.post('/instagram-feed-image', protect, upload.single('image'), validateImageMagicBytes, asyncHandler(async (req, res) => {
+  if (!req.file) return res.status(400).json({ message: 'No image provided' });
+  const newPath = `/uploads/${req.file.filename}`;
+
+  const existing = await SiteSettings.findOne({ adminId: req.admin.id });
+  const current = existing?.instagramFeedImages || [];
+  if (current.length >= 9) {
+    fs.unlink(req.file.path, () => {});
+    return res.status(400).json({ message: 'Maximum 9 Instagram feed images allowed' });
+  }
+
+  const updated = [...current, newPath];
+  const settings = await SiteSettings.upsert(req.admin.id, { instagramFeedImages: updated });
+  res.json({ instagramFeedImages: settings.instagramFeedImages || [] });
+}));
+
+// DELETE /api/settings/instagram-feed-image/:index  — ADMIN (remove one image by index)
+router.delete('/instagram-feed-image/:index', protect, asyncHandler(async (req, res) => {
+  const idx = parseInt(req.params.index, 10);
+  if (isNaN(idx) || idx < 0) return res.status(400).json({ message: 'Invalid index' });
+
+  const existing = await SiteSettings.findOne({ adminId: req.admin.id });
+  const current = existing?.instagramFeedImages || [];
+  if (idx >= current.length) return res.status(404).json({ message: 'Image not found' });
+
+  const removedPath = current[idx];
+  const updated = current.filter((_, i) => i !== idx);
+  await SiteSettings.upsert(req.admin.id, { instagramFeedImages: updated });
+
+  // Delete the file from disk
+  const fullPath = require('path').join(__dirname, '../../uploads', require('path').basename(removedPath));
+  fs.unlink(fullPath, () => {});
+
+  res.json({ instagramFeedImages: updated });
 }));
 
 // POST /api/settings/hero-image  — ADMIN

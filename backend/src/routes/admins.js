@@ -1,5 +1,6 @@
 const express = require('express');
 const fs = require('fs');
+const pool = require('../db');
 const Admin = require('../models/Admin');
 const AdminProduct = require('../models/AdminProduct');
 const SiteSettings = require('../models/SiteSettings');
@@ -138,6 +139,58 @@ router.post('/:id/profile-image', upload.single('image'), validateImageMagicByte
   if (!req.file) return res.status(400).json({ message: 'No image uploaded' });
   const profileImagePath = await replaceUploadedFile(req.params.id, 'profileImagePath', `/uploads/${req.file.filename}`, { SiteSettings, fs });
   res.json({ profileImagePath });
+}));
+
+// GET /api/admins/:id/storage — superadmin only
+router.get('/:id/storage', asyncHandler(async (req, res) => {
+  const { rows } = await pool.query(
+    `SELECT
+       COALESCE(SUM(gi.size), 0)::bigint
+       + COALESCE((
+           SELECT SUM((v->>'size')::bigint)
+           FROM galleries g2, jsonb_array_elements(g2.videos) v
+           WHERE g2.admin_id = $1 AND (v->>'size') IS NOT NULL
+         ), 0)::bigint AS used,
+       a.storage_quota_bytes AS quota
+     FROM admins a
+     LEFT JOIN galleries g  ON g.admin_id = a.id
+     LEFT JOIN gallery_images gi ON gi.gallery_id = g.id
+     WHERE a.id = $1
+     GROUP BY a.storage_quota_bytes`,
+    [req.params.id]
+  );
+  if (!rows[0]) return res.status(404).json({ message: 'Admin not found' });
+
+  const used  = Number(rows[0].used);
+  const quota = Number(rows[0].quota);
+  res.json({
+    adminId:     req.params.id,
+    usedBytes:   used,
+    quotaBytes:  quota,
+    usedGB:      parseFloat((used  / 1024 ** 3).toFixed(2)),
+    quotaGB:     parseFloat((quota / 1024 ** 3).toFixed(2)),
+    percentUsed: quota > 0 ? parseFloat(((used / quota) * 100).toFixed(1)) : 0,
+  });
+}));
+
+// PATCH /api/admins/:id/quota — superadmin only
+router.patch('/:id/quota', asyncHandler(async (req, res) => {
+  const quotaGB = parseFloat(req.body.quotaGB);
+  if (!isFinite(quotaGB) || quotaGB < 0.1 || quotaGB > 10000) {
+    return res.status(400).json({ message: 'quotaGB must be between 0.1 and 10000' });
+  }
+  const quotaBytes = Math.round(quotaGB * 1024 ** 3);
+  const { rows } = await pool.query(
+    `UPDATE admins SET storage_quota_bytes = $1, updated_at = NOW()
+     WHERE id = $2 RETURNING id, storage_quota_bytes`,
+    [quotaBytes, req.params.id]
+  );
+  if (!rows[0]) return res.status(404).json({ message: 'Admin not found' });
+  res.json({
+    adminId:    rows[0].id,
+    quotaBytes: Number(rows[0].storage_quota_bytes),
+    quotaGB,
+  });
 }));
 
 module.exports = router;

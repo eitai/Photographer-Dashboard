@@ -2,8 +2,10 @@ const express = require('express');
 const path = require('path');
 const fs = require('fs');
 const Gallery = require('../models/Gallery');
+const GalleryImage = require('../models/GalleryImage');
 const Client = require('../models/Client');
 const { protect } = require('../middleware/auth');
+const checkQuota = require('../middleware/checkQuota');
 const asyncHandler = require('../middleware/asyncHandler');
 const { sendGalleryLink } = require('../services/emailService');
 const { withTransaction } = require('../utils/transaction');
@@ -215,11 +217,36 @@ router.delete('/:id', protect, asyncHandler(async (req, res) => {
     return res.status(400).json({ message: 'Invalid ID format' });
   const gallery = await Gallery.findOneAndDelete({ _id: req.params.id, adminId: req.admin.id });
   if (!gallery) return res.status(404).json({ message: 'Gallery not found' });
+
+  // Clean up image files from disk (DB rows cascade-delete via FK)
+  const images = await GalleryImage.find({ galleryId: req.params.id });
+  const THUMB_DIR = path.join(__dirname, '../../uploads/thumbnails');
+  for (const img of images) {
+    const filePath = path.join(__dirname, '../../uploads', img.filename);
+    if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+    if (img.thumbnailPath) {
+      const thumbPath = path.join(THUMB_DIR, path.basename(img.thumbnailPath));
+      if (fs.existsSync(thumbPath)) fs.unlinkSync(thumbPath);
+    }
+    if (img.beforePath) {
+      const beforePath = path.join(__dirname, '../../uploads', path.basename(img.beforePath));
+      if (fs.existsSync(beforePath)) fs.unlinkSync(beforePath);
+    }
+  }
+
+  // Clean up video files from disk
+  if (Array.isArray(gallery.videos)) {
+    for (const v of gallery.videos) {
+      const filePath = path.join(__dirname, '../../uploads', path.basename(v.filename));
+      if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+    }
+  }
+
   res.json({ message: 'Gallery deleted' });
 }));
 
 // POST /api/galleries/:id/video  — upload one or more videos
-router.post('/:id/video', protect, uploadVideo.array('videos', 20), asyncHandler(async (req, res) => {
+router.post('/:id/video', protect, checkQuota, uploadVideo.array('videos', 20), asyncHandler(async (req, res) => {
   if (!UUID_RE.test(req.params.id))
     return res.status(400).json({ message: 'Invalid ID format' });
   const gallery = await Gallery.findOne({ _id: req.params.id, adminId: req.admin.id });
@@ -232,6 +259,7 @@ router.post('/:id/video', protect, uploadVideo.array('videos', 20), asyncHandler
       path: `/uploads/${file.filename}`,
       filename: file.filename,
       originalName: file.originalname,
+      size: file.size,
     });
   }
   gallery.videos = currentVideos;

@@ -35,7 +35,8 @@
       "Bash(echo \"app.js check done: $?\")",
       "Bash(netstat -ano)",
       "Bash(del \"c:\\\\Users\\\\eitai\\\\Desktop\\\\codevalue\\\\store test\\\\frontend\\\\src\\\\pages\\\\admin\\\\dashboard\\\\StatusBadge.tsx\")",
-      "Bash(xargs grep:*)"
+      "Bash(xargs grep:*)",
+      "Bash(psql \"postgresql://postgres:postgres@localhost:5432/koral\" -f backend/src/db/migrations/004_storage_quota.sql)"
     ],
     "deny": [
       "Bash(taskkill *)",

@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import api from '@/lib/api';
+import api, { getMyStorage, getAdminStorage, setAdminQuota } from '@/lib/api';
 import * as clientService from '@/services/clientService';
 import * as galleryService from '@/services/galleryService';
 import { fetchProductOrders } from '@/services/productOrderService';
@@ -24,6 +24,8 @@ export const queryKeys = {
   admins: ['admins'] as const,
   productOrders: (clientId: string) => ['product-orders', clientId] as const,
   adminProducts: ['admin-products'] as const,
+  storageMe: ['storage', 'me'] as const,
+  adminStorage: (id: string) => ['storage', 'admin', id] as const,
 };
 
 // ---------------------------------------------------------------------------
@@ -131,6 +133,38 @@ export function useAdminProducts() {
     queryKey: queryKeys.adminProducts,
     queryFn: () => api.get<AdminProduct[]>('/admin-products').then((r) => r.data),
     staleTime: 60_000,
+  });
+}
+
+export function useMyStorage() {
+  return useQuery({
+    queryKey: queryKeys.storageMe,
+    queryFn: getMyStorage,
+    staleTime: 30_000,
+    refetchInterval: 30_000,
+    refetchOnWindowFocus: true,
+  });
+}
+
+export function useAdminStorage(adminId: string) {
+  return useQuery({
+    queryKey: queryKeys.adminStorage(adminId),
+    queryFn: () => getAdminStorage(adminId),
+    enabled: !!adminId,
+    staleTime: 30_000,
+  });
+}
+
+export function useSetAdminQuota() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ adminId, quotaGB }: { adminId: string; quotaGB: number }) =>
+      setAdminQuota(adminId, quotaGB),
+    onSuccess: (_, { adminId }) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.admins });
+      queryClient.invalidateQueries({ queryKey: queryKeys.adminStorage(adminId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.storageMe });
+    },
   });
 }
 

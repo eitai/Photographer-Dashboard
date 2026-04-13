@@ -17,6 +17,17 @@ export interface AdminRecord {
   username?: string | null;
   studioName?: string | null;
   createdAt: string;
+  storageQuotaBytes: number;
+  storageUsedBytes: number;
+}
+
+export interface StorageStats {
+  adminId: string;
+  usedBytes: number;
+  quotaBytes: number;
+  usedGB: number;
+  quotaGB: number;
+  percentUsed: number;
 }
 
 export interface AdminSettings {

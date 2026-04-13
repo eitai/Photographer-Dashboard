@@ -9,6 +9,7 @@ CREATE TABLE IF NOT EXISTS admins (
   username TEXT UNIQUE,
   studio_name TEXT,
   push_token TEXT,
+  storage_quota_bytes BIGINT NOT NULL DEFAULT 10737418240,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -145,7 +146,9 @@ CREATE TABLE IF NOT EXISTS site_settings (
   packages_disclaimer TEXT NOT NULL DEFAULT '',
   services JSONB NOT NULL DEFAULT '[]',
   testimonials JSONB NOT NULL DEFAULT '[]',
-  packages JSONB NOT NULL DEFAULT '[]'
+  packages JSONB NOT NULL DEFAULT '[]',
+  instagram_feed_enabled BOOLEAN NOT NULL DEFAULT FALSE,
+  instagram_feed_images TEXT[] NOT NULL DEFAULT '{}'
 );
 
 CREATE TABLE IF NOT EXISTS admin_products (

@@ -79,7 +79,7 @@ app.use(compression({
 // ── Rate limiting ─────────────────────────────────────────────────────────────
 const globalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: process.env.NODE_ENV === 'test' ? 10000 : 500,
+  max: process.env.NODE_ENV === 'test' ? 10000 : 2000,
   standardHeaders: true,
   legacyHeaders: false,
   message: { message: 'Too many requests, please try again later.' },
@@ -155,6 +155,7 @@ v1.use('/blog',                      require('./routes/blog'));
 v1.use('/contact',                   require('./routes/contact'));
 v1.use('/settings',                  require('./routes/settings'));
 v1.use('/admins',                    require('./routes/admins'));
+v1.use('/storage',                   require('./routes/storage'));
 v1.use('/admin-products',            require('./routes/adminProducts'));
 v1.use('/product-orders',            require('./routes/productOrders'));
 v1.use('/p/:id',                     require('./routes/public'));

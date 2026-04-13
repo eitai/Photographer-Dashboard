@@ -1,28 +1,33 @@
 const pool = require('../db');
 
-// Default 10 GB per admin; override with MAX_STORAGE_BYTES env var
-const MAX_BYTES = parseInt(process.env.MAX_STORAGE_BYTES || String(10 * 1024 * 1024 * 1024));
-
-/**
- * Middleware — rejects upload requests when the admin has exceeded their
- * storage quota. Must be placed after `protect` so `req.admin` is populated.
- */
 const checkQuota = async (req, res, next) => {
   try {
     const { rows } = await pool.query(
-      `SELECT COALESCE(SUM(gi.size), 0)::bigint AS total
-       FROM gallery_images gi
-       JOIN galleries g ON g.id = gi.gallery_id
-       WHERE g.admin_id = $1`,
+      `SELECT
+         COALESCE(SUM(gi.size), 0)::bigint
+         + COALESCE((
+             SELECT SUM((v->>'size')::bigint)
+             FROM galleries g2, jsonb_array_elements(g2.videos) v
+             WHERE g2.admin_id = $1 AND (v->>'size') IS NOT NULL
+           ), 0)::bigint AS used,
+         a.storage_quota_bytes AS quota
+       FROM admins a
+       LEFT JOIN galleries g ON g.admin_id = a.id
+       LEFT JOIN gallery_images gi ON gi.gallery_id = g.id
+       WHERE a.id = $1
+       GROUP BY a.storage_quota_bytes`,
       [req.admin.id]
     );
-    const usedBytes = Number(rows[0].total);
-    if (usedBytes >= MAX_BYTES) {
-      const limitGB = (MAX_BYTES / (1024 ** 3)).toFixed(0);
+
+    const used = Number(rows[0]?.used ?? 0);
+    const quota = Number(rows[0]?.quota ?? 10 * 1024 ** 3);
+
+    if (used >= quota) {
       return res.status(413).json({
-        message: `Storage quota of ${limitGB} GB exceeded`,
-        used: usedBytes,
-        limit: MAX_BYTES,
+        code: 'QUOTA_EXCEEDED',
+        message: `Storage quota of ${(quota / 1024 ** 3).toFixed(1)} GB exceeded`,
+        used,
+        quota,
       });
     }
     next();

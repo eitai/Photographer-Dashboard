@@ -2,7 +2,10 @@ import { useState } from 'react';
 import { Menu } from 'lucide-react';
 import { AdminSidebar } from './AdminSidebar';
 import { NotificationBell } from './NotificationBell';
+import { StorageBar } from './StorageBar';
 import { useAuthStore } from '@/store/authStore';
+import { useAuth } from '@/hooks/useAuth';
+import { useMyStorage } from '@/hooks/useQueries';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { useI18n } from '@/lib/i18n';
 
@@ -16,9 +19,11 @@ export const AdminLayout = ({ children, title, actions }: AdminLayoutProps) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const theme = useAuthStore((s) => s.theme);
   const { dir } = useI18n();
+  const { admin } = useAuth();
+  const { data: storage } = useMyStorage();
 
   return (
-    <div dir={dir} data-theme={theme} className='admin-layout flex min-h-screen bg-white'>
+    <div dir={dir} data-theme={theme} className='admin-layout flex h-screen overflow-hidden bg-white'>
       {/* Mobile overlay */}
       {sidebarOpen && (
         <div
@@ -29,7 +34,7 @@ export const AdminLayout = ({ children, title, actions }: AdminLayoutProps) => {
 
       <AdminSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
-      <main className='flex-1 overflow-auto min-w-0 flex flex-col'>
+      <main className='flex-1 overflow-hidden min-w-0 flex flex-col'>
         {/* Top bar — visually extends the sidebar logo section */}
         <div className='h-16 flex items-center gap-4 px-6 bg-white border-b border-gray-100 shrink-0'>
           {/* Hamburger — mobile only */}
@@ -45,10 +50,21 @@ export const AdminLayout = ({ children, title, actions }: AdminLayoutProps) => {
           <div className='flex-1 flex items-center gap-3'>
             {actions}
           </div>
+          {/* Storage bar — compact, admin role only */}
+          {admin?.role === 'admin' && storage && (
+            <div className='hidden sm:block w-36'>
+              <StorageBar
+                usedGB={storage.usedGB}
+                quotaGB={storage.quotaGB}
+                percentUsed={storage.percentUsed}
+                compact
+              />
+            </div>
+          )}
           {/* Notification bell */}
           <NotificationBell />
         </div>
-        <div className='px-4 md:px-8 py-6 flex-1 bg-gray-50'>
+        <div className='px-4 md:px-8 py-6 flex-1 bg-gray-50 overflow-y-auto'>
           <ErrorBoundary label={title || 'page content'}>
             {children}
           </ErrorBoundary>
