@@ -163,7 +163,12 @@ v1.use('/p/:id',                     require('./routes/public'));
 app.use('/api/v1', v1);
 app.use('/api',    v1); // backward compat — existing clients keep working
 
-// ── Health check — available at both /api/health and /api/v1/health ──────────
+// ── Root + health checks ──────────────────────────────────────────────────────
+// GET /api and GET /api/v1 return 200 so deployment platform health probes pass.
+app.get(['/api', '/api/v1'], (req, res) => {
+  res.json({ status: 'ok', version: process.env.npm_package_version || '1.0.0' });
+});
+
 app.get(['/api/health', '/api/v1/health'], async (req, res) => {
   let dbStatus = 'disconnected';
   try {

@@ -84,6 +84,134 @@ export const AdminDashboard = () => {
 
   return (
     <AdminLayout title={t('admin.nav.dashboard')} actions={topBarActions}>
+      {/* Full-height shell — no outer scroll */}
+      <div className='flex flex-col h-full -mx-4 md:-mx-8 -my-6 overflow-hidden'>
+
+        {/* ── Fixed top section: landing link + stat cards ── */}
+        <div className='shrink-0 px-4 md:px-8 pt-6 pb-4 bg-gray-50 border-b border-beige space-y-4'>
+          {admin?.id && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <a
+                  href={`/${admin.id}`}
+                  target='_blank'
+                  rel='noreferrer'
+                  className='inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-zinc-900 border border-zinc-900 text-white text-sm font-medium hover:bg-black transition-colors'
+                >
+                  <ExternalLink size={15} />
+                  {t('admin.dashboard.view_landing')}
+                </a>
+              </TooltipTrigger>
+              <TooltipContent>
+                {window.location.origin}/{admin.id}
+              </TooltipContent>
+            </Tooltip>
+          )}
+
+          {isLoading ? (
+            <div className='grid grid-cols-1 sm:grid-cols-3 gap-4'>
+              {[0, 1, 2].map((i) => (
+                <div key={i} className='bg-card rounded-xl border border-beige p-5 space-y-3'>
+                  <Skeleton className='h-8 w-16' />
+                  <Skeleton className='h-4 w-24' />
+                  <Skeleton className='h-3 w-32' />
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className='grid grid-cols-1 sm:grid-cols-3 gap-4'>
+              <StatCard
+                label={t('admin.dashboard.clients')}
+                value={clients.length}
+                icon={Users}
+                iconClass='bg-blue-100 text-blue-500'
+                to='/admin/clients'
+                sub={t('admin.dashboard.stat_clients_sub')}
+              />
+              <StatCard
+                label={t('admin.dashboard.galleries')}
+                value={galleries.length}
+                icon={Images}
+                iconClass='bg-purple-100 text-purple-500'
+                to='/admin/clients'
+                sub={t('admin.dashboard.stat_galleries_sub')}
+              />
+              <StatCard
+                label={t('admin.dashboard.pending')}
+                value={pendingCount}
+                icon={CheckSquare}
+                iconClass='bg-rose-100 text-rose-500'
+                to='/admin/selections'
+                sub={t('admin.dashboard.stat_pending_sub')}
+              />
+            </div>
+          )}
+        </div>
+
+        {/* ── Scrollable main area ── */}
+        <div className='flex-1 overflow-hidden flex flex-col lg:flex-row gap-0'>
+
+          {/* Left — client list */}
+          <div className='flex-1 min-w-0 flex flex-col overflow-hidden border-e border-beige'>
+            {/* Filter bar — fixed */}
+            <div className='shrink-0 px-4 md:px-6 pt-4 pb-3 bg-white border-b border-beige'>
+              <div className='flex items-center justify-between mb-3'>
+                <h2 className='text-sm font-semibold text-charcoal'>{t('admin.dashboard.panel_title')}</h2>
+                <p className='text-xs text-warm-gray'>{clientCountLabel} · {galleryCountLabel}</p>
+              </div>
+              <div className='flex flex-wrap gap-2'>
+                {FILTER_CHIPS.map(({ key, labelKey }) => (
+                  <button
+                    key={key}
+                    type='button'
+                    onClick={() => setFilter(key)}
+                    className={`px-3 py-1 rounded-full text-xs font-sans font-medium transition-colors border ${
+                      filter === key
+                        ? 'bg-charcoal text-white border-charcoal'
+                        : 'bg-ivory text-warm-gray border-beige hover:border-charcoal hover:text-charcoal'
+                    }`}
+                  >
+                    {t(labelKey)}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Client rows — scrollable */}
+            <div className='flex-1 overflow-y-auto px-4 md:px-6 py-4'>
+              {isLoading ? (
+                <div className='flex flex-col gap-3'>
+                  {[0, 1, 2, 3].map((i) => (
+                    <div key={i} className='border border-beige rounded-xl p-4 flex items-center gap-3'>
+                      <Skeleton className='h-9 w-9 rounded-full shrink-0' />
+                      <div className='flex-1 space-y-2'>
+                        <Skeleton className='h-4 w-40' />
+                        <Skeleton className='h-3 w-24' />
+                      </div>
+                      <Skeleton className='h-5 w-16 rounded-full' />
+                    </div>
+                  ))}
+                </div>
+              ) : filteredClients.length === 0 ? (
+                <p className='text-sm text-warm-gray'>{t('admin.dashboard.no_clients')}</p>
+              ) : (
+                <div className='flex flex-col gap-3'>
+                  {filteredClients.map((c) => (
+                    <ClientRow key={c._id} client={c} galleries={galleries} onAddGallery={(c) => setAddGalleryClient(c)} />
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Right — activity + quick add, scrollable */}
+          <div className='w-full lg:w-[320px] shrink-0 overflow-y-auto px-4 md:px-6 py-4 flex flex-col gap-4 bg-white'>
+            <ActivityPanel clients={clients} />
+            <QuickAddClient />
+          </div>
+        </div>
+      </div>
+
       {showNewClient && (
         <div className='fixed inset-0 z-50 flex items-center justify-center bg-black/40' onClick={() => setShowNewClient(false)}>
           <div className='bg-white rounded-2xl shadow-xl p-6 w-full max-w-sm mx-4' onClick={(e) => e.stopPropagation()}>
@@ -101,128 +229,6 @@ export const AdminDashboard = () => {
         </div>
       )}
 
-      {admin?.id && (
-        <div className='mb-6'>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <a
-                href={`/${admin.id}`}
-                target='_blank'
-                rel='noreferrer'
-                className='inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-zinc-900 border border-zinc-900 text-white text-sm font-medium hover:bg-black transition-colors'
-              >
-                <ExternalLink size={15} />
-                {t('admin.dashboard.view_landing')}
-              </a>
-            </TooltipTrigger>
-            <TooltipContent>
-              {window.location.origin}/{admin.id}
-            </TooltipContent>
-          </Tooltip>
-        </div>
-      )}
-
-      {isLoading ? (
-        <div className='grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8'>
-          {[0, 1, 2].map((i) => (
-            <div key={i} className='bg-card rounded-xl border border-beige p-5 space-y-3'>
-              <Skeleton className='h-8 w-16' />
-              <Skeleton className='h-4 w-24' />
-              <Skeleton className='h-3 w-32' />
-            </div>
-          ))}
-        </div>
-      ) : (
-        <div className='grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8'>
-          <StatCard
-            label={t('admin.dashboard.clients')}
-            value={clients.length}
-            icon={Users}
-            iconClass='bg-blue-100 text-blue-500'
-            to='/admin/clients'
-            sub={t('admin.dashboard.stat_clients_sub')}
-          />
-          <StatCard
-            label={t('admin.dashboard.galleries')}
-            value={galleries.length}
-            icon={Images}
-            iconClass='bg-purple-100 text-purple-500'
-            to='/admin/clients'
-            sub={t('admin.dashboard.stat_galleries_sub')}
-          />
-          <StatCard
-            label={t('admin.dashboard.pending')}
-            value={pendingCount}
-            icon={CheckSquare}
-            iconClass='bg-rose-100 text-rose-500'
-            to='/admin/selections'
-            sub={t('admin.dashboard.stat_pending_sub')}
-          />
-        </div>
-      )}
-
-      <div className='flex flex-col lg:flex-row gap-6 items-start'>
-        <div className='flex-1 min-w-0'>
-          <div className='bg-card rounded-xl border border-beige p-6'>
-            <div className='flex items-center justify-between mb-5'>
-              <h2 className=' text-lg text-charcoal'>{t('admin.dashboard.panel_title')}</h2>
-            </div>
-
-            {isLoading ? (
-              <div className='flex flex-col gap-3'>
-                {[0, 1, 2, 3].map((i) => (
-                  <div key={i} className='border border-beige rounded-xl p-4 flex items-center gap-3'>
-                    <Skeleton className='h-9 w-9 rounded-full shrink-0' />
-                    <div className='flex-1 space-y-2'>
-                      <Skeleton className='h-4 w-40' />
-                      <Skeleton className='h-3 w-24' />
-                    </div>
-                    <Skeleton className='h-5 w-16 rounded-full' />
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <>
-                <div className='flex flex-wrap gap-2 mb-4'>
-                  {FILTER_CHIPS.map(({ key, labelKey }) => (
-                    <button
-                      key={key}
-                      type='button'
-                      onClick={() => setFilter(key)}
-                      className={`px-3 py-1 rounded-full text-xs font-sans font-medium transition-colors border ${
-                        filter === key
-                          ? 'bg-charcoal text-white border-charcoal'
-                          : 'bg-ivory text-warm-gray border-beige hover:border-charcoal hover:text-charcoal'
-                      }`}
-                    >
-                      {t(labelKey)}
-                    </button>
-                  ))}
-                </div>
-
-                <p className='text-xs text-warm-gray font-sans mb-4'>
-                  {clientCountLabel} · {galleryCountLabel}
-                </p>
-
-                {filteredClients.length === 0 ? (
-                  <p className='text-sm text-warm-gray'>{t('admin.dashboard.no_clients')}</p>
-                ) : (
-                  <div className='flex flex-col gap-3'>
-                    {filteredClients.map((c) => (
-                      <ClientRow key={c._id} client={c} galleries={galleries} onAddGallery={(c) => setAddGalleryClient(c)} />
-                    ))}
-                  </div>
-                )}
-              </>
-            )}
-          </div>
-        </div>
-
-        <div className='w-full lg:w-[340px] shrink-0 flex flex-col gap-4'>
-          <ActivityPanel clients={clients} />
-          <QuickAddClient />
-        </div>
-      </div>
       {addGalleryClient && (
         <AddGalleryModal
           isOpen={!!addGalleryClient}
