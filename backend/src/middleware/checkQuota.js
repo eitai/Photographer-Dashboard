@@ -1,6 +1,9 @@
 const pool = require('../db');
 
 const checkQuota = async (req, res, next) => {
+  // Superadmins have unlimited storage
+  if (req.admin?.role === 'superadmin') return next();
+
   try {
     const { rows } = await pool.query(
       `SELECT

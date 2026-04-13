@@ -3,8 +3,9 @@ import { cn } from '@/lib/utils';
 
 interface StorageBarProps {
   usedGB: number;
-  quotaGB: number;
+  quotaGB: number | null;
   percentUsed: number;
+  unlimited?: boolean;
   compact?: boolean;
 }
 
@@ -14,8 +15,27 @@ function getFillClass(percentUsed: number): string {
   return 'bg-[#E7B8B5]';
 }
 
-export function StorageBar({ usedGB, quotaGB, percentUsed, compact = false }: StorageBarProps) {
+export function StorageBar({ usedGB, quotaGB, percentUsed, unlimited = false, compact = false }: StorageBarProps) {
   const { t } = useI18n();
+
+  if (unlimited) {
+    if (compact) {
+      return (
+        <p className='text-[10px] text-warm-gray'>{usedGB.toFixed(1)} GB {t('storage.used')} · ∞</p>
+      );
+    }
+    return (
+      <div className='space-y-1.5'>
+        <div className='flex items-center justify-between text-xs text-warm-gray'>
+          <span>{t('storage.used')}: {usedGB.toFixed(2)} GB</span>
+          <span className='font-medium text-charcoal'>∞</span>
+        </div>
+        <div dir='ltr' className={cn('w-full rounded-full bg-beige overflow-hidden', 'h-2')}>
+          <div className='h-full rounded-full bg-[#E7B8B5]' style={{ width: '4%' }} />
+        </div>
+      </div>
+    );
+  }
 
   const clampedPercent = Math.min(percentUsed, 100);
   const fillClass = getFillClass(percentUsed);
@@ -24,7 +44,6 @@ export function StorageBar({ usedGB, quotaGB, percentUsed, compact = false }: St
   if (compact) {
     return (
       <div className='space-y-1'>
-        {/* Bar track — always LTR so fill grows left-to-right */}
         <div dir='ltr' className={cn('w-full rounded-full bg-beige overflow-hidden', trackHeight)}>
           <div
             className={cn('h-full rounded-full transition-all duration-300', fillClass)}
@@ -36,9 +55,8 @@ export function StorageBar({ usedGB, quotaGB, percentUsed, compact = false }: St
             aria-label={t('storage.used')}
           />
         </div>
-        {/* Label */}
         <p className='text-[10px] text-warm-gray'>
-          {usedGB.toFixed(1)} / {quotaGB.toFixed(1)} GB
+          {usedGB.toFixed(1)} / {quotaGB?.toFixed(1)} GB
         </p>
         {percentUsed >= 100 && (
           <p className='text-[10px] text-red-500 font-medium'>{t('storage.quotaExceeded')}</p>
@@ -52,10 +70,9 @@ export function StorageBar({ usedGB, quotaGB, percentUsed, compact = false }: St
 
   return (
     <div className='space-y-1.5'>
-      {/* Label row */}
       <div className='flex items-center justify-between text-xs text-warm-gray'>
         <span>
-          {t('storage.used')}: {usedGB.toFixed(2)} {t('storage.of')} {quotaGB.toFixed(2)} GB
+          {t('storage.used')}: {usedGB.toFixed(2)} {t('storage.of')} {quotaGB?.toFixed(2)} GB
         </span>
         <span
           className={cn(
@@ -66,8 +83,6 @@ export function StorageBar({ usedGB, quotaGB, percentUsed, compact = false }: St
           {clampedPercent.toFixed(1)}%
         </span>
       </div>
-
-      {/* Bar track — always LTR so fill grows left-to-right */}
       <div dir='ltr' className={cn('w-full rounded-full bg-beige overflow-hidden', trackHeight)}>
         <div
           className={cn('h-full rounded-full transition-all duration-300', fillClass)}
@@ -79,7 +94,6 @@ export function StorageBar({ usedGB, quotaGB, percentUsed, compact = false }: St
           aria-label={t('storage.used')}
         />
       </div>
-
       {percentUsed >= 100 && (
         <p className='text-xs text-red-500 font-medium'>{t('storage.quotaExceeded')}</p>
       )}
