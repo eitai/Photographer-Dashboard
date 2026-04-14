@@ -6,8 +6,6 @@ services:
       POSTGRES_USER: koral
       POSTGRES_PASSWORD: koral
       POSTGRES_DB: koral
-    ports:
-      - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -20,14 +18,14 @@ services:
     build:
       context: ./backend
     restart: unless-stopped
-    ports:
-      - "5000:5000"
+    expose:
+      - "5000"
     environment:
       DATABASE_URL: postgresql://koral:koral@postgres:5432/koral
-      JWT_SECRET: ${JWT_SECRET:-koral_super_secret_jwt_key_change_in_production}
+      JWT_SECRET: ${JWT_SECRET}
       JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-7d}
-      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:8080}
-      NODE_ENV: ${NODE_ENV:-development}
+      FRONTEND_URL: ${FRONTEND_URL}
+      NODE_ENV: ${NODE_ENV:-production}
       SMTP_HOST: ${SMTP_HOST:-}
       SMTP_PORT: ${SMTP_PORT:-587}
       SMTP_USER: ${SMTP_USER:-}
@@ -38,7 +36,21 @@ services:
       postgres:
         condition: service_healthy
     volumes:
-      - ./backend/uploads:/app/uploads
+      - uploads_data:/app/uploads
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        # Same as the public domain — nginx inside this container proxies
+        # /api/* and /uploads/* to the backend service internally
+        VITE_API_URL: ${FRONTEND_URL}
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
 
 volumes:
   postgres_data:
+  uploads_data:

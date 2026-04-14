@@ -13,8 +13,8 @@ export interface UploadFile {
   error: boolean;
 }
 
-const MAX_IMAGE_SIZE = 40 * 1024 * 1024; // 40 MB
-const BATCH_SIZE = 50;                   // images per request
+const MAX_IMAGE_SIZE = 40 * 1024 * 1024; // 40 MB per file
+const MAX_BATCH_BYTES = 50 * 1024 * 1024; // 50 MB per request (Cloudflare free plan cap is 100 MB — stay well under)
 const PARALLEL_BATCHES = 2;              // concurrent requests
 
 export function useGalleryUpload(galleryId: string | undefined, onUploadComplete: () => void) {
@@ -48,11 +48,20 @@ export function useGalleryUpload(galleryId: string | undefined, onUploadComplete
       }));
       setQueue((q) => [...q, ...newItems]);
 
-      // Split into batches of BATCH_SIZE
+      // Split into size-capped batches so no single request exceeds MAX_BATCH_BYTES
       const batches: UploadFile[][] = [];
-      for (let i = 0; i < newItems.length; i += BATCH_SIZE) {
-        batches.push(newItems.slice(i, i + BATCH_SIZE));
+      let current: UploadFile[] = [];
+      let currentBytes = 0;
+      for (const item of newItems) {
+        if (current.length > 0 && currentBytes + item.file.size > MAX_BATCH_BYTES) {
+          batches.push(current);
+          current = [];
+          currentBytes = 0;
+        }
+        current.push(item);
+        currentBytes += item.file.size;
       }
+      if (current.length > 0) batches.push(current);
 
       const uploadBatch = async (batch: UploadFile[]) => {
         const batchIds = batch.map((b) => b.id);

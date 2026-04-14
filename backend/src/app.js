@@ -142,6 +142,7 @@ app.use(
   '/uploads',
   (req, res, next) => {
     res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+    res.setHeader('Access-Control-Allow-Origin', '*');
     next();
   },
   express.static(path.join(__dirname, '../uploads'), {
@@ -150,6 +151,13 @@ app.use(
     lastModified: true,
   })
 );
+
+// 404 fallback for /uploads — tell Cloudflare not to cache misses so a
+// newly uploaded file becomes visible immediately on the next request.
+app.use('/uploads', (req, res) => {
+  res.setHeader('Cache-Control', 'no-store');
+  res.status(404).json({ message: 'File not found' });
+});
 
 // ── Routes ────────────────────────────────────────────────────────────────────
 // All routes are mounted on a versioned sub-router.
