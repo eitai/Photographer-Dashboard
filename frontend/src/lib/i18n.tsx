@@ -156,6 +156,7 @@ const translations: Record<string, Record<Lang, string>> = {
   'admin.common.loading': { he: 'טוען…', en: 'Loading…' },
   'admin.common.saving': { he: 'שומר…', en: 'Saving…' },
   'admin.common.deleting': { he: 'מוחק…', en: 'Deleting…' },
+  'admin.common.save': { he: 'שמור', en: 'Save' },
   'admin.common.cancel': { he: 'ביטול', en: 'Cancel' },
   'admin.common.delete': { he: 'מחק', en: 'Delete' },
   'admin.common.error': { he: 'אירעה שגיאה', en: 'Something went wrong' },

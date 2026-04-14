@@ -99,14 +99,7 @@ export const App = () => (
                     </PublicLayout>
                   }
                 />
-                <Route
-                  path='/gallery/:token'
-                  element={
-                    <PublicLayout>
-                      <ClientGallery />
-                    </PublicLayout>
-                  }
-                />
+                <Route path='/gallery/:token' element={<ClientGallery />} />
                 <Route path='/products/:token' element={<ClientProductsPage />} />
 
                 {/* Admin routes — no Navbar/Footer */}

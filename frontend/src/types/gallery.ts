@@ -13,6 +13,7 @@ export interface GalleryData {
   name: string;
   clientName: string;
   clientId: string;
+  adminId?: string;
   token: string;
   headerMessage: string;
   maxSelections: number;

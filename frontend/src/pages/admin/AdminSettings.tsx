@@ -65,18 +65,9 @@ type SettingsTab = 'identity' | 'hero' | 'about' | 'sections' | 'system';
 // Constants
 // ---------------------------------------------------------------------------
 
-const THEMES = ['soft', 'luxury', 'bold', 'minimal', 'warm', 'ocean', 'forest', 'rose', 'vintage', 'midnight', 'bw'] as const;
+const THEMES = ['soft', 'bw'] as const;
 const THEME_META: Record<string, { bg: string; primary: string; fg: string }> = {
   soft: { bg: '#faf8f4', primary: '#e7b8b5', fg: '#3c3a38' },
-  luxury: { bg: '#1a1814', primary: '#c9a84c', fg: '#f0ead8' },
-  bold: { bg: '#111111', primary: '#c0392b', fg: '#f5f5f5' },
-  minimal: { bg: '#ffffff', primary: '#111111', fg: '#111111' },
-  warm: { bg: '#f5ede3', primary: '#c4612a', fg: '#3b2a1a' },
-  ocean: { bg: '#eef4f7', primary: '#2d7d9a', fg: '#1a3040' },
-  forest: { bg: '#f0f4ef', primary: '#3a7d44', fg: '#1e2d1f' },
-  rose: { bg: '#fdf4f5', primary: '#c4687a', fg: '#3d2023' },
-  vintage: { bg: '#f7f0e6', primary: '#8b6914', fg: '#2c2416' },
-  midnight: { bg: '#0f1624', primary: '#5b8dee', fg: '#e8edf5' },
   bw: { bg: '#ffffff', primary: '#000000', fg: '#000000' },
 };
 
@@ -201,7 +192,7 @@ const SectionCard = ({ title, enabled, onToggle, enabledLabel, children, onSave,
           className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus-visible:outline focus-visible:outline-2 focus-visible:outline-blush ${enabled ? 'bg-blush' : 'bg-beige'}`}
         >
           <span
-            className={`pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow-md ring-0 transition-transform duration-200 ease-in-out ${enabled ? 'translate-x-5' : 'translate-x-0'}`}
+            className={`pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow-md ring-0 transition-transform duration-200 ease-in-out ${enabled ? 'translate-x-5 rtl:-translate-x-5' : 'translate-x-0'}`}
           />
         </button>
       </label>
@@ -265,9 +256,7 @@ export const AdminSettings = () => {
   const [activeTab, setActiveTab] = useState<SettingsTab>('identity');
 
   // ── Identity tab state ──────────────────────────────────────────────────────
-  const [password, setPassword] = useState({ current: '', next: '', confirm: '' });
-  const [pwMsg, setPwMsg] = useState('');
-  const [savingPw, setSavingPw] = useState(false);
+
   const [profile, setProfile] = useState({ name: admin?.name ?? '', studioName: admin?.studioName ?? '' });
   const [profileMsg, setProfileMsg] = useState('');
   const [savingProfile, setSavingProfile] = useState(false);
@@ -281,7 +270,6 @@ export const AdminSettings = () => {
 
   // ── Hero tab state ──────────────────────────────────────────────────────────
   const [hero, setHero] = useState({
-    theme: 'bw',
     heroSubtitle: '',
     heroOverlayOpacity: 'medium' as HeroOverlayOpacity,
     heroCtaPrimaryLabel: '',
@@ -357,13 +345,18 @@ export const AdminSettings = () => {
   const [uploadingIgImage, setUploadingIgImage] = useState(false);
   const igFeedInputRef = useRef<HTMLInputElement>(null);
 
+  // ── System tab state ────────────────────────────────────────────────────────
+  const [systemTheme, setSystemTheme] = useState('soft');
+  const [savingTheme, setSavingTheme] = useState(false);
+
   // ── Populate from settings cache ────────────────────────────────────────────
   useEffect(() => {
     if (!settingsData) return;
     const s = settingsData;
 
+    setSystemTheme(s.theme || 'soft');
+
     setHero({
-      theme: s.theme || 'bw',
       heroSubtitle: s.heroSubtitle || '',
       heroOverlayOpacity: (s.heroOverlayOpacity as HeroOverlayOpacity) || 'medium',
       heroCtaPrimaryLabel: s.heroCtaPrimaryLabel || '',
@@ -418,25 +411,6 @@ export const AdminSettings = () => {
     }
   };
 
-  const handlePassword = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (password.next !== password.confirm) {
-      setPwMsg(t('admin.settings.passwords_mismatch'));
-      return;
-    }
-    setSavingPw(true);
-    try {
-      await api.put('/auth/password', { current: password.current, next: password.next });
-      toast.success(t('admin.settings.password_updated'));
-      setPwMsg('');
-      setPassword({ current: '', next: '', confirm: '' });
-    } catch {
-      toast.error(t('admin.settings.password_failed'));
-    } finally {
-      setSavingPw(false);
-    }
-  };
-
   const handleCatalogCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!catalogForm.name.trim()) return;
@@ -486,19 +460,32 @@ export const AdminSettings = () => {
     setSavingHero(true);
     try {
       await api.put('/settings/landing', {
-        theme: hero.theme,
         heroSubtitle: hero.heroSubtitle,
         heroOverlayOpacity: hero.heroOverlayOpacity,
         heroCtaPrimaryLabel: hero.heroCtaPrimaryLabel,
         heroCtaSecondaryLabel: hero.heroCtaSecondaryLabel,
       });
-      setTheme(hero.theme);
       toast.success(t('admin.settings.landing_saved'));
       queryClient.invalidateQueries({ queryKey: queryKeys.settings });
     } catch {
       toast.error(t('admin.settings.landing_failed'));
     } finally {
       setSavingHero(false);
+    }
+  };
+
+  // ── Handlers: System / Theme ───────────────────────────────────────────────
+  const handleSaveTheme = async () => {
+    setSavingTheme(true);
+    try {
+      await api.put('/settings/landing', { theme: systemTheme });
+      setTheme(systemTheme);
+      toast.success(t('admin.settings.landing_saved'));
+      queryClient.invalidateQueries({ queryKey: queryKeys.settings });
+    } catch {
+      toast.error(t('admin.settings.landing_failed'));
+    } finally {
+      setSavingTheme(false);
     }
   };
 
@@ -823,32 +810,6 @@ export const AdminSettings = () => {
             </form>
           </div>
 
-          {/* Change password */}
-          <div className='bg-card rounded-xl border border-beige p-6'>
-            <h2 className='font-semibold text-charcoal mb-4'>{t('admin.settings.change_password')}</h2>
-            <form onSubmit={handlePassword} className='space-y-4'>
-              {([
-                { field: 'current', label: t('admin.settings.current_password') },
-                { field: 'next', label: t('admin.settings.new_password') },
-                { field: 'confirm', label: t('admin.settings.confirm_password') },
-              ] as const).map(({ field, label }) => (
-                <div key={field}>
-                  <label className='block text-xs text-warm-gray mb-1'>{label}</label>
-                  <InputField
-                    type='password'
-                    value={password[field]}
-                    onChange={(e) => setPassword({ ...password, [field]: e.target.value })}
-                    required
-                  />
-                </div>
-              ))}
-              {pwMsg && <p className='text-sm text-charcoal'>{pwMsg}</p>}
-              <Button type='submit' variant='primary' size='sm' disabled={savingPw}>
-                {savingPw ? t('admin.settings.updating') : t('admin.settings.update_password')}
-              </Button>
-            </form>
-          </div>
-
           {/* Public page URL */}
           {admin?.id && (
             <div className='bg-card rounded-xl border border-beige p-6'>
@@ -957,14 +918,6 @@ export const AdminSettings = () => {
         <div className='max-w-2xl space-y-6'>
           <div className='bg-card rounded-xl border border-beige p-6 space-y-6'>
             <h2 className='font-semibold text-charcoal'>{t('admin.settings.tab.hero')}</h2>
-
-            {/* Theme picker */}
-            <ThemePicker
-              value={hero.theme}
-              onChange={(key) => setHero({ ...hero, theme: key })}
-              label={t('admin.settings.theme_label')}
-              getLabel={(key) => t(`theme.${key}`)}
-            />
 
             {/* Hero image upload */}
             <div>
@@ -1460,7 +1413,24 @@ export const AdminSettings = () => {
 
       {/* ── Tab 5: System ──────────────────────────────────────────────────── */}
       {activeTab === 'system' && (
-        <div className='max-w-md'>
+        <div className='max-w-md space-y-4'>
+          {/* Theme */}
+          <div className='bg-card rounded-xl border border-beige p-6 space-y-4'>
+            <h2 className='font-semibold text-charcoal'>{t('admin.settings.theme_label')}</h2>
+            <ThemePicker
+              value={systemTheme}
+              onChange={setSystemTheme}
+              label={t('admin.settings.theme_label')}
+              getLabel={(key) => t(`theme.${key}`)}
+            />
+            <div className='pt-2 border-t border-beige'>
+              <Button type='button' variant='primary' size='sm' onClick={handleSaveTheme} disabled={savingTheme}>
+                {savingTheme ? t('admin.common.saving') : t('admin.common.save')}
+              </Button>
+            </div>
+          </div>
+
+          {/* System info */}
           <div className='bg-card rounded-xl border border-beige p-6'>
             <h2 className='font-semibold text-charcoal mb-4'>{t('admin.settings.system')}</h2>
             <dl className='space-y-2 text-sm'>

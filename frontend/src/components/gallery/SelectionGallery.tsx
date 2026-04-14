@@ -64,7 +64,7 @@ export const SelectionGallery = ({ gallery, images, getImageUrl }: Props) => {
   }, []);
 
   const isVirtualized = images.length > VIRTUALIZATION_THRESHOLD;
-  const stickyTop = selectedIds.size > 0 ? 117 : 64; // 64px header + 53px selection bar
+  const stickyTop = selectedIds.size > 0 ? 109 : 56; // 56px header + 53px selection bar
 
   const toggleSelect = (imageId: string) => {
     setSelectedIds((prev) => {
@@ -121,7 +121,7 @@ export const SelectionGallery = ({ gallery, images, getImageUrl }: Props) => {
         />
 
         {!isBlocked && (
-          <div className='absolute inset-0 bg-foreground/0 group-hover:bg-foreground/20 transition-colors duration-200 pointer-events-none' />
+          <div className='absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors duration-200 pointer-events-none' />
         )}
 
         {!isBlocked && (
@@ -198,14 +198,15 @@ export const SelectionGallery = ({ gallery, images, getImageUrl }: Props) => {
 
   if (submitted) {
     return (
-      <main className='pt-16 min-h-screen flex items-center justify-center'>
+      <main className='flex-1 flex items-center justify-center' style={{ backgroundColor: 'var(--background)' }}>
         <FadeIn>
           <div className='text-center px-6'>
-            <p className='text-3xl text-foreground mb-4'>{t('gallery.thank_you')}</p>
-            <p className='text-muted-foreground mb-8'>{t('gallery.review_choices')}</p>
+            <p className='text-3xl mb-4' style={{ color: 'var(--foreground)' }}>{t('gallery.thank_you')}</p>
+            <p className='mb-8' style={{ color: 'var(--muted-foreground)' }}>{t('gallery.review_choices')}</p>
             <button
               onClick={() => window.close()}
-              className='px-5 py-2.5 rounded-lg border border-border text-muted-foreground text-sm hover:bg-muted transition-colors'
+              className='px-5 py-2.5 rounded-xl text-sm font-sans transition-colors'
+              style={{ border: '1px solid var(--border)', color: 'var(--muted-foreground)', backgroundColor: 'var(--background)' }}
             >
               {t('gallery.close_window')}
             </button>
@@ -216,14 +217,14 @@ export const SelectionGallery = ({ gallery, images, getImageUrl }: Props) => {
   }
 
   return (
-    <main className='pt-16'>
+    <main className='flex-1' style={{ backgroundColor: 'var(--background)' }}>
       <section className='section-spacing'>
         <div className='container-narrow'>
           <FadeIn>
             <div className='text-center mb-12 max-w-[50%] mx-auto'>
-              <p className=' text-2xl md:text-3xl text-foreground mb-2'>{gallery.headerMessage}</p>
-              {gallery.clientName && <p className='text-muted-foreground'>{gallery.clientName}</p>}
-              <p className='text-sm text-muted-foreground mt-2'>
+              <p className='text-2xl md:text-3xl mb-2' style={{ color: 'var(--foreground)' }}>{gallery.headerMessage}</p>
+              {gallery.clientName && <p className='font-sans' style={{ color: 'var(--muted-foreground)' }}>{gallery.clientName}</p>}
+              <p className='text-sm font-sans mt-2' style={{ color: 'var(--muted-foreground)' }}>
                 {selectedIds.size} {t('gallery.select_of')} {gallery.maxSelections} {t('gallery.images_selected')}
               </p>
             </div>
@@ -233,16 +234,16 @@ export const SelectionGallery = ({ gallery, images, getImageUrl }: Props) => {
             <FadeIn>
               <div className='mb-10 space-y-4'>
                 {(gallery.videos ?? []).map((v) => (
-                  <div key={v.filename} className='rounded-2xl overflow-hidden border border-border bg-black'>
-                    <div className='flex items-center gap-2 px-4 py-3 bg-background/90 border-b border-border'>
-                      <Video size={14} className='text-muted-foreground' />
-                      <span className='text-sm font-medium text-foreground truncate flex-1'>
+                  <div key={v.filename} className='rounded-2xl overflow-hidden border border-beige bg-black'>
+                    <div className='flex items-center gap-2 px-4 py-3 border-b' style={{ backgroundColor: 'color-mix(in srgb, var(--background) 90%, transparent)', borderBottomColor: 'var(--border)' }}>
+                      <Video size={14} style={{ color: 'var(--muted-foreground)' }} />
+                      <span className='text-sm font-sans font-medium truncate flex-1' style={{ color: 'var(--foreground)' }}>
                         {v.originalName || t('gallery.video_section')}
                       </span>
                       <a
                         href={`${API_BASE}${v.path}`}
                         download={v.originalName || v.filename}
-                        className='ms-auto flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors shrink-0'
+                        className='ms-auto flex items-center gap-1.5 text-xs font-sans transition-colors shrink-0' style={{ color: 'var(--muted-foreground)' }}
                       >
                         <Download size={13} />
                         {t('gallery.download_video')}
@@ -256,15 +257,16 @@ export const SelectionGallery = ({ gallery, images, getImageUrl }: Props) => {
           )}
 
           {selectedIds.size > 0 && (
-            <div className='sticky top-16 z-40 bg-background/90 backdrop-blur-sm border-b border-border py-3 mb-8 -mx-6 px-6'>
+            <div className='sticky top-14 z-40 backdrop-blur-sm py-3 mb-8 -mx-6 px-6' style={{ backgroundColor: 'color-mix(in srgb, var(--background) 90%, transparent)', borderBottom: '1px solid var(--border)' }}>
               <div className='flex items-center justify-between max-w-[1100px] mx-auto'>
-                <span className={`text-sm font-medium ${atMax ? 'text-[#E7B8B5]' : 'text-muted-foreground'}`}>
+                <span className='text-sm font-sans font-medium' style={{ color: atMax ? 'var(--primary)' : 'var(--muted-foreground)' }}>
                   {selectedIds.size} / {gallery.maxSelections}
                   {atMax && <span className='ms-2 text-xs'>— {t('gallery.max_reached')}</span>}
                 </span>
                 <button
                   onClick={handleSubmit}
-                  className='flex items-center gap-2 px-6 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition-opacity'
+                  className='flex items-center gap-2 px-6 py-2 rounded-xl text-sm font-sans font-medium transition-colors'
+                  style={{ backgroundColor: 'var(--primary)', color: 'var(--primary-foreground)' }}
                 >
                   <Send size={14} />
                   {t('gallery.send_selection')}
@@ -308,7 +310,7 @@ export const SelectionGallery = ({ gallery, images, getImageUrl }: Props) => {
                         loading='lazy'
                       />
                       {!isBlocked && (
-                        <div className='absolute inset-0 bg-foreground/0 group-hover:bg-foreground/20 transition-colors duration-200 pointer-events-none' />
+                        <div className='absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors duration-200 pointer-events-none' />
                       )}
                       {!isBlocked && (
                         <button
@@ -390,7 +392,7 @@ export const SelectionGallery = ({ gallery, images, getImageUrl }: Props) => {
 
           {images.length === 0 && (
             <div className='text-center py-20'>
-              <p className='text-muted-foreground'>{t('gallery.no_images')}</p>
+              <p className='font-sans' style={{ color: 'var(--muted-foreground)' }}>{t('gallery.no_images')}</p>
             </div>
           )}
         </div>
