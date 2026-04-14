@@ -7,10 +7,11 @@ export const ProtectedRoute = ({ children, superadminOnly = false }: { children:
   const { isVerifying } = useVerifyAuth();
   const { t } = useI18n();
 
-  // Block rendering until both the local store hydration AND the server-side
-  // session verification have completed. isVerifying covers the /auth/me ping;
-  // loading covers any in-flight store operation (e.g. the login call itself).
-  if (loading || isVerifying) return <div className="min-h-screen flex items-center justify-center text-warm-gray">{t('admin.common.loading')}</div>;
+  // Block rendering only when we have no admin data at all (cold page load with
+  // no localStorage cache). If admin is already set (just logged in, or from
+  // the localStorage cache) render immediately — the /auth/me verification runs
+  // in the background and will overwrite stale data if the token has changed.
+  if (loading || (!admin && isVerifying)) return <div className="min-h-screen flex items-center justify-center text-warm-gray">{t('admin.common.loading')}</div>;
 
   // admin is null only after the server ping has settled — a missing or expired
   // cookie surfaces as a 401 which clears the store via clearAuthAndRedirect().
