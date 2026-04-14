@@ -36,7 +36,9 @@ services:
       postgres:
         condition: service_healthy
     volumes:
-      - uploads_data:/app/uploads
+      # Bind mount — files persist on the host at ./backend/uploads/
+      # (existing uploaded files stay intact across rebuilds)
+      - ./backend/uploads:/app/uploads
 
   frontend:
     build:
@@ -49,10 +51,8 @@ services:
     depends_on:
       - backend
     volumes:
-      # nginx serves /uploads/* directly from the same volume the backend writes to.
-      # This bypasses Node entirely — no proxy chain for image requests.
-      - uploads_data:/var/www/uploads:ro
+      # nginx reads from the same host directory — no proxy needed for images
+      - ./backend/uploads:/var/www/uploads:ro
 
 volumes:
   postgres_data:
-  uploads_data:
