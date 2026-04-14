@@ -23,9 +23,10 @@ const checkQuota = async (req, res, next) => {
     );
 
     const used = Number(rows[0]?.used ?? 0);
-    const quota = Number(rows[0]?.quota ?? 10 * 1024 ** 3);
+    const quota = rows[0]?.quota != null ? Number(rows[0].quota) : null;
 
-    if (used >= quota) {
+    // null quota = unlimited
+    if (quota !== null && used >= quota) {
       return res.status(413).json({
         code: 'QUOTA_EXCEEDED',
         message: `Storage quota of ${(quota / 1024 ** 3).toFixed(1)} GB exceeded`,

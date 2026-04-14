@@ -26,6 +26,7 @@ export const queryKeys = {
   adminProducts: ['admin-products'] as const,
   storageMe: ['storage', 'me'] as const,
   adminStorage: (id: string) => ['storage', 'admin', id] as const,
+  galleryPreview: (galleryId: string) => ['galleries', galleryId, 'preview'] as const,
 };
 
 // ---------------------------------------------------------------------------
@@ -62,6 +63,18 @@ export function useGalleriesByClient(clientId: string) {
     queryKey: queryKeys.galleriesByClient(clientId),
     queryFn: () => galleryService.fetchGalleries(clientId),
     enabled: !!clientId,
+  });
+}
+
+export function useGalleryPreviewImages(galleryId: string) {
+  return useQuery({
+    queryKey: queryKeys.galleryPreview(galleryId),
+    queryFn: async () => {
+      const res = await api.get(`/galleries/${galleryId}/images?limit=5&page=1`);
+      return (res.data.images ?? res.data) as import('@/types/gallery').GalleryImage[];
+    },
+    enabled: !!galleryId,
+    staleTime: 5 * 60 * 1000,
   });
 }
 

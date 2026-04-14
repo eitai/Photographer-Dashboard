@@ -40,8 +40,9 @@ router.get('/me', protect, asyncHandler(async (req, res) => {
 
   const { rows } = await pool.query(isSuperadmin ? usageQuery : quotaQuery, [req.admin.id]);
 
-  const used  = Number(rows[0]?.used  ?? 0);
-  const quota = isSuperadmin ? null : Number(rows[0]?.quota ?? 10 * 1024 ** 3);
+  const used  = Number(rows[0]?.used ?? 0);
+  // null quota (superadmin or unlimited admin) = no limit
+  const quota = isSuperadmin ? null : (rows[0]?.quota != null ? Number(rows[0].quota) : null);
 
   res.json({
     adminId:     req.admin.id,

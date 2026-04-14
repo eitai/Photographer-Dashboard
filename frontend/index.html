@@ -20,14 +20,12 @@
     <!-- Content Security Policy -->
     <meta http-equiv="Content-Security-Policy" content="
       default-src 'self';
-      script-src 'self';
+      script-src 'self' https://static.cloudflareinsights.com;
       style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
       font-src 'self' https://fonts.gstatic.com;
-      img-src 'self' data: blob: http://localhost:5000 https:;
-      connect-src 'self' http://localhost:5000 ws://localhost:* wss://localhost:*;
-      frame-ancestors 'none';
+      img-src 'self' data: blob: https: http://localhost:*;
+      connect-src 'self' http://localhost:* ws://localhost:* wss://localhost:* https://cloudflareinsights.com;
       base-uri 'self';
-      form-action 'self';
     " />
   </head>
 

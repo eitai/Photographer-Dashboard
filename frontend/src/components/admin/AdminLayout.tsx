@@ -3,6 +3,7 @@ import { Menu } from 'lucide-react';
 import { AdminSidebar } from './AdminSidebar';
 import { NotificationBell } from './NotificationBell';
 import { StorageBar } from './StorageBar';
+import { Skeleton } from '@/components/ui/skeleton';
 import { useAuthStore } from '@/store/authStore';
 import { useAuth } from '@/hooks/useAuth';
 import { useMyStorage } from '@/hooks/useQueries';
@@ -20,17 +21,12 @@ export const AdminLayout = ({ children, title, actions }: AdminLayoutProps) => {
   const theme = useAuthStore((s) => s.theme);
   const { dir } = useI18n();
   const { admin } = useAuth();
-  const { data: storage } = useMyStorage();
+  const { data: storage, isLoading: storageLoading } = useMyStorage();
 
   return (
     <div dir={dir} data-theme={theme} className='admin-layout flex h-screen overflow-hidden bg-white'>
       {/* Mobile overlay */}
-      {sidebarOpen && (
-        <div
-          className='fixed inset-0 z-20 bg-black/40 md:hidden'
-          onClick={() => setSidebarOpen(false)}
-        />
-      )}
+      {sidebarOpen && <div className='fixed inset-0 z-20 bg-black/40 md:hidden' onClick={() => setSidebarOpen(false)} />}
 
       <AdminSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
@@ -47,29 +43,33 @@ export const AdminLayout = ({ children, title, actions }: AdminLayoutProps) => {
           {/* Title */}
           {title && <h1 className='text-base font-semibold text-charcoal shrink-0'>{title}</h1>}
           {/* Actions (search + buttons) — fills remaining space */}
-          <div className='flex-1 flex items-center gap-3'>
-            {actions}
-          </div>
+          <div className='flex-1 flex items-center gap-3'>{actions}</div>
           {/* Storage bar — compact, admin role only */}
-          {admin?.role === 'admin' && storage && (
+          {admin?.role === 'admin' && (
             <div className='hidden sm:block w-36'>
-              <StorageBar
-                usedGB={storage.usedGB}
-                quotaGB={storage.quotaGB}
-                percentUsed={storage.percentUsed}
-                compact
-              />
+              {storageLoading || !storage ? (
+                <div className='space-y-1'>
+                  <Skeleton className='h-1 w-full rounded-full' />
+                  <Skeleton className='h-2.5 w-20' />
+                </div>
+              ) : (
+                <StorageBar
+                  usedGB={storage.usedGB}
+                  quotaGB={storage.quotaGB}
+                  percentUsed={storage.percentUsed}
+                  unlimited={storage.unlimited}
+                  compact
+                />
+              )}
             </div>
           )}
           {/* Notification bell */}
           <NotificationBell />
         </div>
-        <div className='px-4 md:px-8 py-6 flex-1 bg-gray-50 overflow-y-auto'>
-          <ErrorBoundary label={title || 'page content'}>
-            {children}
-          </ErrorBoundary>
+        <div className='px-4 md:px-8 pt-3 flex-1 bg-gray-50 overflow-y-auto'>
+          <ErrorBoundary label={title || 'page content'}>{children}</ErrorBoundary>
         </div>
       </main>
     </div>
   );
-}
+};

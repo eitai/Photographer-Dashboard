@@ -50,7 +50,7 @@ export const AdminClientDetail = () => {
   // ---------------------------------------------------------------------------
   // Submissions — prefetch for all selection_submitted galleries
   // ---------------------------------------------------------------------------
-  const submittedGalleries = galleries.filter((g) => g.status === 'selection_submitted');
+  const submittedGalleries = galleries.filter((g) => ['selection_submitted', 'in_editing', 'delivered'].includes(g.status));
 
   useEffect(() => {
     const ids = submittedGalleries.map((g) => g._id).join(',');

@@ -29,7 +29,7 @@ export const ClientRow = ({ client, galleries, onAddGallery }: ClientRowProps) =
       : `${clientGalleries.length} ${t('admin.dashboard.gallery_plural')}`;
 
   return (
-    <div className='border border-beige rounded-xl overflow-hidden'>
+    <div className='border-b border-gray-100 last:border-b-0'>
       <div
         role='button'
         tabIndex={0}
@@ -37,7 +37,7 @@ export const ClientRow = ({ client, galleries, onAddGallery }: ClientRowProps) =
         onKeyDown={(e) => {
           if (e.key === 'Enter' || e.key === ' ') setOpen((v) => !v);
         }}
-        className='w-full flex items-center gap-3 px-4 py-3 bg-card hover:bg-ivory transition-colors cursor-pointer select-none'
+        className='w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition-colors cursor-pointer select-none'
       >
         <span className='w-9 h-9 rounded-full bg-blush/20 text-blush text-xs font-sans font-semibold flex items-center justify-center shrink-0'>
           {initials}
@@ -53,8 +53,11 @@ export const ClientRow = ({ client, galleries, onAddGallery }: ClientRowProps) =
         <span className='text-xs text-warm-gray font-sans shrink-0'>{galleryCountLabel}</span>
         <ChevronDown size={15} className={`text-warm-gray shrink-0 transition-transform duration-200 ${open ? 'rotate-180' : ''}`} />
       </div>
-      {open && (
-        <div className='bg-ivory border-t border-beige px-4 py-3'>
+      <div
+        className={`grid transition-all duration-300 ease-in-out ${open ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'}`}
+      >
+        <div className='overflow-hidden'>
+        <div className='bg-gray-50 border-t border-gray-100 px-4 py-3'>
           <div className='flex items-center justify-between mb-2'>
             <p className='text-xs font-sans font-semibold text-warm-gray uppercase tracking-wide'>{t('admin.nav.galleries')}</p>
             <button
@@ -69,14 +72,15 @@ export const ClientRow = ({ client, galleries, onAddGallery }: ClientRowProps) =
           {clientGalleries.length === 0 ? (
             <p className='text-xs text-warm-gray py-2'>{t('admin.dashboard.no_galleries_client')}</p>
           ) : (
-            <div className='flex flex-col gap-1'>
+            <div className='flex flex-col gap-2'>
               {clientGalleries.map((g) => (
                 <GalleryCard key={g._id} gallery={g} client={client} />
               ))}
             </div>
           )}
         </div>
-      )}
+        </div>
+      </div>
     </div>
   );
 };

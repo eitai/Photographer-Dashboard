@@ -220,7 +220,7 @@ export const SelectionGallery = ({ gallery, images, getImageUrl }: Props) => {
       <section className='section-spacing'>
         <div className='container-narrow'>
           <FadeIn>
-            <div className='text-center mb-12'>
+            <div className='text-center mb-12 max-w-[50%] mx-auto'>
               <p className=' text-2xl md:text-3xl text-foreground mb-2'>{gallery.headerMessage}</p>
               {gallery.clientName && <p className='text-muted-foreground'>{gallery.clientName}</p>}
               <p className='text-sm text-muted-foreground mt-2'>

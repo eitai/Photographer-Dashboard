@@ -11,6 +11,7 @@ import { Button } from '@/components/admin/Button';
 import { Modal } from '@/components/ui/Modal';
 import { useAdmins, useCreateAdmin, useDeleteAdmin, useAdminStorage, useSetAdminQuota } from '@/hooks/useQueries';
 import { StorageBar } from '@/components/admin/StorageBar';
+import { QuotaSlider } from '@/components/admin/QuotaSlider';
 
 interface ProfileForm {
   name: string;
@@ -30,7 +31,7 @@ interface LandingForm {
   facebookUrl: string;
 }
 
-const EMPTY_FORM = { name: '', email: '', password: '', role: 'admin' as const, username: '', studioName: '' };
+const EMPTY_FORM = { name: '', email: '', password: '', role: 'admin' as const, username: '', studioName: '', quotaGB: 10 as number | null };
 
 const labelClass = 'block text-xs text-warm-gray mb-1';
 
@@ -42,7 +43,6 @@ export const AdminUsers = () => {
   const deleteAdminMutation = useDeleteAdmin();
   const [search, setSearch] = useState('');
   const [form, setForm] = useState(EMPTY_FORM);
-  const [msg, setMsg] = useState({ text: '', error: false });
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
 
   // Edit panel state
@@ -75,12 +75,11 @@ export const AdminUsers = () => {
     createAdminMutation.mutate(form, {
       onSuccess: () => {
         setForm(EMPTY_FORM);
-        setMsg({ text: t('admin.users.created'), error: false });
-        setTimeout(() => setMsg({ text: '', error: false }), 3000);
+        toast.success(t('admin.users.created'));
       },
       onError: (err: unknown) => {
         const message = (err as { response?: { data?: { message?: string } } }).response?.data?.message;
-        setMsg({ text: message || t('admin.users.create_error'), error: true });
+        toast.error(message || t('admin.users.create_error'));
       },
     });
   };
@@ -106,7 +105,7 @@ export const AdminUsers = () => {
     setEditingId(a._id);
     setEditMsg({ text: '', error: false });
     setProfileForm({ name: a.name, email: a.email, studioName: a.studioName || '', username: a.username || '', role: a.role, newPassword: '' });
-    setQuotaInputGB(a.storageQuotaBytes ? (a.storageQuotaBytes / 1024 ** 3).toFixed(1) : '');
+    setQuotaInputGB(a.storageQuotaBytes ? parseFloat((a.storageQuotaBytes / 1024 ** 3).toFixed(1)) : 10);
     setSettings(null);
     try {
       const r = await api.get(`/admins/${a._id}/settings`);
@@ -193,7 +192,7 @@ export const AdminUsers = () => {
     }
   };
 
-  const [quotaInputGB, setQuotaInputGB] = useState<string>('');
+  const [quotaInputGB, setQuotaInputGB] = useState<number | null>(10);
   const setAdminQuotaMutation = useSetAdminQuota();
   const { data: editingAdminStorage } = useAdminStorage(editingId ?? '');
 
@@ -466,30 +465,18 @@ export const AdminUsers = () => {
                           usedGB={editingAdminStorage.usedGB}
                           quotaGB={editingAdminStorage.quotaGB}
                           percentUsed={editingAdminStorage.percentUsed}
+                          unlimited={editingAdminStorage.unlimited}
                         />
                       )}
-                      <div>
-                        <label className={labelClass}>{t('admin.users.storage_quota_label')}</label>
-                        <InputField
-                          type='number'
-                          value={quotaInputGB}
-                          onChange={(e) => setQuotaInputGB(e.target.value)}
-                          placeholder='10'
-                          min='1'
-                          step='0.5'
-                        />
-                        <p className='text-[10px] text-warm-gray mt-0.5'>{t('admin.users.storage_quota_hint')}</p>
-                      </div>
+                      <QuotaSlider value={quotaInputGB} onChange={setQuotaInputGB} />
                       <Button
                         variant='primary'
                         size='sm'
-                        disabled={setAdminQuotaMutation.isPending || !quotaInputGB}
+                        disabled={setAdminQuotaMutation.isPending}
                         onClick={() => {
-                          if (!editingId || !quotaInputGB) return;
-                          const gb = parseFloat(quotaInputGB);
-                          if (isNaN(gb) || gb <= 0) return;
+                          if (!editingId) return;
                           setAdminQuotaMutation.mutate(
-                            { adminId: editingId, quotaGB: gb },
+                            { adminId: editingId, quotaGB: quotaInputGB ?? 0 },
                             {
                               onSuccess: () => {
                                 setEditMsg({ text: t('admin.users.quota_saved'), error: false });
@@ -663,9 +650,11 @@ export const AdminUsers = () => {
                   placeholder='Studio Name'
                 />
               </div>
+              <div className='sm:col-span-2'>
+                <QuotaSlider value={form.quotaGB} onChange={(v) => setForm((f) => ({ ...f, quotaGB: v }))} />
+              </div>
             </div>
 
-            {msg.text && <p className={`text-sm ${msg.error ? 'text-red-500' : 'text-charcoal'}`}>{msg.text}</p>}
 
             <Button
               type='submit'

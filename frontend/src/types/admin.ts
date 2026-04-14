@@ -24,10 +24,11 @@ export interface AdminRecord {
 export interface StorageStats {
   adminId: string;
   usedBytes: number;
-  quotaBytes: number;
+  quotaBytes: number | null;
   usedGB: number;
-  quotaGB: number;
+  quotaGB: number | null;
   percentUsed: number;
+  unlimited: boolean;
 }
 
 export interface AdminSettings {

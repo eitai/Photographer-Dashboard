@@ -36,7 +36,6 @@ export const GalleryGrid = ({
   setShowDeliveryFormFor,
   setDeliveryHeaderMessage,
   createDeliveryGallery,
-  onMarkInEditing,
 }: GalleryGridProps) => {
   // Build delivery map: originalId → delivery gallery (only for originals in this list)
   const deliveryByOriginalId = new Map<string, GalleryData>();
@@ -75,19 +74,23 @@ export const GalleryGrid = ({
   };
 
   return (
-    <div className='flex flex-col gap-3 w-full'>
+    <div className='flex flex-wrap gap-3'>
       {groups.map((group) => {
         if (group.type === 'single') {
           return (
-            <div key={group.gallery._id} className='grid grid-cols-2 gap-3'>
+            <div key={group.gallery._id} className='w-[35rem]'>
               <GalleryCard g={group.gallery} {...sharedCardProps} />
             </div>
           );
         }
         return (
-          <div key={group.original._id} className='grid grid-cols-2 gap-3'>
-            <GalleryCard g={group.original} {...sharedCardProps} />
-            <GalleryCard g={group.delivery} {...sharedCardProps} />
+          <div key={group.original._id} className='flex gap-3'>
+            <div className='w-[35rem]'>
+              <GalleryCard g={group.original} {...sharedCardProps} />
+            </div>
+            <div className='w-[35rem]'>
+              <GalleryCard g={group.delivery} {...sharedCardProps} />
+            </div>
           </div>
         );
       })}

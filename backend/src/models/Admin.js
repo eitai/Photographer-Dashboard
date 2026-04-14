@@ -64,9 +64,14 @@ async function countDocuments() {
 
 async function create(data) {
   const hash = await bcrypt.hash(data.password, 12);
+  // null quotaGB = unlimited; omitted quotaGB = default 10 GB
+  const quotaBytes =
+    data.quotaGB === null ? null :
+    data.quotaGB !== undefined ? Math.round(parseFloat(data.quotaGB) * 1024 ** 3) :
+    10 * 1024 ** 3;
   const { rows } = await pool.query(
-    `INSERT INTO admins (name, email, password, role, username, studio_name, push_token)
-     VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
+    `INSERT INTO admins (name, email, password, role, username, studio_name, push_token, storage_quota_bytes)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
     [
       data.name,
       data.email,
@@ -75,6 +80,7 @@ async function create(data) {
       data.username || null,
       data.studioName || null,
       data.pushToken || null,
+      quotaBytes,
     ]
   );
   return rowToCamel(rows[0]);

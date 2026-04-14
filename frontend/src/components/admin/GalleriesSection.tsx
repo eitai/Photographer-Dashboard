@@ -80,7 +80,7 @@ export const GalleriesSection = ({
       </div>
 
       {showGalleryForm && (
-        <form onSubmit={createGallery} className='bg-ivory rounded-xl p-4 mb-5 space-y-3 border border-beige'>
+        <form onSubmit={createGallery} className='bg-ivory rounded-xl p-4 mb-5 space-y-3 border border-beige max-w-[50%]'>
           <div className='grid grid-cols-1 sm:grid-cols-2 gap-3'>
             <div>
               <label className='block text-xs text-warm-gray mb-1'>{t('admin.galleries.name_label')}</label>

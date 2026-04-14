@@ -22,7 +22,7 @@ router.get('/', asyncHandler(async (req, res) => {
 
 // POST /api/admins
 router.post('/', asyncHandler(async (req, res) => {
-  const { name, email, password, role, username, studioName } = req.body;
+  const { name, email, password, role, username, studioName, quotaGB } = req.body;
   if (!name || !email || !password)
     return res.status(400).json({ message: 'Name, email and password are required' });
 
@@ -44,6 +44,7 @@ router.post('/', asyncHandler(async (req, res) => {
     role: role || 'admin',
     username: username || undefined,
     studioName: studioName || undefined,
+    quotaGB: quotaGB || undefined,
   });
 
   // Seed default product catalog for the new admin
@@ -174,12 +175,15 @@ router.get('/:id/storage', asyncHandler(async (req, res) => {
 }));
 
 // PATCH /api/admins/:id/quota — superadmin only
+// quotaGB: number = specific GB limit; 0 or null = unlimited
 router.patch('/:id/quota', asyncHandler(async (req, res) => {
-  const quotaGB = parseFloat(req.body.quotaGB);
-  if (!isFinite(quotaGB) || quotaGB < 0.1 || quotaGB > 10000) {
-    return res.status(400).json({ message: 'quotaGB must be between 0.1 and 10000' });
+  const raw = req.body.quotaGB;
+  const unlimited = raw === null || raw === 0 || raw === '0';
+  const quotaGB = unlimited ? null : parseFloat(raw);
+  if (!unlimited && (!isFinite(quotaGB) || quotaGB < 0.1 || quotaGB > 10000)) {
+    return res.status(400).json({ message: 'quotaGB must be between 0.1 and 10000, or null for unlimited' });
   }
-  const quotaBytes = Math.round(quotaGB * 1024 ** 3);
+  const quotaBytes = unlimited ? null : Math.round(quotaGB * 1024 ** 3);
   const { rows } = await pool.query(
     `UPDATE admins SET storage_quota_bytes = $1, updated_at = NOW()
      WHERE id = $2 RETURNING id, storage_quota_bytes`,
@@ -188,8 +192,9 @@ router.patch('/:id/quota', asyncHandler(async (req, res) => {
   if (!rows[0]) return res.status(404).json({ message: 'Admin not found' });
   res.json({
     adminId:    rows[0].id,
-    quotaBytes: Number(rows[0].storage_quota_bytes),
+    quotaBytes: rows[0].storage_quota_bytes ? Number(rows[0].storage_quota_bytes) : null,
     quotaGB,
+    unlimited,
   });
 }));
 

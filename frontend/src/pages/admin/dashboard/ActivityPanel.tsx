@@ -13,7 +13,7 @@ export const ActivityPanel = ({ clients }: { clients: Client[] }) => {
     });
 
   return (
-    <div className='bg-card rounded-xl border border-beige p-5 flex flex-col max-h-72'>
+    <div className='bg-white rounded-xl shadow p-5 flex flex-col h-full'>
       <h3 className=' text-base text-charcoal mb-4 shrink-0'>{t('admin.dashboard.activity_title')}</h3>
       {recent.length === 0 ? (
         <p className='text-xs text-warm-gray'>{t('admin.dashboard.no_activity')}</p>

@@ -848,6 +848,8 @@ const translations: Record<string, Record<Lang, string>> = {
   'admin.users.storage_quota_label': { he: 'מכסה (GB)', en: 'Quota (GB)' },
   'admin.users.storage_quota_hint': { he: 'הגדר את כמות האחסון המרבית לצלם זה', en: 'Set the maximum storage this photographer may use' },
   'admin.users.quota_saved': { he: 'מכסת האחסון עודכנה', en: 'Storage quota updated' },
+  'admin.users.storage_unlimited_hint': { he: 'ללא הגבלת אחסון לצלם זה', en: 'No storage limit for this photographer' },
+  'admin.users.unlimited_label': { he: 'ללא הגבלה', en: 'Unlimited' },
 
   // ── Admin: Status labels ────────────────────────────────────────────────────
   'admin.status.gallery_sent': { he: 'גלריה נשלחה', en: 'Gallery Sent' },

@@ -5,15 +5,7 @@ import { AddGalleryModal } from '@/components/admin/AddGalleryModal';
 import { useAuth } from '@/hooks/useAuth';
 import { useI18n } from '@/lib/i18n';
 import { useGalleries, useClients } from '@/hooks/useQueries';
-import {
-  Users,
-  Images,
-  CheckSquare,
-  ExternalLink,
-  Plus,
-  Search,
-  X,
-} from 'lucide-react';
+import { Users, Images, CheckSquare, ExternalLink, Plus, Search, X } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Button } from '@/components/admin/Button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -85,10 +77,9 @@ export const AdminDashboard = () => {
   return (
     <AdminLayout title={t('admin.nav.dashboard')} actions={topBarActions}>
       {/* Full-height shell — no outer scroll */}
-      <div className='flex flex-col h-full -mx-4 md:-mx-8 -my-6 overflow-hidden'>
-
+      <div className='flex flex-col h-full -mx-4 md:-mx-8 -my-6 overflow-hidden bg-gray-50'>
         {/* ── Fixed top section: landing link + stat cards ── */}
-        <div className='shrink-0 px-4 md:px-8 pt-6 pb-4 bg-gray-50 border-b border-beige space-y-4'>
+        <div className='shrink-0 px-4 md:px-8 pt-6 pb-4 space-y-4'>
           {admin?.id && (
             <Tooltip>
               <TooltipTrigger asChild>
@@ -111,7 +102,7 @@ export const AdminDashboard = () => {
           {isLoading ? (
             <div className='grid grid-cols-1 sm:grid-cols-3 gap-4'>
               {[0, 1, 2].map((i) => (
-                <div key={i} className='bg-card rounded-xl border border-beige p-5 space-y-3'>
+                <div key={i} className='bg-white rounded-xl shadow-sm p-5 space-y-3'>
                   <Skeleton className='h-8 w-16' />
                   <Skeleton className='h-4 w-24' />
                   <Skeleton className='h-3 w-32' />
@@ -149,15 +140,13 @@ export const AdminDashboard = () => {
         </div>
 
         {/* ── Scrollable main area ── */}
-        <div className='flex-1 overflow-hidden flex flex-col lg:flex-row gap-0'>
-
+        <div className='flex-1 overflow-hidden flex flex-col lg:flex-row'>
           {/* Left — client list */}
-          <div className='flex-1 min-w-0 flex flex-col overflow-hidden border-e border-beige'>
+          <div className='flex-1 min-w-0 flex flex-col bg-white rounded-2xl shadow m-4'>
             {/* Filter bar — fixed */}
-            <div className='shrink-0 px-4 md:px-6 pt-4 pb-3 bg-white border-b border-beige'>
+            <div className='shrink-0 px-4 md:px-6 pt-4 pb-3'>
               <div className='flex items-center justify-between mb-3'>
                 <h2 className='text-sm font-semibold text-charcoal'>{t('admin.dashboard.panel_title')}</h2>
-                <p className='text-xs text-warm-gray'>{clientCountLabel} · {galleryCountLabel}</p>
               </div>
               <div className='flex flex-wrap gap-2'>
                 {FILTER_CHIPS.map(({ key, labelKey }) => (
@@ -178,11 +167,11 @@ export const AdminDashboard = () => {
             </div>
 
             {/* Client rows — scrollable */}
-            <div className='flex-1 overflow-y-auto px-4 md:px-6 py-4'>
+            <div className='flex-1 overflow-y-auto px-4 md:px-6 pt-4 pb-6'>
               {isLoading ? (
                 <div className='flex flex-col gap-3'>
                   {[0, 1, 2, 3].map((i) => (
-                    <div key={i} className='border border-beige rounded-xl p-4 flex items-center gap-3'>
+                    <div key={i} className='bg-white rounded-xl shadow-sm p-4 flex items-center gap-3'>
                       <Skeleton className='h-9 w-9 rounded-full shrink-0' />
                       <div className='flex-1 space-y-2'>
                         <Skeleton className='h-4 w-40' />
@@ -204,10 +193,14 @@ export const AdminDashboard = () => {
             </div>
           </div>
 
-          {/* Right — activity + quick add, scrollable */}
-          <div className='w-full lg:w-[320px] shrink-0 overflow-y-auto px-4 md:px-6 py-4 flex flex-col gap-4 bg-white'>
-            <ActivityPanel clients={clients} />
-            <QuickAddClient />
+          {/* Right — activity + quick add, full height */}
+          <div className='w-full lg:w-[320px] shrink-0 flex flex-col px-4 md:px-6 py-4 gap-4 overflow-hidden'>
+            <div className='flex-1 min-h-0'>
+              <ActivityPanel clients={clients} />
+            </div>
+            <div className='shrink-0'>
+              <QuickAddClient />
+            </div>
           </div>
         </div>
       </div>

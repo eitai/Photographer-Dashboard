@@ -10,7 +10,7 @@ export interface StatCardProps {
 }
 
 export const StatCard = ({ label, value, icon: Icon, iconClass, to, sub }: StatCardProps) => (
-  <Link to={to} className='relative bg-card rounded-xl border border-beige p-5 hover:shadow-sm transition-shadow block'>
+  <Link to={to} className='relative bg-white rounded-xl shadow hover:shadow-md transition-shadow p-5 block'>
     <span className={`absolute top-3 end-3 w-7 h-7 rounded-full flex items-center justify-center ${iconClass}`}>
       <Icon size={13} />
     </span>
