@@ -1,20 +1,16 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useI18n } from '@/lib/i18n';
 
 export const AdminLogin = () => {
-  const { login, admin } = useAuth();
+  const { login } = useAuth();
   const { t } = useI18n();
   const navigate = useNavigate();
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    if (admin) navigate(admin.role === 'superadmin' ? '/admin/users' : '/admin/dashboard', { replace: true });
-  }, [admin, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
