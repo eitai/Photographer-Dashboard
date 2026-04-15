@@ -50,9 +50,6 @@ services:
       - "80:80"
     depends_on:
       - backend
-    volumes:
-      # nginx reads from the same host directory — no proxy needed for images
-      - ./backend/uploads:/var/www/uploads:ro
 
 volumes:
   postgres_data:
