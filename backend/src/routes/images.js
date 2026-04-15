@@ -66,25 +66,19 @@ router.post('/', protect, checkQuota, upload.array('images', 5000), validateImag
   const imageDocs = await Promise.all(
     req.files.map(async (file, i) => {
       const thumbFilename = `thumb_${path.parse(file.filename).name}.jpg`;
-      let imagePath;
-      let thumbnailPath;
-      try {
-        // Generate thumbnail as buffer (works for both local and S3 paths)
-        const thumbBuffer = await sharp(file.path)
-          .withMetadata(false)           // strip EXIF (GPS, camera info)
-          .resize({ width: 800, withoutEnlargement: true })
-          .jpeg({ quality: 78 })
-          .toBuffer();
-        // Upload original and thumbnail (to S3 or local disk)
-        [imagePath, thumbnailPath] = await Promise.all([
-          s3.processUpload(file),
-          s3.processThumbnail(thumbBuffer, thumbFilename, THUMB_DIR),
-        ]);
-      } catch (err) {
-        logger.warn(`Upload/thumbnail failed for ${file.filename}: ${err.message}`);
-        // Fall back: keep original on disk if S3 upload failed
-        imagePath = imagePath || `/uploads/${file.filename}`;
-      }
+
+      // Generate thumbnail as buffer (no disk write — goes straight to S3 or local)
+      const thumbBuffer = await sharp(file.path)
+        .withMetadata(false)
+        .resize({ width: 800, withoutEnlargement: true })
+        .jpeg({ quality: 78 })
+        .toBuffer();
+
+      // Upload to S3 (or local disk if S3 not configured). Throws on failure — no silent fallback.
+      const [imagePath, thumbnailPath] = await Promise.all([
+        s3.processUpload(file),
+        s3.processThumbnail(thumbBuffer, thumbFilename, THUMB_DIR),
+      ]);
       const nameWithoutExt = path.parse(file.originalname).name;
       const matchedOriginal = selectedImageMap[nameWithoutExt];
 
