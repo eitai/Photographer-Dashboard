@@ -44,7 +44,11 @@
       "Bash(curl -s https://photographer-dashboard.arxentra.app/api/health)",
       "Bash(curl -s -X POST https://photographer-dashboard.arxentra.app/api/auth/seed -H 'Content-Type: application/json' -d '{\"name\":\"Eitai Meir\",\"email\":\"eitaimeir@gmail.com\",\"username\":\"admin\",\"password\":\"xdloler123\"}')",
       "Bash(curl -s -o /dev/null -w \"%{http_code}\" \"https://photographer-dashboard.arxentra.app/uploads/thumbnails/thumb_f043ddb4d7f7b4892a7c37c9b7b3a528.jpg\")",
-      "Bash(curl -s -o /dev/null -w \"%{http_code}\" \"https://photographer-dashboard.arxentra.app/uploads/thumbnails/thumb_2e13209d95c29a988f8146a6f2876869.jpg\")"
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" \"https://photographer-dashboard.arxentra.app/uploads/thumbnails/thumb_2e13209d95c29a988f8146a6f2876869.jpg\")",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" \"https://photographer-dashboard.arxentra.app/uploads/thumbnails/thumb_046a1c93f985c70a29b9eb2f54423153.jpg\")",
+      "Bash(find /c/Users/eitai/Desktop/codevalue/arxentra/arxentra_web/helm -name \"*.yaml\" -type f -exec grep -l \"S3\\\\|AWS\\\\|s3\" {} \\\\;)",
+      "Bash(git -C \"c:/Users/eitai/Desktop/codevalue/store test\" check-ignore backend/.env)",
+      "Bash(git -C \"c:/Users/eitai/Desktop/codevalue/store test\" ls-files backend/.env)"
     ],
     "deny": [
       "Bash(taskkill *)",
