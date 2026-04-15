@@ -42,7 +42,8 @@
       "Bash(curl -s -X OPTIONS https://photographer-dashboard.arxentra.app/api/auth/login -H 'Origin: https://photographer-dashboard.arxentra.app' -H 'Access-Control-Request-Method: POST' -H 'Access-Control-Request-Headers: content-type' -v)",
       "Bash(curl -s -X POST https://photographer-dashboard.arxentra.app/api/auth/login -H 'Content-Type: application/json' -H 'Origin: https://photographer-dashboard.arxentra.app' -d '{\"username\":\"admin\",\"password\":\"Admin1234!\"}' -v)",
       "Bash(curl -s https://photographer-dashboard.arxentra.app/api/health)",
-      "Bash(curl -s -X POST https://photographer-dashboard.arxentra.app/api/auth/seed -H 'Content-Type: application/json' -d '{\"name\":\"Eitai Meir\",\"email\":\"eitaimeir@gmail.com\",\"username\":\"admin\",\"password\":\"xdloler123\"}')"
+      "Bash(curl -s -X POST https://photographer-dashboard.arxentra.app/api/auth/seed -H 'Content-Type: application/json' -d '{\"name\":\"Eitai Meir\",\"email\":\"eitaimeir@gmail.com\",\"username\":\"admin\",\"password\":\"xdloler123\"}')",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" \"https://photographer-dashboard.arxentra.app/uploads/thumbnails/thumb_f043ddb4d7f7b4892a7c37c9b7b3a528.jpg\")"
     ],
     "deny": [
       "Bash(taskkill *)",
