@@ -1,6 +1,19 @@
 import axios from 'axios';
 
-export const API_BASE = import.meta.env.VITE_API_URL;
+export const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
+/**
+ * Resolve a stored image/video path to a fully-qualified URL.
+ *
+ * New uploads go to S3 and are stored as full URLs (https://...).
+ * Legacy uploads are stored as relative paths (/uploads/...) and are
+ * served by the backend's static middleware → backend URL is prepended.
+ */
+export const getImageUrl = (path: string): string => {
+  if (!path) return '';
+  if (path.startsWith('http')) return path;       // S3 / full URL
+  return `${API_BASE}${path}`;                    // legacy local path
+};
 
 const api = axios.create({
   baseURL: `${API_BASE}/api`,

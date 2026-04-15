@@ -10,6 +10,7 @@ const asyncHandler = require('../middleware/asyncHandler');
 const validatePassword = require('../utils/validatePassword');
 const formatAdmin = require('../utils/formatAdmin');
 const replaceUploadedFile = require('../utils/replaceUploadedFile');
+const s3 = require('../config/s3');
 
 const router = express.Router();
 router.use(superprotect);
@@ -131,14 +132,14 @@ router.put('/:id/landing', asyncHandler(async (req, res) => {
 // POST /api/admins/:id/hero-image
 router.post('/:id/hero-image', upload.single('image'), validateImageMagicBytes, asyncHandler(async (req, res) => {
   if (!req.file) return res.status(400).json({ message: 'No image uploaded' });
-  const heroImagePath = await replaceUploadedFile(req.params.id, 'heroImagePath', `/uploads/${req.file.filename}`, { SiteSettings, fs });
+  const heroImagePath = await replaceUploadedFile(req.params.id, 'heroImagePath', await s3.processUpload(req.file), { SiteSettings, fs });
   res.json({ heroImagePath });
 }));
 
 // POST /api/admins/:id/profile-image
 router.post('/:id/profile-image', upload.single('image'), validateImageMagicBytes, asyncHandler(async (req, res) => {
   if (!req.file) return res.status(400).json({ message: 'No image uploaded' });
-  const profileImagePath = await replaceUploadedFile(req.params.id, 'profileImagePath', `/uploads/${req.file.filename}`, { SiteSettings, fs });
+  const profileImagePath = await replaceUploadedFile(req.params.id, 'profileImagePath', await s3.processUpload(req.file), { SiteSettings, fs });
   res.json({ profileImagePath });
 }));
 

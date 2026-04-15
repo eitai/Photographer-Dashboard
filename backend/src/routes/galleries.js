@@ -11,6 +11,9 @@ const { sendGalleryLink } = require('../services/emailService');
 const { withTransaction } = require('../utils/transaction');
 const { uploadVideo } = require('../middleware/upload');
 const { UUID_RE } = require('../utils/uuid');
+const s3 = require('../config/s3');
+
+const UPLOADS_DIR = path.join(__dirname, '../../uploads');
 
 const router = express.Router();
 
@@ -255,8 +258,9 @@ router.post('/:id/video', protect, checkQuota, uploadVideo.array('videos', 20), 
 
   const currentVideos = Array.isArray(gallery.videos) ? gallery.videos : [];
   for (const file of req.files) {
+    const videoPath = await s3.processUpload(file);
     currentVideos.push({
-      path: `/uploads/${file.filename}`,
+      path: videoPath,
       filename: file.filename,
       originalName: file.originalname,
       size: file.size,
@@ -278,9 +282,9 @@ router.delete('/:id/video/:filename', protect, asyncHandler(async (req, res) => 
   const idx = currentVideos.findIndex((v) => v.filename === req.params.filename);
   if (idx === -1) return res.status(404).json({ message: 'Video not found' });
 
-  const safeFilename = path.basename(req.params.filename);
-  const filePath = path.join(__dirname, '../../uploads', safeFilename);
-  fs.unlink(filePath, () => {}); // non-fatal
+  // Delete from S3 or local disk (use stored path from video record)
+  const video = currentVideos[idx];
+  await s3.deleteUpload(video.path, UPLOADS_DIR);
 
   currentVideos.splice(idx, 1);
   gallery.videos = currentVideos;

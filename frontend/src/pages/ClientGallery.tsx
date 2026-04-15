@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
-import api from '@/lib/api';
+import api, { getImageUrl } from '@/lib/api';
 import { useI18n } from '@/lib/i18n';
 import { DeliveryGallery } from '@/components/gallery/DeliveryGallery';
 import { SelectionGallery } from '@/components/gallery/SelectionGallery';
@@ -8,8 +8,6 @@ import { ProductOrdersClient } from '@/components/gallery/ProductOrdersClient';
 import { fetchProductOrdersByToken } from '@/services/productOrderService';
 import type { GalleryData, GalleryImage } from '@/types/gallery';
 import type { ProductOrder } from '@/services/productOrderService';
-
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
 export const ClientGallery = () => {
   const { token } = useParams<{ token: string }>();
@@ -21,7 +19,7 @@ export const ClientGallery = () => {
   const [productOrders, setProductOrders] = useState<ProductOrder[]>([]);
   const [theme, setTheme] = useState('soft');
 
-  const getImageUrl = useCallback((path: string) => `${API_BASE}${path}`, []);
+  const resolveImageUrl = useCallback((path: string) => getImageUrl(path), []);
 
   useEffect(() => {
     if (!token) return;
@@ -97,7 +95,7 @@ export const ClientGallery = () => {
     return themeWrapper(
       <>
         {header}
-        <DeliveryGallery gallery={gallery} images={images} getImageUrl={getImageUrl} />
+        <DeliveryGallery gallery={gallery} images={images} getImageUrl={resolveImageUrl} />
       </>
     );
   }
@@ -105,8 +103,8 @@ export const ClientGallery = () => {
   return themeWrapper(
     <>
       {header}
-      <SelectionGallery gallery={gallery} images={images} getImageUrl={getImageUrl} />
-      {productOrders.length > 0 && <ProductOrdersClient orders={productOrders} getImageUrl={getImageUrl} />}
+      <SelectionGallery gallery={gallery} images={images} getImageUrl={resolveImageUrl} />
+      {productOrders.length > 0 && <ProductOrdersClient orders={productOrders} getImageUrl={resolveImageUrl} />}
     </>
   );
 };

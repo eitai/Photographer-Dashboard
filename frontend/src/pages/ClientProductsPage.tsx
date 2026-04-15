@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { Check, Send, ShoppingBag, Package } from 'lucide-react';
 import Masonry from 'react-masonry-css';
-import api from '@/lib/api';
+import api, { getImageUrl } from '@/lib/api';
 import { FadeIn } from '@/components/FadeIn';
 import { useI18n } from '@/lib/i18n';
 import {
@@ -12,8 +12,6 @@ import {
   type SelectedPhoto,
 } from '@/services/productOrderService';
 import type { GalleryImage } from '@/types/gallery';
-
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -29,7 +27,6 @@ interface ImageWithGallery extends GalleryImage {
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-const getImageUrl = (path: string) => `${API_BASE}${path}`;
 
 // ── OrderPanel ────────────────────────────────────────────────────────────────
 

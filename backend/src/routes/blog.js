@@ -4,6 +4,7 @@ const { uploadImage: upload, validateImageMagicBytes } = require('../middleware/
 const { protect } = require('../middleware/auth');
 const asyncHandler = require('../middleware/asyncHandler');
 const { UUID_RE } = require('../utils/uuid');
+const s3 = require('../config/s3');
 
 const router = express.Router();
 
@@ -37,7 +38,7 @@ router.post('/', protect, upload.single('featuredImage'), validateImageMagicByte
     title, content, seoTitle, seoDescription, category, published, publishedAt,
     adminId: req.admin.id,
   };
-  if (req.file) data.featuredImagePath = `/uploads/${req.file.filename}`;
+  if (req.file) data.featuredImagePath = await s3.processUpload(req.file);
   const post = await BlogPost.create(data);
   res.status(201).json(post);
 }));
@@ -48,7 +49,7 @@ router.put('/:id', protect, upload.single('featuredImage'), validateImageMagicBy
     return res.status(400).json({ message: 'Invalid ID format' });
   const { title, content, seoTitle, seoDescription, category, published, publishedAt } = req.body;
   const data = { title, content, seoTitle, seoDescription, category, published, publishedAt };
-  if (req.file) data.featuredImagePath = `/uploads/${req.file.filename}`;
+  if (req.file) data.featuredImagePath = await s3.processUpload(req.file);
   const post = await BlogPost.findOneAndUpdate(
     { _id: req.params.id, adminId: req.admin.id },
     data

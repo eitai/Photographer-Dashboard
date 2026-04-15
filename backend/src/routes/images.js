@@ -11,9 +11,11 @@ const checkQuota = require('../middleware/checkQuota');
 const asyncHandler = require('../middleware/asyncHandler');
 const logger = require('../utils/logger');
 const { UUID_RE } = require('../utils/uuid');
+const s3 = require('../config/s3');
 
 const router = express.Router({ mergeParams: true });
 
+const UPLOADS_DIR = path.join(__dirname, '../../uploads');
 const THUMB_DIR = path.join(__dirname, '../../uploads/thumbnails');
 if (!fs.existsSync(THUMB_DIR)) fs.mkdirSync(THUMB_DIR, { recursive: true });
 
@@ -64,17 +66,24 @@ router.post('/', protect, checkQuota, upload.array('images', 5000), validateImag
   const imageDocs = await Promise.all(
     req.files.map(async (file, i) => {
       const thumbFilename = `thumb_${path.parse(file.filename).name}.jpg`;
+      let imagePath;
       let thumbnailPath;
       try {
-        await sharp(file.path)
+        // Generate thumbnail as buffer (works for both local and S3 paths)
+        const thumbBuffer = await sharp(file.path)
           .withMetadata(false)           // strip EXIF (GPS, camera info)
           .resize({ width: 800, withoutEnlargement: true })
           .jpeg({ quality: 78 })
-          .toFile(path.join(THUMB_DIR, thumbFilename));
-        thumbnailPath = `/uploads/thumbnails/${thumbFilename}`;
-      } catch (thumbErr) {
-        logger.warn(`Thumbnail generation failed for ${file.filename}: ${thumbErr.message}`);
-        // fall back to original — non-fatal
+          .toBuffer();
+        // Upload original and thumbnail (to S3 or local disk)
+        [imagePath, thumbnailPath] = await Promise.all([
+          s3.processUpload(file),
+          s3.processThumbnail(thumbBuffer, thumbFilename, THUMB_DIR),
+        ]);
+      } catch (err) {
+        logger.warn(`Upload/thumbnail failed for ${file.filename}: ${err.message}`);
+        // Fall back: keep original on disk if S3 upload failed
+        imagePath = imagePath || `/uploads/${file.filename}`;
       }
       const nameWithoutExt = path.parse(file.originalname).name;
       const matchedOriginal = selectedImageMap[nameWithoutExt];
@@ -83,7 +92,7 @@ router.post('/', protect, checkQuota, upload.array('images', 5000), validateImag
         galleryId,
         filename: file.filename,
         originalName: file.originalname,
-        path: `/uploads/${file.filename}`,
+        path: imagePath,
         thumbnailPath,
         beforePath: matchedOriginal ? matchedOriginal.path : undefined,
         sortOrder: i,
@@ -107,14 +116,12 @@ router.patch('/:imageId/before', protect, checkQuota, upload.single('before'), v
   if (!gallery) return res.status(403).json({ message: 'Forbidden' });
   if (!req.file) return res.status(400).json({ message: 'No file uploaded' });
 
-  // Delete old before file if exists
+  // Delete old before file if exists (S3 or local)
   if (image.beforePath) {
-    const oldFilename = path.basename(image.beforePath);
-    const oldFilePath = path.join(__dirname, '../../uploads', oldFilename);
-    if (fs.existsSync(oldFilePath)) fs.unlinkSync(oldFilePath);
+    await s3.deleteUpload(image.beforePath, UPLOADS_DIR);
   }
 
-  image.beforePath = `/uploads/${req.file.filename}`;
+  image.beforePath = await s3.processUpload(req.file);
   await GalleryImage.save(image);
   res.json(image);
 }));
@@ -129,13 +136,12 @@ router.delete('/:imageId', protect, asyncHandler(async (req, res) => {
   const gallery = await Gallery.findOne({ _id: image.galleryId, adminId: req.admin.id });
   if (!gallery) return res.status(403).json({ message: 'Forbidden' });
 
-  const filePath = path.join(__dirname, '../../uploads', image.filename);
-  if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
-
-  if (image.thumbnailPath) {
-    const thumbPath = path.join(THUMB_DIR, path.basename(image.thumbnailPath));
-    if (fs.existsSync(thumbPath)) fs.unlinkSync(thumbPath);
-  }
+  // Delete original + thumbnail from S3 or local disk
+  await Promise.all([
+    s3.deleteUpload(image.path, UPLOADS_DIR),
+    image.thumbnailPath ? s3.deleteUpload(image.thumbnailPath, THUMB_DIR) : Promise.resolve(),
+    image.beforePath    ? s3.deleteUpload(image.beforePath, UPLOADS_DIR)  : Promise.resolve(),
+  ]);
 
   await GalleryImage.findByIdAndDelete(req.params.imageId);
   res.json({ message: 'Image deleted' });

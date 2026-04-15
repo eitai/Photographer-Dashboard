@@ -4,9 +4,7 @@ import { FadeIn } from '@/components/FadeIn';
 import { useI18n } from '@/lib/i18n';
 import Masonry from 'react-masonry-css';
 import { Lightbox, type LightboxImage } from '@/components/gallery/Lightbox';
-import api from '@/lib/api';
-
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+import api, { getImageUrl } from '@/lib/api';
 
 export const PhotographerPortfolio = () => {
   const { t } = useI18n();
@@ -23,7 +21,6 @@ export const PhotographerPortfolio = () => {
       .finally(() => setLoading(false));
   }, [username]);
 
-  const getImageUrl = (path: string) => `${API_BASE}${path}`;
 
   return (
     <main className='pt-16'>

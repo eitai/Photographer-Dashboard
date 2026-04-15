@@ -7,6 +7,9 @@ const { protect } = require('../middleware/auth');
 const { uploadImage: upload, validateImageMagicBytes } = require('../middleware/upload');
 const asyncHandler = require('../middleware/asyncHandler');
 const replaceUploadedFile = require('../utils/replaceUploadedFile');
+const s3 = require('../config/s3');
+
+const UPLOADS_DIR = require('path').join(__dirname, '../../uploads');
 
 const router = express.Router();
 
@@ -233,7 +236,6 @@ router.put('/instagram-feed', protect, asyncHandler(async (req, res) => {
 // POST /api/settings/instagram-feed-image  — ADMIN (upload one image, append to array)
 router.post('/instagram-feed-image', protect, upload.single('image'), validateImageMagicBytes, asyncHandler(async (req, res) => {
   if (!req.file) return res.status(400).json({ message: 'No image provided' });
-  const newPath = `/uploads/${req.file.filename}`;
 
   const existing = await SiteSettings.findOne({ adminId: req.admin.id });
   const current = existing?.instagramFeedImages || [];
@@ -242,6 +244,7 @@ router.post('/instagram-feed-image', protect, upload.single('image'), validateIm
     return res.status(400).json({ message: 'Maximum 9 Instagram feed images allowed' });
   }
 
+  const newPath = await s3.processUpload(req.file);
   const updated = [...current, newPath];
   const settings = await SiteSettings.upsert(req.admin.id, { instagramFeedImages: updated });
   res.json({ instagramFeedImages: settings.instagramFeedImages || [] });
@@ -260,9 +263,8 @@ router.delete('/instagram-feed-image/:index', protect, asyncHandler(async (req, 
   const updated = current.filter((_, i) => i !== idx);
   await SiteSettings.upsert(req.admin.id, { instagramFeedImages: updated });
 
-  // Delete the file from disk
-  const fullPath = require('path').join(__dirname, '../../uploads', require('path').basename(removedPath));
-  fs.unlink(fullPath, () => {});
+  // Delete the file from S3 or local disk
+  await s3.deleteUpload(removedPath, UPLOADS_DIR);
 
   res.json({ instagramFeedImages: updated });
 }));
@@ -270,14 +272,14 @@ router.delete('/instagram-feed-image/:index', protect, asyncHandler(async (req, 
 // POST /api/settings/hero-image  — ADMIN
 router.post('/hero-image', protect, upload.single('image'), validateImageMagicBytes, asyncHandler(async (req, res) => {
   if (!req.file) return res.status(400).json({ message: 'No image provided' });
-  const heroImagePath = await replaceUploadedFile(req.admin.id, 'heroImagePath', `/uploads/${req.file.filename}`, { SiteSettings, fs });
+  const heroImagePath = await replaceUploadedFile(req.admin.id, 'heroImagePath', await s3.processUpload(req.file), { SiteSettings, fs });
   res.json({ heroImagePath });
 }));
 
 // POST /api/settings/profile-image  — ADMIN
 router.post('/profile-image', protect, upload.single('image'), validateImageMagicBytes, asyncHandler(async (req, res) => {
   if (!req.file) return res.status(400).json({ message: 'No image provided' });
-  const profileImagePath = await replaceUploadedFile(req.admin.id, 'profileImagePath', `/uploads/${req.file.filename}`, { SiteSettings, fs });
+  const profileImagePath = await replaceUploadedFile(req.admin.id, 'profileImagePath', await s3.processUpload(req.file), { SiteSettings, fs });
   res.json({ profileImagePath });
 }));
 

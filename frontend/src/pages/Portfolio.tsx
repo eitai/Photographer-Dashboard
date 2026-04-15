@@ -3,10 +3,8 @@ import { useI18n } from '@/lib/i18n';
 import { FadeIn } from '@/components/FadeIn';
 import Masonry from 'react-masonry-css';
 import { Lightbox, type LightboxImage } from '@/components/gallery/Lightbox';
-import api from '@/lib/api';
+import api, { getImageUrl } from '@/lib/api';
 import { Helmet } from 'react-helmet-async';
-
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
 export const Portfolio = () => {
   const { t } = useI18n();
@@ -22,7 +20,6 @@ export const Portfolio = () => {
       .finally(() => setLoading(false));
   }, []);
 
-  const getImageUrl = (path: string) => `${API_BASE}${path}`;
 
   return (
     <main className='pt-16'>
