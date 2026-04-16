@@ -163,6 +163,7 @@ app.use('/uploads', (req, res) => {
 // All routes are mounted on a versioned sub-router.
 // Both /api/v1/* (canonical) and /api/* (backward compat) are active.
 const v1 = express.Router();
+v1.use('/media',                     require('./routes/media'));
 v1.use('/auth',                      require('./routes/auth'));
 v1.use('/clients',                   require('./routes/clients'));
 v1.use('/galleries',                 require('./routes/galleries'));

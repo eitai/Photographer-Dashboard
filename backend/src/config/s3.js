@@ -13,8 +13,9 @@
  *   S3 configured + failure  → local temp deleted, error thrown (no disk fallback)
  *   S3 not configured (dev)  → local disk storage as before
  */
-const { S3Client, DeleteObjectCommand, ListObjectsV2Command } = require('@aws-sdk/client-s3');
+const { S3Client, DeleteObjectCommand, ListObjectsV2Command, GetObjectCommand } = require('@aws-sdk/client-s3');
 const { Upload } = require('@aws-sdk/lib-storage');
+const { getSignedUrl } = require('@aws-sdk/s3-request-presigner');
 const fs   = require('fs');
 const path = require('path');
 
@@ -97,7 +98,7 @@ async function uploadFile(localPath, key, contentType = 'application/octet-strea
     params: { Bucket: cfg().bucket, Key: key, Body: fs.createReadStream(localPath), ContentType: contentType },
   });
   await upload.done();
-  return getPublicUrl(key);
+  return key; // callers store the key, not the full URL
 }
 
 async function uploadBuffer(buffer, key, contentType = 'image/jpeg') {
@@ -106,7 +107,19 @@ async function uploadBuffer(buffer, key, contentType = 'image/jpeg') {
     params: { Bucket: cfg().bucket, Key: key, Body: buffer, ContentType: contentType },
   });
   await upload.done();
-  return getPublicUrl(key);
+  return key; // callers store the key, not the full URL
+}
+
+/**
+ * Generate a presigned GET URL for an S3 key.
+ * This is a local signing operation — no network call to S3.
+ *
+ * @param {string} key         S3 object key (e.g. "admins/<adminId>/filename.jpg")
+ * @param {number} expiresIn   Seconds until the URL expires (default: 7 days)
+ */
+async function generatePresignedUrl(key, expiresIn = 604800) {
+  const command = new GetObjectCommand({ Bucket: cfg().bucket, Key: key });
+  return getSignedUrl(_getClient(), command, { expiresIn });
 }
 
 async function deleteFile(key) {
@@ -164,13 +177,18 @@ async function processThumbnail(buffer, thumbFilename, thumbDir, adminId) {
 async function deleteUpload(storedPath, uploadsDir) {
   if (!storedPath) return;
   if (storedPath.startsWith('http')) {
+    // Legacy format: full S3 URL — extract key
     const key = urlToKey(storedPath);
     if (key) await deleteFile(key);
-  } else {
+  } else if (storedPath.startsWith('/')) {
+    // Local disk path (dev fallback)
     try {
       const localPath = path.join(uploadsDir, path.basename(storedPath));
       if (fs.existsSync(localPath)) fs.unlinkSync(localPath);
     } catch { /* ignore */ }
+  } else {
+    // New format: raw S3 key (e.g. "admins/<id>/filename.jpg")
+    await deleteFile(storedPath);
   }
 }
 
@@ -222,6 +240,7 @@ module.exports = {
   uploadFile,
   uploadBuffer,
   deleteFile,
+  generatePresignedUrl,
   listAdminStorageBytes,
   processUpload:    (...a) => { _logStatus(); return _orig.processUpload(...a); },
   processThumbnail: (...a) => { _logStatus(); return _orig.processThumbnail(...a); },

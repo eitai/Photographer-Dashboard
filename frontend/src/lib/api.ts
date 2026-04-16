@@ -5,14 +5,29 @@ export const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 /**
  * Resolve a stored image/video path to a fully-qualified URL.
  *
- * New uploads go to S3 and are stored as full URLs (https://...).
- * Legacy uploads are stored as relative paths (/uploads/...) and are
- * served by the backend's static middleware → backend URL is prepended.
+ * Three formats are handled:
+ *
+ *  1. S3 key  (new format)  — "admins/<id>/file.jpg"
+ *     → routed through /api/media/<key> which generates a presigned URL
+ *       and redirects 302. Transparent to <img>, <video>, fetch, etc.
+ *
+ *  2. Legacy full S3 URL — "https://bucket.s3.amazonaws.com/admins/..."
+ *     → key is extracted from the URL and routed the same way.
+ *
+ *  3. Local /uploads/... path (dev with S3 disabled)
+ *     → backend URL is prepended; served directly as a static file.
  */
 export const getImageUrl = (path: string): string => {
   if (!path) return '';
-  if (path.startsWith('http')) return path;       // S3 / full URL
-  return `${API_BASE}${path}`;                    // legacy local path
+  // Local static file (dev, S3 not configured)
+  if (path.startsWith('/')) return `${API_BASE}${path}`;
+  // Legacy full S3 URL — extract key after ".amazonaws.com/"
+  if (path.startsWith('https://') && path.includes('.amazonaws.com/')) {
+    const key = path.split('.amazonaws.com/').pop();
+    if (key) return `${API_BASE}/api/media/${key}`;
+  }
+  // New format: raw S3 key (e.g. "admins/<id>/file.jpg")
+  return `${API_BASE}/api/media/${path}`;
 };
 
 const api = axios.create({
