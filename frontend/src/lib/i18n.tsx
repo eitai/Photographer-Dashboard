@@ -202,6 +202,8 @@ const translations: Record<string, Record<Lang, string>> = {
   'admin.client.link_copied': { he: 'הקישור הועתק!', en: 'Link copied!' },
   'admin.client.delivery_suffix': { he: 'ערוך', en: 'Edited' },
   'admin.client.create_delivery': { he: 'צור גלריית מסירה', en: 'Create Delivery Gallery' },
+  'admin.gallery.reactivate': { he: 'פתח מחדש לבחירה', en: 'Reopen for Selection' },
+  'admin.gallery.reactivating': { he: 'פותח...', en: 'Reopening...' },
   'admin.client.delivery_badge': { he: 'מסירה', en: 'Delivery' },
   'admin.client.delivery_header_ph': {
     he: 'הודעה ללקוחה (למשל: "התמונות המעובדות שלך מוכנות 🤍")',

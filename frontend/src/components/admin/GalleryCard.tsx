@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { StatusBadge } from '@/components/admin/StatusBadge';
-import { Copy, Check, Mail, ExternalLink, Trash2, Settings, Images, MessageSquare } from 'lucide-react';
+import { Copy, Check, Mail, ExternalLink, Trash2, Settings, Images, MessageSquare, RotateCcw } from 'lucide-react';
 import { useI18n } from '@/lib/i18n';
 import type { Client } from '@/types/admin';
 import type { GalleryData } from '@/types/gallery';
@@ -28,6 +28,8 @@ interface GalleryCardProps {
   setShowDeliveryFormFor: (id: string | null) => void;
   setDeliveryHeaderMessage: (msg: string) => void;
   createDeliveryGallery: (originalGalleryId: string) => void;
+  reactivateGallery: (galleryId: string) => void;
+  reactivatingId: string | null;
 }
 
 export const GalleryCard = ({
@@ -50,6 +52,8 @@ export const GalleryCard = ({
   setShowDeliveryFormFor,
   setDeliveryHeaderMessage,
   createDeliveryGallery,
+  reactivateGallery,
+  reactivatingId,
 }: GalleryCardProps) => {
   const { t } = useI18n();
   const hasDelivery = galleries.some((g2) => g2.deliveryOf === g._id);
@@ -161,6 +165,18 @@ export const GalleryCard = ({
           {t('admin.galleries.manage')}
         </Link>
       </div>
+
+      {/* Reactivate — reopen for client selection */}
+      {g.status === 'selection_submitted' && (
+        <button
+          onClick={() => reactivateGallery(g._id)}
+          disabled={reactivatingId === g._id}
+          className='mx-4 mb-3 flex items-center justify-center gap-1.5 w-[calc(100%-2rem)] text-xs text-amber-700 border border-dashed border-amber-300 bg-amber-50 rounded-lg py-2 hover:border-amber-400 hover:bg-amber-100 transition-colors disabled:opacity-60'
+        >
+          <RotateCcw size={12} />
+          {reactivatingId === g._id ? t('admin.gallery.reactivating') : t('admin.gallery.reactivate')}
+        </button>
+      )}
 
       {/* Create delivery gallery */}
       {!g.isDelivery &&

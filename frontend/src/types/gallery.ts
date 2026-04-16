@@ -23,6 +23,7 @@ export interface GalleryData {
   lastEmailSentAt?: string;
   status: 'gallery_sent' | 'viewed' | 'selection_submitted' | 'in_editing' | 'delivered';
   videos?: { path: string; filename: string; originalName: string }[];
+  previousSelectionIds?: string[];
 }
 
 /** Minimal gallery shape used in admin list/card views */

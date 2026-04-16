@@ -4,11 +4,12 @@ import { Modal } from '@/components/ui/Modal';
 interface Props {
   count: number;
   deleting: boolean;
+  progress?: { done: number; total: number } | null;
   onConfirm: () => void;
   onCancel: () => void;
 }
 
-export function DeleteConfirmModal({ count, deleting, onConfirm, onCancel }: Props) {
+export function DeleteConfirmModal({ count, deleting, progress, onConfirm, onCancel }: Props) {
   const { t } = useI18n();
   return (
     <Modal isOpen onClose={onCancel}>
@@ -18,7 +19,23 @@ export function DeleteConfirmModal({ count, deleting, onConfirm, onCancel }: Pro
           {count} {t('admin.upload.images')}
         </span>
       </p>
-      <p className='text-sm text-warm-gray mb-6'>{t('admin.upload.delete_body')}</p>
+      <p className='text-sm text-warm-gray mb-4'>{t('admin.upload.delete_body')}</p>
+
+      {progress && (
+        <div className='mb-4'>
+          <div className='flex justify-between text-xs text-warm-gray mb-1'>
+            <span>{t('admin.upload.deleting')}</span>
+            <span>{progress.done} / {progress.total}</span>
+          </div>
+          <div className='h-1.5 bg-beige rounded-full overflow-hidden'>
+            <div
+              className='h-full bg-rose-400 rounded-full transition-all duration-200'
+              style={{ width: `${(progress.done / progress.total) * 100}%` }}
+            />
+          </div>
+        </div>
+      )}
+
       <div className='flex gap-3'>
         <button
           onClick={onConfirm}

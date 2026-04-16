@@ -240,6 +240,15 @@ export function useSendGallerySms(clientId: string) {
   });
 }
 
+export function useReactivateGallery(clientId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (galleryId: string) => galleryService.reactivateGallery(galleryId),
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: queryKeys.galleriesByClient(clientId) }),
+  });
+}
+
 export function useDeleteGallery(clientId: string) {
   const queryClient = useQueryClient();
   return useMutation({

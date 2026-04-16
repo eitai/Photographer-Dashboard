@@ -21,6 +21,8 @@ interface GalleryGridProps {
   setShowDeliveryFormFor: (id: string | null) => void;
   setDeliveryHeaderMessage: (msg: string) => void;
   createDeliveryGallery: (originalGalleryId: string) => void;
+  reactivateGallery: (galleryId: string) => void;
+  reactivatingId: string | null;
 }
 
 export const GalleryGrid = ({
@@ -42,6 +44,8 @@ export const GalleryGrid = ({
   setShowDeliveryFormFor,
   setDeliveryHeaderMessage,
   createDeliveryGallery,
+  reactivateGallery,
+  reactivatingId,
 }: GalleryGridProps) => {
   // Build delivery map: originalId → delivery gallery (only for originals in this list)
   const deliveryByOriginalId = new Map<string, GalleryData>();
@@ -80,6 +84,8 @@ export const GalleryGrid = ({
     setShowDeliveryFormFor,
     setDeliveryHeaderMessage,
     createDeliveryGallery,
+    reactivateGallery,
+    reactivatingId,
   };
 
   return (

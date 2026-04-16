@@ -21,7 +21,7 @@ export const SubmissionsSection = ({
   setDeleteImageTarget,
 }: SubmissionsSectionProps) => {
   const { t } = useI18n();
-  const galleriesWithSubs = galleries.filter((g) => ['selection_submitted', 'in_editing', 'delivered'].includes(g.status) && submissions[g._id]?.length > 0);
+  const galleriesWithSubs = galleries.filter((g) => submissions[g._id]?.length > 0);
 
   if (galleriesWithSubs.length === 0) return null;
 

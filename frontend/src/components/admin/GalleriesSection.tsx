@@ -27,6 +27,8 @@ interface GalleriesSectionProps {
   setShowDeliveryFormFor: (id: string | null) => void;
   setDeliveryHeaderMessage: (msg: string) => void;
   createDeliveryGallery: (id: string) => void;
+  reactivateGallery: (id: string) => void;
+  reactivatingId: string | null;
 }
 
 export const GalleriesSection = ({
@@ -49,6 +51,8 @@ export const GalleriesSection = ({
   setShowDeliveryFormFor,
   setDeliveryHeaderMessage,
   createDeliveryGallery,
+  reactivateGallery,
+  reactivatingId,
 }: GalleriesSectionProps) => {
   const { t } = useI18n();
   const [showGalleryForm, setShowGalleryForm] = useState(false);
@@ -172,6 +176,8 @@ export const GalleriesSection = ({
           setShowDeliveryFormFor={setShowDeliveryFormFor}
           setDeliveryHeaderMessage={setDeliveryHeaderMessage}
           createDeliveryGallery={createDeliveryGallery}
+          reactivateGallery={reactivateGallery}
+          reactivatingId={reactivatingId}
         />
       )}
     </div>

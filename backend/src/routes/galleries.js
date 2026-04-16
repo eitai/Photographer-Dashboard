@@ -2,6 +2,7 @@ const express = require('express');
 const path = require('path');
 const fs = require('fs');
 const Gallery = require('../models/Gallery');
+const GallerySubmission = require('../models/GallerySubmission');
 const GalleryImage = require('../models/GalleryImage');
 const Client = require('../models/Client');
 const SiteSettings = require('../models/SiteSettings');
@@ -50,6 +51,15 @@ router.get('/token/:token', asyncHandler(async (req, res) => {
       }
     });
   }
+
+  // If admin reactivated (status is viewed but a submission exists), attach previous selection IDs
+  if (gallery.status === 'viewed') {
+    const submission = await GallerySubmission.findOne({ galleryId: gallery.id });
+    if (submission) {
+      gallery.previousSelectionIds = submission.selectedImageIds;
+    }
+  }
+
   res.json(gallery);
 }));
 
@@ -262,6 +272,22 @@ router.put('/:id', protect, asyncHandler(async (req, res) => {
     { name, clientName, headerMessage, isActive, expiresAt, status, maxSelections }
   );
   if (!gallery) return res.status(404).json({ message: 'Gallery not found' });
+  res.json(gallery);
+}));
+
+// POST /api/galleries/:id/reactivate  — reset a submitted gallery back to 'viewed' and delete its submissions
+router.post('/:id/reactivate', protect, asyncHandler(async (req, res) => {
+  if (!UUID_RE.test(req.params.id))
+    return res.status(400).json({ message: 'Invalid ID format' });
+
+  const gallery = await Gallery.findOne({ _id: req.params.id, adminId: req.admin.id });
+  if (!gallery) return res.status(404).json({ message: 'Gallery not found' });
+
+  if (gallery.status !== 'selection_submitted')
+    return res.status(400).json({ message: 'Gallery is not in selection_submitted status' });
+
+  gallery.status = 'viewed';
+  await Gallery.save(gallery);
   res.json(gallery);
 }));
 

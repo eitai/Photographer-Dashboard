@@ -18,12 +18,15 @@ interface Props {
 export const SelectionGallery = ({ gallery, images, getImageUrl }: Props) => {
   const { t } = useI18n();
   const [selectedIds, setSelectedIds] = useState<Set<string>>(() => {
+    // If admin reactivated, seed from the previous submission (authoritative source)
+    if (gallery.previousSelectionIds?.length) {
+      return new Set(gallery.previousSelectionIds);
+    }
     const saved = sessionStorage.getItem(`selections_${gallery._id}`);
     return saved ? new Set(JSON.parse(saved)) : new Set();
   });
   const SUBMITTED_KEY = `submitted_${gallery._id}`;
   const alreadySubmitted =
-    localStorage.getItem(SUBMITTED_KEY) === 'true' ||
     gallery.status === 'selection_submitted' ||
     gallery.status === 'in_editing' ||
     gallery.status === 'delivered';
@@ -133,11 +136,7 @@ export const SelectionGallery = ({ gallery, images, getImageUrl }: Props) => {
           </button>
         )}
 
-        {isSelected ? (
-          <div className='absolute top-2 end-2 w-8 h-8 rounded-full flex items-center justify-center text-charcoal' style={{ backgroundColor: '#E7B8B5' }}>
-            <Check size={14} />
-          </div>
-        ) : !isBlocked ? (
+        {!isSelected && !isBlocked && (
           <button
             onClick={(e) => { e.stopPropagation(); toggleSelect(img._id); }}
             className='absolute top-2 end-2 w-8 h-8 rounded-full bg-black/40 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200'
@@ -145,7 +144,7 @@ export const SelectionGallery = ({ gallery, images, getImageUrl }: Props) => {
           >
             <Check size={14} />
           </button>
-        ) : null}
+        )}
 
         {isSelected && (
           <button
@@ -320,14 +319,7 @@ export const SelectionGallery = ({ gallery, images, getImageUrl }: Props) => {
                           <Maximize2 size={14} />
                         </button>
                       )}
-                      {isSelected ? (
-                        <div
-                          className='absolute top-2 end-2 w-8 h-8 rounded-full flex items-center justify-center text-charcoal'
-                          style={{ backgroundColor: '#E7B8B5' }}
-                        >
-                          <Check size={14} />
-                        </div>
-                      ) : !isBlocked ? (
+                      {!isSelected && !isBlocked && (
                         <button
                           onClick={(e) => { e.stopPropagation(); toggleSelect(img._id); }}
                           className='absolute top-2 end-2 w-8 h-8 rounded-full bg-black/40 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200'
@@ -335,7 +327,7 @@ export const SelectionGallery = ({ gallery, images, getImageUrl }: Props) => {
                         >
                           <Check size={14} />
                         </button>
-                      ) : null}
+                      )}
                       {isSelected && (
                         <button
                           onClick={(e) => { e.stopPropagation(); setHeroId(heroId === img._id ? null : img._id); }}

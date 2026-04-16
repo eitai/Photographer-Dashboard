@@ -12,6 +12,7 @@ import { useGalleryData } from '@/hooks/useGalleryData';
 import { useImageDeletion } from '@/hooks/useImageDeletion';
 import { useVideoUpload } from '@/hooks/useVideoUpload';
 import { useI18n } from '@/lib/i18n';
+import { getImageUrl } from '@/lib/api';
 import { ArrowLeft, CloudUpload, Video, Trash2, X, Images } from 'lucide-react';
 import { Button } from '@/components/admin/Button';
 
@@ -23,7 +24,7 @@ export const AdminGalleryUpload = () => {
 
   const { gallery, setGallery, loadError, images, loadImages } = useGalleryData(id);
   const { queue, dragging, setDragging, inputRef, handleFiles, onDrop } = useGalleryUpload(id, loadImages);
-  const { toDelete, setToDelete, bulkDeleting, confirmDelete } = useImageDeletion(id, () => {
+  const { toDelete, setToDelete, bulkDeleting, deleteProgress, confirmDelete } = useImageDeletion(id, () => {
     setSelectedIds(new Set());
     loadImages();
   });
@@ -299,9 +300,11 @@ export const AdminGalleryUpload = () => {
                 <div className='space-y-2'>
                   {(gallery.videos ?? []).map((v) => (
                     <div key={v.filename} className='flex items-center gap-3 px-3 py-2 bg-gray-50 border border-beige rounded-xl'>
-                      <div className='w-10 h-10 rounded-lg bg-beige flex items-center justify-center shrink-0'>
-                        <Video size={16} className='text-warm-gray' />
-                      </div>
+                      <video
+                        src={getImageUrl(v.path)}
+                        preload='metadata'
+                        className='w-16 h-10 rounded-lg object-cover shrink-0 bg-black'
+                      />
                       <span className='text-xs text-charcoal truncate flex-1'>{v.originalName || v.filename}</span>
                       <Button
                         variant='danger'
@@ -328,6 +331,7 @@ export const AdminGalleryUpload = () => {
         <DeleteConfirmModal
           count={toDelete.length}
           deleting={bulkDeleting}
+          progress={deleteProgress}
           onConfirm={confirmDelete}
           onCancel={() => setToDelete([])}
         />

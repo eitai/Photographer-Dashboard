@@ -11,13 +11,7 @@ interface Props {
   onRequestDelete: (id: string) => void;
 }
 
-export const ImageGrid = ({
-  images,
-  selectedIds,
-  onToggleSelect,
-  onOpenLightbox,
-  onRequestDelete,
-}: Props) => {
+export const ImageGrid = ({ images, selectedIds, onToggleSelect, onOpenLightbox, onRequestDelete }: Props) => {
   const { t } = useI18n();
 
   return (
@@ -39,29 +33,27 @@ export const ImageGrid = ({
               loading='lazy'
             />
 
-            {isSelected ? (
-              <div className='absolute top-1 right-1 w-5 h-5 rounded-full bg-blush flex items-center justify-center shadow'>
-                <Check size={11} className='text-charcoal' />
-              </div>
-            ) : (
-              <button
-                onClick={(e) => { e.stopPropagation(); onRequestDelete(img._id); }}
-                className='absolute top-1 end-1 bg-black/50 text-white p-1.5 rounded-xl opacity-0 group-hover:opacity-100 [@media(hover:none)]:opacity-100 transition-opacity'
-                title={t('admin.upload.delete_title')}
-              >
-                <Trash2 size={11} />
-              </button>
-            )}
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onRequestDelete(img._id);
+              }}
+              className='absolute top-1 end-1 bg-black/50 text-white p-1.5 rounded-xl opacity-0 group-hover:opacity-100 [@media(hover:none)]:opacity-100 transition-opacity'
+              title={t('admin.upload.delete_title')}
+            >
+              <Trash2 size={11} />
+            </button>
 
             <button
-              onClick={(e) => { e.stopPropagation(); onOpenLightbox(idx); }}
+              onClick={(e) => {
+                e.stopPropagation();
+                onOpenLightbox(idx);
+              }}
               className='absolute top-1 start-1 bg-black/50 text-white p-1.5 rounded-xl opacity-0 group-hover:opacity-100 [@media(hover:none)]:opacity-100 transition-opacity'
               title={t('admin.upload.open_title')}
             >
               <Maximize2 size={11} />
             </button>
-
-
           </div>
         );
       })}

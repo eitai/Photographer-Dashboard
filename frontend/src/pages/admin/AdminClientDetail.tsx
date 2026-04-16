@@ -20,6 +20,7 @@ import {
   useResendGalleryEmail,
   useSendGallerySms,
   useDeleteGallery,
+  useReactivateGallery,
   useDeleteSubmission,
   useDeleteSubmissionImage,
   queryKeys,
@@ -45,13 +46,15 @@ export const AdminClientDetail = () => {
   const resendEmail = useResendGalleryEmail(id!);
   const sendSms = useSendGallerySms(id!);
   const deleteGalleryMutation = useDeleteGallery(id!);
+  const reactivateGalleryMutation = useReactivateGallery(id!);
   const deleteSubmissionMutation = useDeleteSubmission(id!);
   const deleteSubmissionImageMutation = useDeleteSubmissionImage(id!);
 
   // ---------------------------------------------------------------------------
-  // Submissions — prefetch for all selection_submitted galleries
+  // Submissions — prefetch for all galleries that may have a submission
+  // 'viewed' is included because a reactivated gallery keeps its previous submission
   // ---------------------------------------------------------------------------
-  const submittedGalleries = galleries.filter((g) => ['selection_submitted', 'in_editing', 'delivered'].includes(g.status));
+  const submittedGalleries = galleries.filter((g) => ['viewed', 'selection_submitted', 'in_editing', 'delivered'].includes(g.status));
 
   useEffect(() => {
     const ids = submittedGalleries.map((g) => g._id).join(',');
@@ -150,6 +153,10 @@ export const AdminClientDetail = () => {
     setDeleteGalleryTarget(null);
   };
 
+  const handleReactivateGallery = async (galleryId: string) => {
+    await reactivateGalleryMutation.mutateAsync(galleryId);
+  };
+
   const handleDeleteSubmissionImage = async () => {
     if (!deleteImageTarget) return;
     await deleteSubmissionImageMutation.mutateAsync(deleteImageTarget);
@@ -186,6 +193,7 @@ export const AdminClientDetail = () => {
   const deletingImage = deleteSubmissionImageMutation.isPending;
   const deletingSubmission = deleteSubmissionMutation.isPending;
   const deletingGallery = deleteGalleryMutation.isPending;
+  const reactivatingId = reactivateGalleryMutation.isPending ? reactivateGalleryMutation.variables ?? null : null;
 
   return (
     <AdminLayout>
@@ -225,6 +233,8 @@ export const AdminClientDetail = () => {
             setShowDeliveryFormFor={setShowDeliveryFormFor}
             setDeliveryHeaderMessage={setDeliveryHeaderMessage}
             createDeliveryGallery={createDeliveryGallery}
+            reactivateGallery={handleReactivateGallery}
+            reactivatingId={reactivatingId}
           />
         </ErrorBoundary>
         <ErrorBoundary label='Submissions'>
