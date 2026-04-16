@@ -23,7 +23,6 @@ import {
   useDeleteSubmissionImage,
   queryKeys,
 } from '@/hooks/useQueries';
-import { API_BASE } from '@/lib/api';
 import { downloadZip } from '@/lib/downloadZip';
 import type { Client } from '@/types/admin';
 import type { GallerySubmission } from '@/types/gallery';
@@ -214,7 +213,6 @@ export const AdminClientDetail = () => {
             galleries={galleries}
             submissions={submissions}
             downloading={downloading}
-            API_BASE={API_BASE}
             downloadAsZip={downloadAsZip}
             setDeleteSubTarget={setDeleteSubTarget}
             setDeleteImageTarget={setDeleteImageTarget}

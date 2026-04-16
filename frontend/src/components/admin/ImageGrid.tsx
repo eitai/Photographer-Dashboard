@@ -1,6 +1,6 @@
 import { Check, Maximize2, Trash2 } from 'lucide-react';
 import { useI18n } from '@/lib/i18n';
-import { API_BASE } from '@/lib/api';
+import { getImageUrl } from '@/lib/api';
 import { GalleryImage } from '@/types/admin';
 
 interface Props {
@@ -33,7 +33,7 @@ export const ImageGrid = ({
             }`}
           >
             <img
-              src={`${API_BASE}${img.thumbnailPath || img.path}`}
+              src={getImageUrl(img.thumbnailPath || img.path)}
               alt={img.originalName}
               className='w-full h-full object-cover'
               loading='lazy'

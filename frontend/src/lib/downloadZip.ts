@@ -1,5 +1,5 @@
 import JSZip from 'jszip';
-import api, { API_BASE } from '@/lib/api';
+import { getImageUrl } from '@/lib/api';
 
 export interface ZipImageEntry {
   _id: string;
@@ -24,10 +24,11 @@ export async function downloadZip(
 
   await Promise.all(
     images.map(async (img) => {
-      const url = `${API_BASE}${img.path}`;
-      const res = await api.get(url, { responseType: 'blob' });
+      const url = getImageUrl(img.path);
+      const res = await fetch(url);
+      const blob = await res.blob();
       const ext = img.filename.includes('.') ? `.${img.filename.split('.').pop()}` : '';
-      folder.file(`${img._id}${ext}`, res.data);
+      folder.file(`${img._id}${ext}`, blob);
     }),
   );
 

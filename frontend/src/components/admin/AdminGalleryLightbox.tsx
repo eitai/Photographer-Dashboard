@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { X, ChevronLeft, ChevronRight, Check } from 'lucide-react';
 import { useI18n } from '@/lib/i18n';
-import { API_BASE } from '@/lib/api';
+import { getImageUrl } from '@/lib/api';
 import { GalleryImage } from '@/types/admin';
 
 interface Props {
@@ -53,7 +53,7 @@ export function AdminGalleryLightbox({ images, index, selectedIds, onClose, onPr
       )}
 
       <img
-        src={`${API_BASE}${img.path}`}
+        src={getImageUrl(img.path)}
         alt={img.originalName}
         className='max-w-full max-h-[90vh] rounded-xl object-contain px-2 sm:px-16'
         onClick={(e) => e.stopPropagation()}

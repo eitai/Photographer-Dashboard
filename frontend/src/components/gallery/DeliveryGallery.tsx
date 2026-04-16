@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Download, Maximize2, Video } from 'lucide-react';
-import { API_BASE } from '@/lib/api';
+import { getImageUrl } from '@/lib/api';
 import { downloadZip } from '@/lib/downloadZip';
 import Masonry from 'react-masonry-css';
 import { FadeIn } from '@/components/FadeIn';
@@ -74,7 +74,7 @@ export const DeliveryGallery = ({ gallery, images, getImageUrl }: Props) => {
                         {v.originalName || t('gallery.video_section')}
                       </span>
                       <a
-                        href={`${API_BASE}${v.path}`}
+                        href={getImageUrl(v.path)}
                         download={v.originalName || v.filename}
                         className='ms-auto flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors shrink-0'
                       >
@@ -82,7 +82,7 @@ export const DeliveryGallery = ({ gallery, images, getImageUrl }: Props) => {
                         {t('gallery.download_video')}
                       </a>
                     </div>
-                    <video src={`${API_BASE}${v.path}`} controls className='w-full max-h-[70vh]' />
+                    <video src={getImageUrl(v.path)} controls className='w-full max-h-[70vh]' />
                   </div>
                 ))}
               </div>

@@ -1,12 +1,12 @@
 import { CheckSquare, Download, Trash2, Star, MessageCircle } from 'lucide-react';
 import { useI18n } from '@/lib/i18n';
+import { getImageUrl } from '@/lib/api';
 import type { GalleryData, GallerySubmission } from '@/types/gallery';
 
 interface SubmissionsSectionProps {
   galleries: GalleryData[];
   submissions: Record<string, GallerySubmission[]>;
   downloading: boolean;
-  API_BASE: string;
   downloadAsZip: (submission: GallerySubmission) => void;
   setDeleteSubTarget: (target: { galleryId: string; submissionId: string } | null) => void;
   setDeleteImageTarget: (target: { galleryId: string; submissionId: string; imageId: string } | null) => void;
@@ -16,7 +16,6 @@ export const SubmissionsSection = ({
   galleries,
   submissions,
   downloading,
-  API_BASE,
   downloadAsZip,
   setDeleteSubTarget,
   setDeleteImageTarget,
@@ -76,7 +75,7 @@ export const SubmissionsSection = ({
                     return (
                       <div key={img._id} className='relative group aspect-square rounded-md overflow-hidden bg-beige'>
                         <img
-                          src={`${API_BASE}${img.thumbnailPath || img.path}`}
+                          src={getImageUrl(img.thumbnailPath || img.path)}
                           alt={img.filename}
                           className='w-full h-full object-cover'
                           loading='lazy'

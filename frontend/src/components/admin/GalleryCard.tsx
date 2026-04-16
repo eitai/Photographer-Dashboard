@@ -6,7 +6,7 @@ import type { Client } from '@/types/admin';
 import type { GalleryData } from '@/types/gallery';
 import { WhatsAppIcon } from '@/pages/admin/dashboard/WhatsAppIcon';
 import { useGalleryPreviewImages } from '@/hooks/useQueries';
-import { API_BASE } from '@/lib/api';
+import { getImageUrl } from '@/lib/api';
 
 interface GalleryCardProps {
   g: GalleryData;
@@ -76,7 +76,7 @@ export const GalleryCard = ({
             previewImages.slice(0, 5).map((img) => (
               <img
                 key={img._id}
-                src={`${API_BASE}${img.thumbnailPath || img.path}`}
+                src={getImageUrl(img.thumbnailPath || img.path)}
                 alt=''
                 className='w-16 h-16 rounded-lg object-cover border border-gray-100 shrink-0'
               />

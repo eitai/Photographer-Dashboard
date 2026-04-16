@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { usePhotographer } from './PhotographerLayout';
 import { FadeIn } from '@/components/FadeIn';
 import { useI18n } from '@/lib/i18n';
-import api from '@/lib/api';
+import api, { getImageUrl } from '@/lib/api';
 import heroFallback from '@/assets/hero-family.jpg';
 import aboutFallback from '@/assets/about-koral.jpg';
 import { Phone, Camera, Heart, Users, Star, Baby, Diamond, Building2, Mountain, Play } from 'lucide-react';
@@ -152,8 +152,6 @@ const OVERLAY_CLASS: Record<'light' | 'medium' | 'dark', string> = {
   dark: 'bg-background/60',
 };
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-
 // ── Component ────────────────────────────────────────────────────────────────
 
 export const PhotographerHome = () => {
@@ -173,8 +171,8 @@ export const PhotographerHome = () => {
     staleTime: 5 * 60 * 1000,
   });
 
-  const heroSrc = settings?.heroImagePath ? `${API_BASE}${settings.heroImagePath}` : heroFallback;
-  const profileSrc = settings?.profileImagePath ? `${API_BASE}${settings.profileImagePath}` : aboutFallback;
+  const heroSrc = settings?.heroImagePath ? getImageUrl(settings.heroImagePath) : heroFallback;
+  const profileSrc = settings?.profileImagePath ? getImageUrl(settings.profileImagePath) : aboutFallback;
   const bio = settings?.bio || t('about.text');
   const overlayClass = OVERLAY_CLASS[settings?.heroOverlayOpacity ?? 'medium'];
 
@@ -198,7 +196,7 @@ export const PhotographerHome = () => {
         <meta property='og:title' content={`${photographerName} | Photography`} />
         <meta property='og:description' content={bio} />
         <meta property='og:url' content={canonicalUrl} />
-        {settings?.profileImagePath && <meta property='og:image' content={`${API_BASE}${settings.profileImagePath}`} />}
+        {settings?.profileImagePath && <meta property='og:image' content={getImageUrl(settings.profileImagePath)} />}
         <link rel='canonical' href={canonicalUrl} />
         <script type='application/ld+json'>
           {JSON.stringify({
@@ -370,7 +368,7 @@ export const PhotographerHome = () => {
                 <FadeIn key={img._id} delay={i * 0.04}>
                   <div className='break-inside-avoid rounded-xl overflow-hidden'>
                     <img
-                      src={`${API_BASE}${img.thumbnailPath || img.path}`}
+                      src={getImageUrl(img.thumbnailPath || img.path)}
                       alt={img.originalName || `${photographerName} photography showcase`}
                       className='w-full h-auto block hover:scale-[1.02] transition-transform duration-300'
                       loading='lazy'
@@ -513,7 +511,7 @@ export const PhotographerHome = () => {
                     {post.featuredImagePath ? (
                       <div className='aspect-[4/3] rounded-xl overflow-hidden mb-4 bg-secondary'>
                         <img
-                          src={`${API_BASE}${post.featuredImagePath}`}
+                          src={getImageUrl(post.featuredImagePath)}
                           alt={post.title}
                           className='w-full h-full object-cover transition-transform duration-300 group-hover:scale-105'
                           loading='lazy'
@@ -607,7 +605,7 @@ export const PhotographerHome = () => {
                     className='block aspect-square rounded-xl overflow-hidden bg-secondary'
                   >
                     <img
-                      src={`${API_BASE}${path}`}
+                      src={getImageUrl(path)}
                       alt={`${photographerName} Instagram`}
                       className='w-full h-full object-cover hover:scale-105 transition-transform duration-300'
                       loading='lazy'

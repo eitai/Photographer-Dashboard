@@ -3,9 +3,7 @@ import { Link } from 'react-router-dom';
 import { usePhotographer } from './PhotographerLayout';
 import { FadeIn } from '@/components/FadeIn';
 import { useI18n } from '@/lib/i18n';
-import api from '@/lib/api';
-
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+import api, { getImageUrl } from '@/lib/api';
 
 export const PhotographerBlog = () => {
   const { t } = useI18n();
@@ -46,7 +44,7 @@ export const PhotographerBlog = () => {
                     {post.featuredImagePath && (
                       <div className='aspect-[4/3] rounded-xl overflow-hidden mb-4 bg-beige'>
                         <img
-                          src={`${API_BASE}${post.featuredImagePath}`}
+                          src={getImageUrl(post.featuredImagePath)}
                           alt={post.title}
                           className='w-full h-full object-cover transition-transform duration-500 group-hover:scale-105'
                           loading='lazy'

@@ -411,6 +411,9 @@ const translations: Record<string, Record<Lang, string>> = {
   'admin.settings.update_password': { he: 'עדכון סיסמה', en: 'Update Password' },
   'admin.settings.system': { he: 'מערכת', en: 'System' },
   'admin.settings.api_server': { he: 'שרת API', en: 'API Server' },
+  'admin.settings.notifications': { he: 'הגדרות התראות', en: 'Notification Settings' },
+  'admin.settings.auto_send_email': { he: 'שליחת מייל אוטומטית בעת יצירת גלריה', en: 'Auto-send email when gallery is created' },
+  'admin.settings.auto_send_email_desc': { he: 'כאשר מופעל, מייל נשלח אוטומטית ללקוח עם קישור לגלריה עם יצירת גלריה חדשה.', en: 'When enabled, an email is automatically sent to the client with their gallery link upon gallery creation.' },
 
   // ── Admin: Product Orders ───────────────────────────────────────────────────
   'admin.products.title': { he: 'מוצרים / הזמנות', en: 'Products / Orders' },

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Package, Trash2, ChevronUp, Download, Plus } from 'lucide-react';
 import { useI18n } from '@/lib/i18n';
-import { API_BASE } from '@/lib/api';
+import { getImageUrl } from '@/lib/api';
 import { downloadZip } from '@/lib/downloadZip';
 import { createProductOrder, deleteProductOrder, type ProductOrder } from '@/services/productOrderService';
 import { useProductOrders, useAdminProducts, type AdminProduct } from '@/hooks/useQueries';
@@ -277,14 +277,14 @@ export const ProductOrdersSection = ({ clientId, clientName, galleries }: Props)
                       {order.selectedPhotoIds.map((photo) => (
                         <a
                           key={photo.imageId}
-                          href={`${API_BASE}${photo.path}`}
+                          href={getImageUrl(photo.path)}
                           target='_blank'
                           rel='noopener noreferrer'
                           className='aspect-square rounded-md overflow-hidden bg-beige block hover:opacity-80 transition-opacity'
                           title={photo.filename}
                         >
                           <img
-                            src={`${API_BASE}${photo.thumbnailPath || photo.path}`}
+                            src={getImageUrl(photo.thumbnailPath || photo.path)}
                             alt={photo.filename}
                             className='w-full h-full object-cover'
                             loading='lazy'

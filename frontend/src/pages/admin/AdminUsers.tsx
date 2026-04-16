@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { AdminLayout } from '@/components/admin/AdminLayout';
 import { useAuth } from '@/hooks/useAuth';
 import { useI18n } from '@/lib/i18n';
-import api, { API_BASE } from '@/lib/api';
+import api, { getImageUrl } from '@/lib/api';
 import { toast } from 'sonner';
 import { Trash2, Plus, Shield, User, Pencil, ExternalLink, X, Check, Search } from 'lucide-react';
 import type { AdminRecord, AdminSettings } from '@/types/admin';
@@ -508,7 +508,7 @@ export const AdminUsers = () => {
                           <p className='text-xs text-warm-gray'>{t('admin.users.hero_image_label')}</p>
                           {settings?.heroImagePath && (
                             <img
-                              src={`${API_BASE}${settings.heroImagePath}`}
+                              src={getImageUrl(settings.heroImagePath)}
                               alt='Hero'
                               className='w-full h-24 object-cover rounded-lg border border-beige'
                             />
@@ -544,7 +544,7 @@ export const AdminUsers = () => {
                           <p className='text-xs text-warm-gray'>{t('admin.users.profile_image_label')}</p>
                           {settings?.profileImagePath && (
                             <img
-                              src={`${API_BASE}${settings.profileImagePath}`}
+                              src={getImageUrl(settings.profileImagePath)}
                               alt='Profile'
                               className='w-24 h-24 object-cover rounded-full border border-beige mx-auto'
                             />
