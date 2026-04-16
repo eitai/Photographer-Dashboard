@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { StatusBadge } from '@/components/admin/StatusBadge';
-import { Copy, Check, Mail, ExternalLink, Trash2, Settings, Images } from 'lucide-react';
+import { Copy, Check, Mail, ExternalLink, Trash2, Settings, Images, MessageSquare } from 'lucide-react';
 import { useI18n } from '@/lib/i18n';
 import type { Client } from '@/types/admin';
 import type { GalleryData } from '@/types/gallery';
@@ -14,6 +14,8 @@ interface GalleryCardProps {
   copiedId: string | null;
   resendingId: string | null;
   resentId: string | null;
+  sendingSmId: string | null;
+  sentSmsId: string | null;
   showDeliveryFormFor: string | null;
   deliveryHeaderMessage: string;
   creatingDeliveryFor: string | null;
@@ -21,6 +23,7 @@ interface GalleryCardProps {
   copyLink: (token: string, galleryId: string) => void;
   whatsAppLink: (token: string) => string;
   resendEmail: (galleryId: string) => void;
+  sendSms: (galleryId: string) => void;
   setDeleteGalleryTarget: (id: string | null) => void;
   setShowDeliveryFormFor: (id: string | null) => void;
   setDeliveryHeaderMessage: (msg: string) => void;
@@ -33,6 +36,8 @@ export const GalleryCard = ({
   copiedId,
   resendingId,
   resentId,
+  sendingSmId,
+  sentSmsId,
   showDeliveryFormFor,
   deliveryHeaderMessage,
   creatingDeliveryFor,
@@ -40,6 +45,7 @@ export const GalleryCard = ({
   copyLink,
   whatsAppLink,
   resendEmail,
+  sendSms,
   setDeleteGalleryTarget,
   setShowDeliveryFormFor,
   setDeliveryHeaderMessage,
@@ -114,6 +120,16 @@ export const GalleryCard = ({
             title={t('admin.galleries.resend_email')}
           >
             {resentId === g._id ? <Check size={13} className='text-green-500' /> : <Mail size={13} />}
+          </button>
+        )}
+        {client.phone && (
+          <button
+            onClick={() => sendSms(g._id)}
+            disabled={sendingSmId === g._id}
+            className='p-2 rounded-lg border border-gray-100 bg-gray-50 text-warm-gray hover:text-blue-500 hover:bg-blue-50 transition-colors disabled:opacity-50'
+            title={t('admin.galleries.send_sms')}
+          >
+            {sentSmsId === g._id ? <Check size={13} className='text-green-500' /> : <MessageSquare size={13} />}
           </button>
         )}
         {client.phone && (

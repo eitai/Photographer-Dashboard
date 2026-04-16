@@ -4,10 +4,12 @@ const fs = require('fs');
 const Gallery = require('../models/Gallery');
 const GalleryImage = require('../models/GalleryImage');
 const Client = require('../models/Client');
+const SiteSettings = require('../models/SiteSettings');
 const { protect } = require('../middleware/auth');
 const checkQuota = require('../middleware/checkQuota');
 const asyncHandler = require('../middleware/asyncHandler');
 const { sendGalleryLink } = require('../services/emailService');
+const { sendGallerySms } = require('../services/smsService');
 const { withTransaction } = require('../utils/transaction');
 const { uploadVideo } = require('../middleware/upload');
 const { UUID_RE } = require('../utils/uuid');
@@ -76,10 +78,16 @@ router.post('/', protect, asyncHandler(async (req, res) => {
   });
 
   let emailSent = false;
+  let smsSent = false;
   if (clientId) {
+    const adminSettings = await SiteSettings.findOne({ adminId: req.admin.id });
+    const autoEmail = adminSettings?.autoSendGalleryEmail ?? true;
+    const autoSms = adminSettings?.autoSendGallerySms ?? false;
     const client = await Client.findById(clientId);
-    if (client?.email) {
-      const galleryUrl = `${process.env.FRONTEND_URL}/gallery/${gallery.token}`;
+    const galleryUrl = `${process.env.FRONTEND_URL}/gallery/${gallery.token}`;
+    const lang = req.admin.lang || 'he';
+
+    if (autoEmail && client?.email) {
       try {
         emailSent = await sendGalleryLink({
           clientName: client.name,
@@ -87,7 +95,7 @@ router.post('/', protect, asyncHandler(async (req, res) => {
           galleryName: gallery.name,
           galleryUrl,
           headerMessage: gallery.headerMessage,
-          lang: req.admin.lang || 'he',
+          lang,
         });
       } catch (_) {
         emailSent = false;
@@ -97,9 +105,22 @@ router.post('/', protect, asyncHandler(async (req, res) => {
         await Gallery.save(gallery);
       }
     }
+
+    if (autoSms && client?.phone) {
+      try {
+        smsSent = await sendGallerySms({
+          clientName: client.name,
+          clientPhone: client.phone,
+          galleryUrl,
+          lang,
+        });
+      } catch (_) {
+        smsSent = false;
+      }
+    }
   }
 
-  res.status(201).json({ ...gallery, emailSent });
+  res.status(201).json({ ...gallery, emailSent, smsSent });
 }));
 
 // POST /api/galleries/:id/delivery
@@ -176,6 +197,36 @@ router.post('/:id/resend-email', protect, asyncHandler(async (req, res) => {
   gallery.lastEmailSentAt = new Date();
   await Gallery.save(gallery);
   res.json({ message: 'Email sent', lastEmailSentAt: gallery.lastEmailSentAt });
+}));
+
+// POST /api/galleries/:id/send-sms
+router.post('/:id/send-sms', protect, asyncHandler(async (req, res) => {
+  if (!UUID_RE.test(req.params.id))
+    return res.status(400).json({ message: 'Invalid ID format' });
+
+  const gallery = await Gallery.findOne({ _id: req.params.id, adminId: req.admin.id }, { populate: true });
+  if (!gallery) return res.status(404).json({ message: 'Gallery not found' });
+
+  const clientObj = gallery.clientId;
+  const clientPhone = typeof clientObj === 'object' ? clientObj.phone : null;
+  const clientName = typeof clientObj === 'object' ? clientObj.name : null;
+
+  if (!clientPhone) return res.status(400).json({ message: 'Client has no phone number' });
+
+  const galleryUrl = `${process.env.FRONTEND_URL}/gallery/${gallery.token}`;
+  try {
+    await sendGallerySms({
+      clientName,
+      clientPhone,
+      galleryUrl,
+      lang: req.admin.lang || 'he',
+    });
+  } catch (err) {
+    console.error('[sms route] Twilio error:', err.message, err.code);
+    return res.status(503).json({ message: err.message || 'SMS failed', code: err.code });
+  }
+
+  res.json({ message: 'SMS sent' });
 }));
 
 // GET /api/galleries/:id

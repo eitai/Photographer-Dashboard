@@ -231,6 +231,15 @@ export function useResendGalleryEmail(clientId: string) {
   });
 }
 
+export function useSendGallerySms(clientId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (galleryId: string) => galleryService.sendGallerySms(galleryId),
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: queryKeys.galleriesByClient(clientId) }),
+  });
+}
+
 export function useDeleteGallery(clientId: string) {
   const queryClient = useQueryClient();
   return useMutation({

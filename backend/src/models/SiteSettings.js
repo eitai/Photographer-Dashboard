@@ -61,6 +61,8 @@ async function upsert(adminId, data, { populate } = {}) {
     packagesDisclaimer: 'packages_disclaimer',
     instagramFeedEnabled: 'instagram_feed_enabled',
     instagramFeedImages: 'instagram_feed_images',
+    autoSendGalleryEmail: 'auto_send_gallery_email',
+    autoSendGallerySms: 'auto_send_gallery_sms',
   };
 
   // JSONB columns: camelCase key → snake_case DB column

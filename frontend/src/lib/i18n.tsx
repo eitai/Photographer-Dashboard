@@ -238,6 +238,9 @@ const translations: Record<string, Record<Lang, string>> = {
   'admin.galleries.email_sent_success': { he: 'המייל נשלח בהצלחה ל{name}', en: 'Email sent successfully to {name}' },
   'admin.galleries.email_sent_error': { he: 'שגיאה בשליחת המייל ל{name}', en: 'Failed to send email to {name}' },
   'admin.galleries.whatsapp_send': { he: 'שלח בוואטסאפ', en: 'Send via WhatsApp' },
+  'admin.galleries.send_sms': { he: 'שלח SMS', en: 'Send SMS' },
+  'admin.galleries.sms_sent_success': { he: 'SMS נשלח בהצלחה ל{name}', en: 'SMS sent successfully to {name}' },
+  'admin.galleries.sms_sent_error': { he: 'שגיאה בשליחת SMS ל{name}', en: 'Failed to send SMS to {name}' },
   'admin.galleries.email_subject': { he: 'הגלריה שלך מוכנה, {name}', en: 'Your gallery is ready, {name}' },
   'admin.galleries.whatsapp_msg': {
     he: 'שלום {name}, הגלריה שלך מוכנה לצפייה 🤍\n{url}',
@@ -413,7 +416,15 @@ const translations: Record<string, Record<Lang, string>> = {
   'admin.settings.api_server': { he: 'שרת API', en: 'API Server' },
   'admin.settings.notifications': { he: 'הגדרות התראות', en: 'Notification Settings' },
   'admin.settings.auto_send_email': { he: 'שליחת מייל אוטומטית בעת יצירת גלריה', en: 'Auto-send email when gallery is created' },
-  'admin.settings.auto_send_email_desc': { he: 'כאשר מופעל, מייל נשלח אוטומטית ללקוח עם קישור לגלריה עם יצירת גלריה חדשה.', en: 'When enabled, an email is automatically sent to the client with their gallery link upon gallery creation.' },
+  'admin.settings.auto_send_email_desc': {
+    he: 'כאשר מופעל, מייל נשלח אוטומטית ללקוח עם קישור לגלריה עם יצירת גלריה חדשה.',
+    en: 'When enabled, an email is automatically sent to the client with their gallery link upon gallery creation.',
+  },
+  'admin.settings.auto_send_sms': { he: 'שליחת SMS אוטומטית בעת יצירת גלריה', en: 'Auto-send SMS when gallery is created' },
+  'admin.settings.auto_send_sms_desc': {
+    he: 'כאשר מופעל, SMS נשלח אוטומטית ללקוח עם קישור לגלריה.',
+    en: 'When enabled, an SMS is automatically sent to the client with their gallery link. Requires Twilio credentials.',
+  },
 
   // ── Admin: Product Orders ───────────────────────────────────────────────────
   'admin.products.title': { he: 'מוצרים / הזמנות', en: 'Products / Orders' },

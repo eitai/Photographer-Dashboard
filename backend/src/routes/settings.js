@@ -50,6 +50,8 @@ router.get('/', protect, asyncHandler(async (req, res) => {
     packagesDisclaimer: settings?.packagesDisclaimer || '',
     instagramFeedEnabled: settings?.instagramFeedEnabled || false,
     instagramFeedImages: settings?.instagramFeedImages || [],
+    autoSendGalleryEmail: settings?.autoSendGalleryEmail ?? true,
+    autoSendGallerySms: settings?.autoSendGallerySms ?? false,
   });
 }));
 
@@ -267,6 +269,19 @@ router.delete('/instagram-feed-image/:index', protect, asyncHandler(async (req, 
   await s3.deleteUpload(removedPath, UPLOADS_DIR);
 
   res.json({ instagramFeedImages: updated });
+}));
+
+// PUT /api/settings/notifications  — ADMIN
+router.put('/notifications', protect, asyncHandler(async (req, res) => {
+  const { autoSendGalleryEmail, autoSendGallerySms } = req.body;
+  const data = {};
+  if (autoSendGalleryEmail !== undefined) data.autoSendGalleryEmail = autoSendGalleryEmail !== false;
+  if (autoSendGallerySms !== undefined) data.autoSendGallerySms = !!autoSendGallerySms;
+  const settings = await SiteSettings.upsert(req.admin.id, data);
+  res.json({
+    autoSendGalleryEmail: settings.autoSendGalleryEmail ?? true,
+    autoSendGallerySms: settings.autoSendGallerySms ?? false,
+  });
 }));
 
 // POST /api/settings/hero-image  — ADMIN

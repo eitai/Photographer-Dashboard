@@ -48,7 +48,13 @@
       "Bash(curl -s -o /dev/null -w \"%{http_code}\" \"https://photographer-dashboard.arxentra.app/uploads/thumbnails/thumb_046a1c93f985c70a29b9eb2f54423153.jpg\")",
       "Bash(find /c/Users/eitai/Desktop/codevalue/arxentra/arxentra_web/helm -name \"*.yaml\" -type f -exec grep -l \"S3\\\\|AWS\\\\|s3\" {} \\\\;)",
       "Bash(git -C \"c:/Users/eitai/Desktop/codevalue/store test\" check-ignore backend/.env)",
-      "Bash(git -C \"c:/Users/eitai/Desktop/codevalue/store test\" ls-files backend/.env)"
+      "Bash(git -C \"c:/Users/eitai/Desktop/codevalue/store test\" ls-files backend/.env)",
+      "Bash(git -C \"c:/Users/eitai/Desktop/codevalue/store test\" check-ignore -v backend/uploads/)",
+      "Bash(grep -E \"\\\\.\\(tsx?|jsx?\\)$\")",
+      "Bash(grep -rn \"API_BASE.*\\\\.path\\\\|API_BASE.*Path\\\\|\\\\`\\\\${API_BASE}\" src/ --include=\"*.tsx\" --include=\"*.ts\")",
+      "Bash(curl -v \"http://localhost:5000/api/media/admins/8fd31cab-daec-44b9-80c2-1cbf91525ea7/thumbnails/thumb_d3ae29038a4a4cc8c8deb433438ab5db.jpg\")",
+      "Bash(curl -s \"http://localhost:5000/api/media/admins/8fd31cab-daec-44b9-80c2-1cbf91525ea7/thumbnails/thumb_d3ae29038a4a4cc8c8deb433438ab5db.jpg\" -o /dev/null -w \"HTTP status: %{http_code}\\\\nRedirect to: %{redirect_url}\\\\n\")",
+      "Bash(curl -sL \"http://localhost:5000/api/media/admins/8fd31cab-daec-44b9-80c2-1cbf91525ea7/thumbnails/thumb_d3ae29038a4a4cc8c8deb433438ab5db.jpg\" -o /dev/null -w \"Final HTTP status: %{http_code}\\\\n\")"
     ],
     "deny": [
       "Bash(taskkill *)",

@@ -349,6 +349,7 @@ export const AdminSettings = () => {
   const [systemTheme, setSystemTheme] = useState('soft');
   const [savingTheme, setSavingTheme] = useState(false);
   const [autoSendEmail, setAutoSendEmail] = useState(true);
+  const [autoSendSms, setAutoSendSms] = useState(false);
   const [savingNotifications, setSavingNotifications] = useState(false);
 
   // ── Populate from settings cache ────────────────────────────────────────────
@@ -393,6 +394,7 @@ export const AdminSettings = () => {
     setIgFeedEnabled(s.instagramFeedEnabled ?? false);
     setIgFeedImages(s.instagramFeedImages ?? []);
     setAutoSendEmail(s.autoSendGalleryEmail ?? true);
+    setAutoSendSms(s.autoSendGallerySms ?? false);
   }, [settingsData]);
 
   // ── Handlers: Identity ──────────────────────────────────────────────────────
@@ -495,7 +497,7 @@ export const AdminSettings = () => {
   const handleSaveNotifications = async () => {
     setSavingNotifications(true);
     try {
-      await api.put('/settings/notifications', { autoSendGalleryEmail: autoSendEmail });
+      await api.put('/settings/notifications', { autoSendGalleryEmail: autoSendEmail, autoSendGallerySms: autoSendSms });
       toast.success(t('admin.settings.landing_saved'));
       queryClient.invalidateQueries({ queryKey: queryKeys.settings });
     } catch {
@@ -1459,6 +1461,18 @@ export const AdminSettings = () => {
               <div>
                 <span className='text-sm text-charcoal'>{t('admin.settings.auto_send_email')}</span>
                 <p className='text-xs text-warm-gray mt-0.5'>{t('admin.settings.auto_send_email_desc')}</p>
+              </div>
+            </label>
+            <label className='flex items-start gap-3 cursor-pointer'>
+              <input
+                type='checkbox'
+                checked={autoSendSms}
+                onChange={(e) => setAutoSendSms(e.target.checked)}
+                className='mt-0.5 h-4 w-4 rounded border-beige accent-blush cursor-pointer'
+              />
+              <div>
+                <span className='text-sm text-charcoal'>{t('admin.settings.auto_send_sms')}</span>
+                <p className='text-xs text-warm-gray mt-0.5'>{t('admin.settings.auto_send_sms_desc')}</p>
               </div>
             </label>
             <div className='pt-2 border-t border-beige'>

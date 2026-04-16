@@ -14,12 +14,15 @@ interface GalleriesSectionProps {
   copiedId: string | null;
   resendingId: string | null;
   resentId: string | null;
+  sendingSmId: string | null;
+  sentSmsId: string | null;
   showDeliveryFormFor: string | null;
   deliveryHeaderMessage: string;
   creatingDeliveryFor: string | null;
   copyLink: (token: string, galleryId: string) => void;
   whatsAppLink: (token: string) => string;
   resendEmail: (id: string) => void;
+  sendSms: (id: string) => void;
   setDeleteGalleryTarget: (id: string) => void;
   setShowDeliveryFormFor: (id: string | null) => void;
   setDeliveryHeaderMessage: (msg: string) => void;
@@ -33,12 +36,15 @@ export const GalleriesSection = ({
   copiedId,
   resendingId,
   resentId,
+  sendingSmId,
+  sentSmsId,
   showDeliveryFormFor,
   deliveryHeaderMessage,
   creatingDeliveryFor,
   copyLink,
   whatsAppLink,
   resendEmail,
+  sendSms,
   setDeleteGalleryTarget,
   setShowDeliveryFormFor,
   setDeliveryHeaderMessage,
@@ -153,12 +159,15 @@ export const GalleriesSection = ({
           copiedId={copiedId}
           resendingId={resendingId}
           resentId={resentId}
+          sendingSmId={sendingSmId}
+          sentSmsId={sentSmsId}
           showDeliveryFormFor={showDeliveryFormFor}
           deliveryHeaderMessage={deliveryHeaderMessage}
           creatingDeliveryFor={creatingDeliveryFor}
           copyLink={copyLink}
           whatsAppLink={whatsAppLink}
           resendEmail={resendEmail}
+          sendSms={sendSms}
           setDeleteGalleryTarget={setDeleteGalleryTarget}
           setShowDeliveryFormFor={setShowDeliveryFormFor}
           setDeliveryHeaderMessage={setDeliveryHeaderMessage}

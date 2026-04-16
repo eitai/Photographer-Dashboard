@@ -18,6 +18,7 @@ import {
   useUpdateClient,
   useCreateDelivery,
   useResendGalleryEmail,
+  useSendGallerySms,
   useDeleteGallery,
   useDeleteSubmission,
   useDeleteSubmissionImage,
@@ -42,6 +43,7 @@ export const AdminClientDetail = () => {
   const updateClient = useUpdateClient(id!);
   const createDelivery = useCreateDelivery(id!);
   const resendEmail = useResendGalleryEmail(id!);
+  const sendSms = useSendGallerySms(id!);
   const deleteGalleryMutation = useDeleteGallery(id!);
   const deleteSubmissionMutation = useDeleteSubmission(id!);
   const deleteSubmissionImageMutation = useDeleteSubmissionImage(id!);
@@ -82,6 +84,7 @@ export const AdminClientDetail = () => {
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [downloading, setDownloading] = useState(false);
   const [resentId, setResentId] = useState<string | null>(null);
+  const [sentSmsId, setSentSmsId] = useState<string | null>(null);
   const [deleteImageTarget, setDeleteImageTarget] = useState<{ galleryId: string; submissionId: string; imageId: string } | null>(null);
   const [deleteSubTarget, setDeleteSubTarget] = useState<{ galleryId: string; submissionId: string } | null>(null);
   const [deleteGalleryTarget, setDeleteGalleryTarget] = useState<string | null>(null);
@@ -121,6 +124,18 @@ export const AdminClientDetail = () => {
     await resendEmail.mutateAsync(galleryId);
     setResentId(galleryId);
     setTimeout(() => setResentId(null), 2500);
+  };
+
+  const handleSendSms = async (galleryId: string) => {
+    try {
+      await sendSms.mutateAsync(galleryId);
+      setSentSmsId(galleryId);
+      setTimeout(() => setSentSmsId(null), 2500);
+      toast.success(t('admin.galleries.sms_sent_success').replace('{name}', client?.name ?? ''));
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
+      toast.error(msg || t('admin.galleries.sms_sent_error').replace('{name}', client?.name ?? ''));
+    }
   };
 
   const handleDeleteSubmission = async () => {
@@ -167,6 +182,7 @@ export const AdminClientDetail = () => {
   // Derive per-mutation pending IDs
   const creatingDeliveryFor = createDelivery.isPending ? createDelivery.variables?.galleryId ?? null : null;
   const resendingId = resendEmail.isPending ? resendEmail.variables ?? null : null;
+  const sendingSmId = sendSms.isPending ? sendSms.variables ?? null : null;
   const deletingImage = deleteSubmissionImageMutation.isPending;
   const deletingSubmission = deleteSubmissionMutation.isPending;
   const deletingGallery = deleteGalleryMutation.isPending;
@@ -196,12 +212,15 @@ export const AdminClientDetail = () => {
             copiedId={copiedId}
             resendingId={resendingId}
             resentId={resentId}
+            sendingSmId={sendingSmId}
+            sentSmsId={sentSmsId}
             showDeliveryFormFor={showDeliveryFormFor}
             deliveryHeaderMessage={deliveryHeaderMessage}
             creatingDeliveryFor={creatingDeliveryFor}
             copyLink={copyLink}
             whatsAppLink={whatsAppLink}
             resendEmail={handleResendEmail}
+            sendSms={handleSendSms}
             setDeleteGalleryTarget={setDeleteGalleryTarget}
             setShowDeliveryFormFor={setShowDeliveryFormFor}
             setDeliveryHeaderMessage={setDeliveryHeaderMessage}

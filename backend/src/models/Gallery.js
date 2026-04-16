@@ -26,7 +26,7 @@ function toRow(data) {
 async function _populateClient(gallery) {
   if (!gallery || !gallery.clientId) return gallery;
   const { rows } = await pool.query(
-    'SELECT id, name, email FROM clients WHERE id = $1',
+    'SELECT id, name, email, phone FROM clients WHERE id = $1',
     [gallery.clientId]
   );
   if (rows[0]) {

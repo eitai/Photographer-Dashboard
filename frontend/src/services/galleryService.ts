@@ -21,6 +21,9 @@ export const createDelivery = (galleryId: string, data: { headerMessage: string;
 export const resendGalleryEmail = (galleryId: string) =>
   api.post(`/galleries/${galleryId}/resend-email`).then((r) => r.data);
 
+export const sendGallerySms = (galleryId: string) =>
+  api.post(`/galleries/${galleryId}/send-sms`).then((r) => r.data);
+
 export const removeGallery = (galleryId: string) =>
   api.delete(`/galleries/${galleryId}`);
 
