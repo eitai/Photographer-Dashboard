@@ -29,6 +29,10 @@ router.get('/*', asyncHandler(async (req, res) => {
 
   const signedUrl = await s3.generatePresignedUrl(key);
 
+  // Override helmet's "same-origin" default so browsers can load these
+  // images cross-origin (e.g. frontend on :8080 loading from API on :5000).
+  res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+  res.setHeader('Access-Control-Allow-Origin', '*');
   // Allow browsers to cache the redirect for up to 1 hour.
   // The presigned URL itself is valid for 7 days, so a cached redirect
   // will keep working long after the cache entry expires.
