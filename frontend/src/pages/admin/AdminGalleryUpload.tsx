@@ -10,7 +10,6 @@ import { UploadQueue } from '@/components/admin/UploadQueue';
 import { useGalleryUpload } from '@/hooks/useGalleryUpload';
 import { useGalleryData } from '@/hooks/useGalleryData';
 import { useImageDeletion } from '@/hooks/useImageDeletion';
-import { useBeforeImageUpload } from '@/hooks/useBeforeImageUpload';
 import { useVideoUpload } from '@/hooks/useVideoUpload';
 import { useI18n } from '@/lib/i18n';
 import { ArrowLeft, CloudUpload, Video, Trash2, X, Images } from 'lucide-react';
@@ -28,7 +27,6 @@ export const AdminGalleryUpload = () => {
     setSelectedIds(new Set());
     loadImages();
   });
-  const { beforeInputRef, uploadingBefore, triggerUpload, handleBeforeUpload } = useBeforeImageUpload(id, loadImages);
   const { videoInputRef, videoQueue, deletingFilename, handleVideoUpload, handleVideoDelete, cancelUpload } = useVideoUpload(
     id,
     setGallery,
@@ -66,7 +64,6 @@ export const AdminGalleryUpload = () => {
     <AdminLayout>
       {/* Fills the layout content area — no outer scroll */}
       <div className='flex flex-col h-full -mx-4 md:-mx-8 -my-6 overflow-hidden'>
-
         {/* ── Header ── */}
         <div className='shrink-0 px-4 md:px-8 pt-4 pb-0 bg-white border-b border-beige'>
           {/* Back button */}
@@ -83,12 +80,8 @@ export const AdminGalleryUpload = () => {
           {/* Gallery title row */}
           <div className='flex items-start justify-between gap-4 mb-4'>
             <div className='min-w-0'>
-              <h1 className='text-xl font-semibold text-charcoal truncate leading-tight'>
-                {gallery.name}
-              </h1>
-              {gallery.clientName && (
-                <p className='text-sm text-warm-gray mt-0.5 truncate'>{gallery.clientName}</p>
-              )}
+              <h1 className='text-xl font-semibold text-charcoal truncate leading-tight'>{gallery.name}</h1>
+              {gallery.clientName && <p className='text-sm text-warm-gray mt-0.5 truncate'>{gallery.clientName}</p>}
             </div>
             <div className='shrink-0 pt-0.5'>
               <StatusBadge status={gallery.status} />
@@ -108,9 +101,11 @@ export const AdminGalleryUpload = () => {
               <Images size={14} />
               {t('admin.gallery.tab_images')}
               {images.length > 0 && (
-                <span className={`text-xs px-1.5 py-0.5 rounded-full ${
-                  activeTab === 'images' ? 'bg-blush/20 text-charcoal' : 'bg-beige text-warm-gray'
-                }`}>
+                <span
+                  className={`text-xs px-1.5 py-0.5 rounded-full ${
+                    activeTab === 'images' ? 'bg-blush/20 text-charcoal' : 'bg-beige text-warm-gray'
+                  }`}
+                >
                   {images.length}
                 </span>
               )}
@@ -125,11 +120,13 @@ export const AdminGalleryUpload = () => {
             >
               <Video size={14} />
               {t('admin.gallery.tab_videos')}
-              {(videoCount > 0 || videoQueue.filter(v => !v.done && !v.cancelled).length > 0) && (
-                <span className={`text-xs px-1.5 py-0.5 rounded-full ${
-                  activeTab === 'videos' ? 'bg-blush/20 text-charcoal' : 'bg-beige text-warm-gray'
-                }`}>
-                  {videoCount + videoQueue.filter(v => !v.done && !v.cancelled).length}
+              {(videoCount > 0 || videoQueue.filter((v) => !v.done && !v.cancelled).length > 0) && (
+                <span
+                  className={`text-xs px-1.5 py-0.5 rounded-full ${
+                    activeTab === 'videos' ? 'bg-blush/20 text-charcoal' : 'bg-beige text-warm-gray'
+                  }`}
+                >
+                  {videoCount + videoQueue.filter((v) => !v.done && !v.cancelled).length}
                 </span>
               )}
             </button>
@@ -139,19 +136,24 @@ export const AdminGalleryUpload = () => {
         {/* ── IMAGES TAB ── */}
         {activeTab === 'images' && (
           <div className='flex flex-col flex-1 overflow-hidden bg-white'>
-
             {/* Drop zone — compact, fixed */}
             <div className='shrink-0 px-4 md:px-8 pt-4'>
               <div
-                role="button"
+                role='button'
                 tabIndex={0}
                 aria-label={t('admin.upload.drop_images_label')}
-                onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  setDragging(true);
+                }}
                 onDragLeave={() => setDragging(false)}
                 onDrop={onDrop}
                 onClick={() => inputRef.current?.click()}
                 onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); inputRef.current?.click(); }
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    inputRef.current?.click();
+                  }
                 }}
                 className={`flex items-center gap-3 border-2 border-dashed rounded-xl px-5 py-3 cursor-pointer transition-colors ${
                   dragging ? 'border-blush bg-blush/10' : 'border-beige hover:border-blush/50 bg-gray-50'
@@ -190,16 +192,14 @@ export const AdminGalleryUpload = () => {
             </div>
 
             {/* Image grid — only scrollable area */}
-            <div className='flex-1 overflow-y-auto px-4 md:px-8 pb-6'>
+            <div className='flex-1 overflow-y-auto py-4 px-4 md:px-8 pb-6'>
               {images.length > 0 && (
                 <ImageGrid
                   images={images}
                   selectedIds={selectedIds}
-                  uploadingBefore={uploadingBefore}
                   onToggleSelect={toggleSelect}
                   onOpenLightbox={setLightboxIndex}
                   onRequestDelete={(imgId) => setToDelete([imgId])}
-                  onTriggerBeforeUpload={triggerUpload}
                 />
               )}
               {images.length === 0 && queue.length === 0 && (
@@ -212,7 +212,6 @@ export const AdminGalleryUpload = () => {
         {/* ── VIDEOS TAB ── */}
         {activeTab === 'videos' && (
           <div className='flex flex-col flex-1 overflow-hidden bg-white'>
-
             {/* Drop zone — compact, fixed */}
             <div className='shrink-0 px-4 md:px-8 pt-4'>
               <input
@@ -227,12 +226,15 @@ export const AdminGalleryUpload = () => {
                 }}
               />
               <div
-                role="button"
+                role='button'
                 tabIndex={0}
                 aria-label={t('admin.gallery.drop_video_label')}
                 onClick={() => videoInputRef.current?.click()}
                 onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); videoInputRef.current?.click(); }
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    videoInputRef.current?.click();
+                  }
                 }}
                 className='flex items-center gap-3 border-2 border-dashed border-beige hover:border-blush/50 rounded-xl px-5 py-3 cursor-pointer transition-colors bg-gray-50'
               >
@@ -258,13 +260,24 @@ export const AdminGalleryUpload = () => {
                         style={{ width: `${item.progress}%` }}
                       />
                     </div>
-                    <span className={`shrink-0 w-16 text-right ${
-                      item.error ? 'text-rose-500' : item.cancelled ? 'text-warm-gray' : item.done ? 'text-green-600' : 'text-charcoal'
-                    }`}>
-                      {item.error ? t('admin.upload.error')
-                        : item.cancelled ? t('admin.gallery.video_cancelled')
-                        : item.done ? t('admin.upload.done')
-                        : `${item.progress}%`}
+                    <span
+                      className={`shrink-0 w-16 text-right ${
+                        item.error
+                          ? 'text-rose-500'
+                          : item.cancelled
+                            ? 'text-warm-gray'
+                            : item.done
+                              ? 'text-green-600'
+                              : 'text-charcoal'
+                      }`}
+                    >
+                      {item.error
+                        ? t('admin.upload.error')
+                        : item.cancelled
+                          ? t('admin.gallery.video_cancelled')
+                          : item.done
+                            ? t('admin.upload.done')
+                            : `${item.progress}%`}
                     </span>
                     {!item.done && !item.error && !item.cancelled && (
                       <button
@@ -303,26 +316,13 @@ export const AdminGalleryUpload = () => {
                     </div>
                   ))}
                 </div>
-              ) : videoQueue.length === 0 && (
-                <p className='text-sm text-warm-gray text-center py-16'>{t('admin.upload.no_images')}</p>
+              ) : (
+                videoQueue.length === 0 && <p className='text-sm text-warm-gray text-center py-16'>{t('admin.upload.no_images')}</p>
               )}
             </div>
           </div>
         )}
       </div>
-
-      {/* Hidden inputs */}
-      <input
-        ref={beforeInputRef}
-        type='file'
-        accept='image/*'
-        className='hidden'
-        onChange={(e) => {
-          const file = e.target.files?.[0];
-          if (file) handleBeforeUpload(file);
-          e.target.value = '';
-        }}
-      />
 
       {toDelete.length > 0 && (
         <DeleteConfirmModal

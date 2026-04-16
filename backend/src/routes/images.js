@@ -76,8 +76,8 @@ router.post('/', protect, checkQuota, upload.array('images', 5000), validateImag
 
       // Upload to S3 (or local disk if S3 not configured). Throws on failure — no silent fallback.
       const [imagePath, thumbnailPath] = await Promise.all([
-        s3.processUpload(file),
-        s3.processThumbnail(thumbBuffer, thumbFilename, THUMB_DIR),
+        s3.processUpload(file, req.admin.id),
+        s3.processThumbnail(thumbBuffer, thumbFilename, THUMB_DIR, req.admin.id),
       ]);
       const nameWithoutExt = path.parse(file.originalname).name;
       const matchedOriginal = selectedImageMap[nameWithoutExt];
@@ -115,7 +115,7 @@ router.patch('/:imageId/before', protect, checkQuota, upload.single('before'), v
     await s3.deleteUpload(image.beforePath, UPLOADS_DIR);
   }
 
-  image.beforePath = await s3.processUpload(req.file);
+  image.beforePath = await s3.processUpload(req.file, req.admin.id);
   await GalleryImage.save(image);
   res.json(image);
 }));

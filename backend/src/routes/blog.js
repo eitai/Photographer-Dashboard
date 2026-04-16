@@ -38,7 +38,7 @@ router.post('/', protect, upload.single('featuredImage'), validateImageMagicByte
     title, content, seoTitle, seoDescription, category, published, publishedAt,
     adminId: req.admin.id,
   };
-  if (req.file) data.featuredImagePath = await s3.processUpload(req.file);
+  if (req.file) data.featuredImagePath = await s3.processUpload(req.file, req.admin.id);
   const post = await BlogPost.create(data);
   res.status(201).json(post);
 }));
@@ -49,7 +49,7 @@ router.put('/:id', protect, upload.single('featuredImage'), validateImageMagicBy
     return res.status(400).json({ message: 'Invalid ID format' });
   const { title, content, seoTitle, seoDescription, category, published, publishedAt } = req.body;
   const data = { title, content, seoTitle, seoDescription, category, published, publishedAt };
-  if (req.file) data.featuredImagePath = await s3.processUpload(req.file);
+  if (req.file) data.featuredImagePath = await s3.processUpload(req.file, req.admin.id);
   const post = await BlogPost.findOneAndUpdate(
     { _id: req.params.id, adminId: req.admin.id },
     data

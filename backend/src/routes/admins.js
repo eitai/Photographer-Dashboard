@@ -132,14 +132,14 @@ router.put('/:id/landing', asyncHandler(async (req, res) => {
 // POST /api/admins/:id/hero-image
 router.post('/:id/hero-image', upload.single('image'), validateImageMagicBytes, asyncHandler(async (req, res) => {
   if (!req.file) return res.status(400).json({ message: 'No image uploaded' });
-  const heroImagePath = await replaceUploadedFile(req.params.id, 'heroImagePath', await s3.processUpload(req.file), { SiteSettings, fs });
+  const heroImagePath = await replaceUploadedFile(req.params.id, 'heroImagePath', await s3.processUpload(req.file, req.params.id), { SiteSettings, fs });
   res.json({ heroImagePath });
 }));
 
 // POST /api/admins/:id/profile-image
 router.post('/:id/profile-image', upload.single('image'), validateImageMagicBytes, asyncHandler(async (req, res) => {
   if (!req.file) return res.status(400).json({ message: 'No image uploaded' });
-  const profileImagePath = await replaceUploadedFile(req.params.id, 'profileImagePath', await s3.processUpload(req.file), { SiteSettings, fs });
+  const profileImagePath = await replaceUploadedFile(req.params.id, 'profileImagePath', await s3.processUpload(req.file, req.params.id), { SiteSettings, fs });
   res.json({ profileImagePath });
 }));
 

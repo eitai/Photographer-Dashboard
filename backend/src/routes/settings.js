@@ -244,7 +244,7 @@ router.post('/instagram-feed-image', protect, upload.single('image'), validateIm
     return res.status(400).json({ message: 'Maximum 9 Instagram feed images allowed' });
   }
 
-  const newPath = await s3.processUpload(req.file);
+  const newPath = await s3.processUpload(req.file, req.admin.id);
   const updated = [...current, newPath];
   const settings = await SiteSettings.upsert(req.admin.id, { instagramFeedImages: updated });
   res.json({ instagramFeedImages: settings.instagramFeedImages || [] });
@@ -272,7 +272,7 @@ router.delete('/instagram-feed-image/:index', protect, asyncHandler(async (req, 
 // POST /api/settings/hero-image  — ADMIN
 router.post('/hero-image', protect, upload.single('image'), validateImageMagicBytes, asyncHandler(async (req, res) => {
   if (!req.file) return res.status(400).json({ message: 'No image provided' });
-  const heroImagePath = await replaceUploadedFile(req.admin.id, 'heroImagePath', await s3.processUpload(req.file), { SiteSettings, fs });
+  const heroImagePath = await replaceUploadedFile(req.admin.id, 'heroImagePath', await s3.processUpload(req.file, req.admin.id), { SiteSettings, fs });
   res.json({ heroImagePath });
 }));
 

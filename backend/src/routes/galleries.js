@@ -258,7 +258,7 @@ router.post('/:id/video', protect, checkQuota, uploadVideo.array('videos', 20), 
 
   const currentVideos = Array.isArray(gallery.videos) ? gallery.videos : [];
   for (const file of req.files) {
-    const videoPath = await s3.processUpload(file);
+    const videoPath = await s3.processUpload(file, req.admin.id);
     currentVideos.push({
       path: videoPath,
       filename: file.filename,

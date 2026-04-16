@@ -1,14 +1,24 @@
 /**
  * S3-compatible storage client (AWS S3, Cloudflare R2, DigitalOcean Spaces, MinIO).
  *
+ * Folder structure inside the bucket:
+ *   admins/<adminId>/<filename>              ← originals (images, videos, blog, settings)
+ *   admins/<adminId>/thumbnails/<filename>   ← Sharp-generated thumbnails
+ *
  * All env vars are read at call time (not module load time) so dotenv timing
  * is never an issue — the values are always current when a function runs.
+ *
+ * Behaviour:
+ *   S3 configured + success  → file stored in S3, local temp deleted
+ *   S3 configured + failure  → local temp deleted, error thrown (no disk fallback)
+ *   S3 not configured (dev)  → local disk storage as before
  */
-const { S3Client, DeleteObjectCommand } = require('@aws-sdk/client-s3');
+const { S3Client, DeleteObjectCommand, ListObjectsV2Command } = require('@aws-sdk/client-s3');
 const { Upload } = require('@aws-sdk/lib-storage');
 const fs   = require('fs');
 const path = require('path');
 
+// ── Config helper (reads env at call time) ────────────────────────────────────
 function cfg() {
   return {
     endpoint:  (process.env.S3_ENDPOINT   || '').trim() || undefined,
@@ -26,10 +36,10 @@ function isEnabled() {
   return Boolean(c.bucket && c.publicUrl && c.keyId && c.secret);
 }
 
+// ── S3 client singleton ───────────────────────────────────────────────────────
 let _client = null;
 
 function _getClient() {
-  // Reset client if config may have changed (first call after dotenv load)
   if (!_client) {
     const c = cfg();
     const opts = {
@@ -42,16 +52,44 @@ function _getClient() {
   return _client;
 }
 
+// ── Key / URL helpers ─────────────────────────────────────────────────────────
+
+/**
+ * Build the S3 key for an original file.
+ * With adminId:  admins/<adminId>/<filename>
+ * Without:       uploads/<filename>  (legacy fallback)
+ */
+function originalKey(filename, adminId) {
+  return adminId ? `admins/${adminId}/${filename}` : `uploads/${filename}`;
+}
+
+/**
+ * Build the S3 key for a thumbnail file.
+ * With adminId:  admins/<adminId>/thumbnails/<filename>
+ * Without:       uploads/thumbnails/<filename>  (legacy fallback)
+ */
+function thumbnailKey(filename, adminId) {
+  return adminId
+    ? `admins/${adminId}/thumbnails/${filename}`
+    : `uploads/thumbnails/${filename}`;
+}
+
 function getPublicUrl(key) {
   return `${cfg().publicUrl}/${key}`;
 }
 
+/**
+ * Extract an S3 key from a full public URL.
+ * Returns null for legacy local "/uploads/..." paths.
+ */
 function urlToKey(storedPath) {
   const { publicUrl } = cfg();
   if (!storedPath || !publicUrl) return null;
   if (storedPath.startsWith(publicUrl + '/')) return storedPath.slice(publicUrl.length + 1);
   return null;
 }
+
+// ── Low-level S3 operations ───────────────────────────────────────────────────
 
 async function uploadFile(localPath, key, contentType = 'application/octet-stream') {
   const upload = new Upload({
@@ -77,20 +115,24 @@ async function deleteFile(key) {
   } catch { /* best-effort */ }
 }
 
+// ── High-level helpers used by routes ─────────────────────────────────────────
+
 /**
  * Upload a multer file to S3 and delete the local temp file.
- * If S3 is not configured → saves to local disk (dev mode).
- * If S3 is configured but fails → deletes the temp file and throws (no local fallback).
+ *   - S3 not configured → save to local disk (dev mode)
+ *   - S3 configured + failure → delete temp file, throw error (no disk fallback)
+ *
+ * @param {object} file     Multer file object
+ * @param {string} adminId  Admin's UUID — used as S3 folder prefix
  */
-async function processUpload(file) {
+async function processUpload(file, adminId) {
   if (!isEnabled()) return `/uploads/${file.filename}`;
-  const key = `uploads/${file.filename}`;
+  const key = originalKey(file.filename, adminId);
   try {
     const url = await uploadFile(file.path, key, file.mimetype);
     try { fs.unlinkSync(file.path); } catch { /* ignore */ }
     return url;
   } catch (err) {
-    // Clean up temp file — don't leave it on disk
     try { fs.unlinkSync(file.path); } catch { /* ignore */ }
     throw err;
   }
@@ -98,18 +140,26 @@ async function processUpload(file) {
 
 /**
  * Upload a Sharp thumbnail buffer to S3 (or write to disk if S3 not configured).
- * If S3 is configured but fails → throws (no local fallback).
+ *
+ * @param {Buffer} buffer
+ * @param {string} thumbFilename  e.g. "thumb_abc123.jpg"
+ * @param {string} thumbDir       Absolute path to local thumbnails dir (dev fallback only)
+ * @param {string} adminId        Admin's UUID — used as S3 folder prefix
  */
-async function processThumbnail(buffer, thumbFilename, thumbDir) {
+async function processThumbnail(buffer, thumbFilename, thumbDir, adminId) {
   if (!isEnabled()) {
     fs.writeFileSync(path.join(thumbDir, thumbFilename), buffer);
     return `/uploads/thumbnails/${thumbFilename}`;
   }
-  return await uploadBuffer(buffer, `uploads/thumbnails/${thumbFilename}`, 'image/jpeg');
+  const key = thumbnailKey(thumbFilename, adminId);
+  return await uploadBuffer(buffer, key, 'image/jpeg');
 }
 
 /**
- * Delete a stored file from S3 (full URL) or local disk (relative path).
+ * Delete a stored file from S3 (full URL) or local disk (relative "/uploads/..." path).
+ *
+ * @param {string} storedPath  As saved in the DB
+ * @param {string} uploadsDir  Absolute path to local uploads dir (legacy deletes)
  */
 async function deleteUpload(storedPath, uploadsDir) {
   if (!storedPath) return;
@@ -124,23 +174,46 @@ async function deleteUpload(storedPath, uploadsDir) {
   }
 }
 
-// Print S3 status once at first call — deferred so dotenv has run by then
+// ── Storage calculation ───────────────────────────────────────────────────────
+
+/**
+ * Sum the total size in bytes of all S3 objects under admins/<adminId>/.
+ * Uses paginated ListObjectsV2 so it handles any number of objects.
+ * Returns 0 if S3 is not configured.
+ */
+async function listAdminStorageBytes(adminId) {
+  if (!isEnabled()) return 0;
+  let totalBytes = 0;
+  let continuationToken;
+  do {
+    const res = await _getClient().send(new ListObjectsV2Command({
+      Bucket: cfg().bucket,
+      Prefix: `admins/${adminId}/`,
+      ContinuationToken: continuationToken,
+    }));
+    for (const obj of res.Contents || []) totalBytes += obj.Size || 0;
+    continuationToken = res.NextContinuationToken;
+  } while (continuationToken);
+  return totalBytes;
+}
+
+// ── Startup status log (fires on first upload call) ──────────────────────────
 let _logged = false;
-function logStatus() {
+function _logStatus() {
   if (_logged) return;
   _logged = true;
   const logger = require('../utils/logger');
   const c = cfg();
   if (isEnabled()) {
-    logger.info(`[S3] enabled — bucket: ${c.bucket}, region: ${c.region}, endpoint: ${c.endpoint || 'default AWS'}`);
+    logger.info(`[S3] enabled — bucket: ${c.bucket}, region: ${c.region}`);
   } else {
-    const missing = ['S3_BUCKET','S3_PUBLIC_URL','AWS_ACCESS_KEY_ID','AWS_SECRET_ACCESS_KEY']
+    const missing = ['S3_BUCKET', 'S3_PUBLIC_URL', 'AWS_ACCESS_KEY_ID', 'AWS_SECRET_ACCESS_KEY']
       .filter(k => !process.env[k]);
     logger.warn(`[S3] disabled — missing env vars: ${missing.join(', ')}`);
   }
 }
 
-// Wrap exported functions to log status on first use
+// Wrap high-level exports to log status on first use
 const _orig = { processUpload, processThumbnail, deleteUpload };
 module.exports = {
   isEnabled,
@@ -149,7 +222,8 @@ module.exports = {
   uploadFile,
   uploadBuffer,
   deleteFile,
-  deleteUpload: (...a) => { logStatus(); return _orig.deleteUpload(...a); },
-  processUpload: (...a) => { logStatus(); return _orig.processUpload(...a); },
-  processThumbnail: (...a) => { logStatus(); return _orig.processThumbnail(...a); },
+  listAdminStorageBytes,
+  processUpload:    (...a) => { _logStatus(); return _orig.processUpload(...a); },
+  processThumbnail: (...a) => { _logStatus(); return _orig.processThumbnail(...a); },
+  deleteUpload:     (...a) => { _logStatus(); return _orig.deleteUpload(...a); },
 };

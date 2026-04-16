@@ -1,4 +1,4 @@
-import { Check, Maximize2, Trash2, ImagePlus } from 'lucide-react';
+import { Check, Maximize2, Trash2 } from 'lucide-react';
 import { useI18n } from '@/lib/i18n';
 import { API_BASE } from '@/lib/api';
 import { GalleryImage } from '@/types/admin';
@@ -6,21 +6,17 @@ import { GalleryImage } from '@/types/admin';
 interface Props {
   images: GalleryImage[];
   selectedIds: Set<string>;
-  uploadingBefore: string | null;
   onToggleSelect: (id: string) => void;
   onOpenLightbox: (index: number) => void;
   onRequestDelete: (id: string) => void;
-  onTriggerBeforeUpload: (id: string) => void;
 }
 
 export const ImageGrid = ({
   images,
   selectedIds,
-  uploadingBefore,
   onToggleSelect,
   onOpenLightbox,
   onRequestDelete,
-  onTriggerBeforeUpload,
 }: Props) => {
   const { t } = useI18n();
 
@@ -65,18 +61,7 @@ export const ImageGrid = ({
               <Maximize2 size={11} />
             </button>
 
-            <button
-              onClick={(e) => { e.stopPropagation(); onTriggerBeforeUpload(img._id); }}
-              disabled={uploadingBefore === img._id}
-              className={`absolute bottom-1 start-1 p-1.5 rounded-xl text-white transition-opacity ${
-                img.beforePath
-                  ? 'bg-blush/80 opacity-100'
-                  : 'bg-black/50 opacity-0 group-hover:opacity-100 [@media(hover:none)]:opacity-100'
-              } ${uploadingBefore === img._id ? 'opacity-60' : ''}`}
-              title='Upload before image'
-            >
-              <ImagePlus size={11} />
-            </button>
+
           </div>
         );
       })}
