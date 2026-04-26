@@ -6,6 +6,7 @@ import type { PhotographerSocial } from '@/pages/photographer/PhotographerLayout
 
 interface NavbarProps {
   photographerName?: string;
+  logoUrl?: string;
   username?: string;
   social?: PhotographerSocial;
 }
@@ -27,7 +28,7 @@ const toWhatsApp = (phone: string) => {
   return digits.startsWith('0') ? '972' + digits.slice(1) : digits;
 };
 
-export const Navbar = ({ photographerName, username, social }: NavbarProps = {}) => {
+export const Navbar = ({ photographerName, logoUrl, username, social }: NavbarProps = {}) => {
   const { t, lang, toggleLang } = useI18n();
   const location = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -42,8 +43,11 @@ export const Navbar = ({ photographerName, username, social }: NavbarProps = {})
   return (
     <nav className='fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-md border-b border-border/50'>
       <div className='container-narrow flex items-center justify-between h-16'>
-        <Link to={`${base}/`} className=' text-xl tracking-wide text-foreground'>
-          {photographerName || 'Koral Photography'}
+        <Link to={`${base}/`} className='flex items-center shrink-0'>
+          {logoUrl
+            ? <img src={logoUrl} alt={photographerName || 'Studio logo'} className='h-8 w-auto object-contain' />
+            : <span className='text-xl tracking-wide text-foreground'>{photographerName || 'Koral Photography'}</span>
+          }
         </Link>
 
         {/* Desktop nav links */}

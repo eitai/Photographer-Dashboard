@@ -35,6 +35,7 @@ async function upsert(adminId, data, { populate } = {}) {
     bio: 'bio',
     heroImagePath: 'hero_image_path',
     profileImagePath: 'profile_image_path',
+    logoImagePath: 'logo_image_path',
     phone: 'phone',
     instagramHandle: 'instagram_handle',
     facebookUrl: 'facebook_url',

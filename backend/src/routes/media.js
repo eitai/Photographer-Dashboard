@@ -1,20 +1,29 @@
 const express = require('express');
+const { Readable } = require('stream');
+const helmet = require('helmet');
 const asyncHandler = require('../middleware/asyncHandler');
 const s3 = require('../config/s3');
 
 const router = express.Router();
 
+// Override Helmet's app-level "same-origin" CORP — media must load cross-origin
+// (frontend at :8080 embeds images/videos served from API at :5000).
+router.use(helmet.crossOriginResourcePolicy({ policy: 'cross-origin' }));
+
+const VIDEO_EXT = /\.(mp4|mov|avi|webm)$/i;
+
 /**
  * GET /api/media/<s3-key>
  *
- * No authentication required — gallery images must be accessible to clients.
- * Generates a presigned S3 URL and redirects the browser to it.
+ * No authentication required — gallery media must be accessible to clients.
  *
- * The key must start with "admins/" — this validates that only objects stored
- * under our per-admin prefix can be served (no path-traversal to other buckets).
+ * Images  → fast 302 redirect to a presigned URL (signing is local HMAC, no S3 call).
+ * Videos  → content is proxied so the browser can send Range requests for seeking.
+ *           Redirecting to a presigned URL breaks video streaming because each range
+ *           request gets a new presigned URL (different signature timestamp), which
+ *           confuses browsers trying to buffer/seek.
  *
- * The presigned URL signing is a local HMAC operation (no S3 network call),
- * so this endpoint is fast enough to handle all image requests.
+ * The key must start with "admins/" — prevents path-traversal to other bucket paths.
  */
 router.get('/*', asyncHandler(async (req, res) => {
   if (!s3.isEnabled()) {
@@ -27,17 +36,39 @@ router.get('/*', asyncHandler(async (req, res) => {
     return res.status(400).json({ message: 'Invalid media key' });
   }
 
-  const signedUrl = await s3.generatePresignedUrl(key);
-
-  // Override helmet's "same-origin" default so browsers can load these
-  // images cross-origin (e.g. frontend on :8080 loading from API on :5000).
+  // Allow cross-origin loads (frontend on :8080 loading from API on :5000)
   res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
   res.setHeader('Access-Control-Allow-Origin', '*');
-  // Allow browsers to cache the redirect for up to 1 hour.
-  // The presigned URL itself is valid for 7 days, so a cached redirect
-  // will keep working long after the cache entry expires.
+
+  const signedUrl = await s3.generatePresignedUrl(key);
+  const isVideo = VIDEO_EXT.test(key) || !!req.headers.range;
+
+  // ── Images: fast redirect ─────────────────────────────────────────────────
+  if (!isVideo) {
+    res.setHeader('Cache-Control', 'private, max-age=3600');
+    return res.redirect(302, signedUrl);
+  }
+
+  // ── Videos: proxy with range support ─────────────────────────────────────
+  const upstreamHeaders = {};
+  if (req.headers.range) upstreamHeaders['Range'] = req.headers.range;
+
+  const upstream = await fetch(signedUrl, { headers: upstreamHeaders });
+
+  if (!upstream.ok) {
+    return res.status(upstream.status).json({ message: 'Media unavailable' });
+  }
+
+  // Forward content headers so the browser knows size, range, and type
+  for (const h of ['content-type', 'content-length', 'content-range', 'accept-ranges']) {
+    const val = upstream.headers.get(h);
+    if (val) res.setHeader(h, val);
+  }
   res.setHeader('Cache-Control', 'private, max-age=3600');
-  res.redirect(302, signedUrl);
+  res.status(upstream.status);
+
+  if (!upstream.body) return res.end();
+  Readable.fromWeb(upstream.body).pipe(res);
 }));
 
 module.exports = router;

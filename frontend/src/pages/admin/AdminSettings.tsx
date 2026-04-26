@@ -280,6 +280,12 @@ export const AdminSettings = () => {
   const [uploadingHero, setUploadingHero] = useState(false);
   const heroInputRef = useRef<HTMLInputElement>(null);
 
+  // ── Logo state ──────────────────────────────────────────────────────────────
+  const [logoPreview, setLogoPreview] = useState('');
+  const [uploadingLogo, setUploadingLogo] = useState(false);
+  const [removingLogo, setRemovingLogo] = useState(false);
+  const logoInputRef = useRef<HTMLInputElement>(null);
+
   // ── About tab state ─────────────────────────────────────────────────────────
   const [about, setAbout] = useState({
     aboutSectionTitle: '',
@@ -379,6 +385,8 @@ export const AdminSettings = () => {
 
     if (s.heroImagePath) setHeroPreview(getImageUrl(s.heroImagePath));
     if (s.profileImagePath) setProfilePreview(getImageUrl(s.profileImagePath));
+    if (s.logoImagePath) setLogoPreview(getImageUrl(s.logoImagePath));
+    else setLogoPreview('');
 
     setServicesEnabled(s.servicesEnabled ?? false);
     setServices(s.services ?? []);
@@ -444,6 +452,38 @@ export const AdminSettings = () => {
     }
   };
 
+  // ── Handlers: Logo ──────────────────────────────────────────────────────────
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingLogo(true);
+    try {
+      const form = new FormData();
+      form.append('image', file);
+      const res = await api.post('/settings/logo-image', form, { headers: { 'Content-Type': undefined } });
+      setLogoPreview(getImageUrl(res.data.logoImagePath));
+      queryClient.invalidateQueries({ queryKey: queryKeys.settings });
+    } catch {
+      toast.error(t('admin.settings.logo_upload_failed'));
+    } finally {
+      setUploadingLogo(false);
+      if (logoInputRef.current) logoInputRef.current.value = '';
+    }
+  };
+
+  const handleLogoRemove = async () => {
+    setRemovingLogo(true);
+    try {
+      await api.delete('/settings/logo-image');
+      setLogoPreview('');
+      queryClient.invalidateQueries({ queryKey: queryKeys.settings });
+    } catch {
+      toast.error(t('admin.common.error'));
+    } finally {
+      setRemovingLogo(false);
+    }
+  };
+
   // ── Handlers: Hero ──────────────────────────────────────────────────────────
   const handleHeroUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -452,7 +492,7 @@ export const AdminSettings = () => {
     try {
       const form = new FormData();
       form.append('image', file);
-      const res = await api.post('/settings/hero-image', form, { headers: { 'Content-Type': 'multipart/form-data' } });
+      const res = await api.post('/settings/hero-image', form, { headers: { 'Content-Type': undefined } });
       setHeroPreview(getImageUrl(res.data.heroImagePath));
     } catch {
       toast.error(t('admin.settings.hero_upload_failed'));
@@ -515,7 +555,7 @@ export const AdminSettings = () => {
     try {
       const form = new FormData();
       form.append('image', file);
-      const res = await api.post('/settings/profile-image', form, { headers: { 'Content-Type': 'multipart/form-data' } });
+      const res = await api.post('/settings/profile-image', form, { headers: { 'Content-Type': undefined } });
       setProfilePreview(getImageUrl(res.data.profileImagePath));
     } catch {
       toast.error(t('admin.settings.profile_upload_failed'));
@@ -740,7 +780,7 @@ export const AdminSettings = () => {
     try {
       const form = new FormData();
       form.append('image', file);
-      const res = await api.post('/settings/instagram-feed-image', form, { headers: { 'Content-Type': 'multipart/form-data' } });
+      const res = await api.post('/settings/instagram-feed-image', form, { headers: { 'Content-Type': undefined } });
       setIgFeedImages(res.data.instagramFeedImages);
       queryClient.invalidateQueries({ queryKey: queryKeys.settings });
     } catch {
@@ -826,6 +866,34 @@ export const AdminSettings = () => {
                 {savingProfile ? t('admin.common.saving') : t('admin.settings.save_profile')}
               </Button>
             </form>
+          </div>
+
+          {/* Studio Logo */}
+          <div className='bg-card rounded-xl border border-beige p-6'>
+            <h2 className='font-semibold text-charcoal mb-1'>{t('admin.settings.logo_image')}</h2>
+            <p className='text-xs text-warm-gray mb-4'>{t('admin.settings.logo_image')}</p>
+            <div className='flex items-center gap-4'>
+              {logoPreview ? (
+                <div className='h-12 flex items-center rounded-lg overflow-hidden border border-beige bg-ivory px-3'>
+                  <img src={logoPreview} alt='Studio logo' className='h-8 w-auto object-contain' />
+                </div>
+              ) : (
+                <div className='h-12 w-24 rounded-lg border border-dashed border-beige bg-ivory flex items-center justify-center text-xs text-warm-gray'>
+                  No logo
+                </div>
+              )}
+              <div className='flex items-center gap-2'>
+                <input ref={logoInputRef} type='file' accept='image/*' className='hidden' onChange={handleLogoUpload} />
+                <Button type='button' variant='ghost' size='sm' onClick={() => logoInputRef.current?.click()} disabled={uploadingLogo || removingLogo}>
+                  {uploadingLogo ? t('admin.common.uploading') : logoPreview ? t('admin.settings.logo_replace') : t('admin.settings.logo_upload')}
+                </Button>
+                {logoPreview && (
+                  <Button type='button' variant='ghost' size='sm' onClick={handleLogoRemove} disabled={removingLogo || uploadingLogo}>
+                    {removingLogo ? '...' : t('admin.settings.logo_remove')}
+                  </Button>
+                )}
+              </div>
+            </div>
           </div>
 
           {/* Public page URL */}
@@ -1048,10 +1116,14 @@ export const AdminSettings = () => {
               <label className='block text-xs text-warm-gray mb-1'>{t('admin.settings.bio')}</label>
               <TextareaField
                 rows={4}
+                maxLength={800}
                 value={about.bio}
                 onChange={(e) => setAbout({ ...about, bio: e.target.value })}
                 placeholder={t('admin.settings.bio_placeholder')}
               />
+              <p className={`text-xs mt-1 text-right ${about.bio.length >= 800 ? 'text-red-400' : 'text-warm-gray'}`}>
+                {about.bio.length} / 800
+              </p>
             </div>
 
             {/* Contact fields */}

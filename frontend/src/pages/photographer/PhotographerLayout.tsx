@@ -3,7 +3,7 @@ import { useParams, Outlet, Navigate } from 'react-router-dom';
 import { Navbar } from '@/components/Navbar';
 import { Footer } from '@/components/Footer';
 import { WhatsAppButton } from '@/components/WhatsAppButton';
-import api from '@/lib/api';
+import api, { getImageUrl } from '@/lib/api';
 
 interface Photographer {
   id: string;
@@ -41,6 +41,7 @@ export const PhotographerLayout = () => {
   const [photographer, setPhotographer] = useState<Photographer | null>(null);
   const [social, setSocial] = useState<PhotographerSocial>(EMPTY_SOCIAL);
   const [theme, setTheme] = useState('soft');
+  const [logoUrl, setLogoUrl] = useState('');
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
 
@@ -61,6 +62,7 @@ export const PhotographerLayout = () => {
           contactEmail: r.data.contactEmail || '',
         });
         setTheme(r.data.theme || 'soft');
+        setLogoUrl(r.data.logoImagePath ? getImageUrl(r.data.logoImagePath) : '');
       })
       .catch(() => {});
   }, [id]);
@@ -82,6 +84,7 @@ export const PhotographerLayout = () => {
       <PhotographerContext.Provider value={{ photographer, username: id!, social, theme }}>
         <Navbar
           photographerName={photographer.studioName || photographer.name}
+          logoUrl={logoUrl}
           username={id!}
           social={social}
         />

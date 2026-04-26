@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import api from '@/lib/api';
+import { queryClient } from '@/App';
 
 export interface AdminUser {
   id: string;
@@ -51,6 +52,8 @@ export const useAuthStore = create<AuthState>((set) => ({
   theme: _initialTheme,
 
   login: async (email, password) => {
+    // Clear any cached data from a previous session before loading the new one.
+    queryClient.clear();
     const payload = email.includes('@') ? { email, password } : { username: email, password };
     const res = await api.post('/auth/login', payload);
     const { admin: adminData } = res.data as { admin: AdminUser };
@@ -69,6 +72,9 @@ export const useAuthStore = create<AuthState>((set) => ({
       // Best-effort — clear local state regardless
     }
     localStorage.removeItem('koral_admin_user');
+    // Clear the React Query cache so a subsequent login as a different user
+    // does not see this user's cached data (galleries, settings, auth/me, etc.).
+    queryClient.clear();
     set({ admin: null });
   },
 

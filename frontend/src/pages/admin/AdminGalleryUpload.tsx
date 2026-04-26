@@ -23,7 +23,7 @@ export const AdminGalleryUpload = () => {
   const { t } = useI18n();
 
   const { gallery, setGallery, loadError, images, loadImages } = useGalleryData(id);
-  const { queue, dragging, setDragging, inputRef, handleFiles, onDrop } = useGalleryUpload(id, loadImages);
+  const { queue, dragging, setDragging, inputRef, handleFiles, onDrop, cancelUpload: cancelImageUpload, isUploading } = useGalleryUpload(id, loadImages);
   const { toDelete, setToDelete, bulkDeleting, deleteProgress, confirmDelete } = useImageDeletion(id, () => {
     setSelectedIds(new Set());
     loadImages();
@@ -178,7 +178,7 @@ export const AdminGalleryUpload = () => {
 
             {/* Upload queue + bulk bar — fixed */}
             <div className='shrink-0 px-4 md:px-8 pt-3'>
-              <UploadQueue queue={queue} />
+              <UploadQueue queue={queue} isUploading={isUploading} onCancel={cancelImageUpload} />
               <BulkActionBar
                 count={selectedIds.size}
                 onClear={() => setSelectedIds(new Set())}

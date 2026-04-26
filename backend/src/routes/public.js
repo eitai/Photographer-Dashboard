@@ -34,6 +34,7 @@ router.get('/settings', asyncHandler(async (req, res) => {
     bio: settings?.bio || '',
     heroImagePath: settings?.heroImagePath || '',
     profileImagePath: settings?.profileImagePath || '',
+    logoImagePath: settings?.logoImagePath || '',
     phone: settings?.phone || '',
     instagramHandle: settings?.instagramHandle || '',
     facebookUrl: settings?.facebookUrl || '',

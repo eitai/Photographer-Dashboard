@@ -22,6 +22,7 @@ router.get('/', protect, asyncHandler(async (req, res) => {
     bio: settings?.bio || '',
     heroImagePath: settings?.heroImagePath || '',
     profileImagePath: settings?.profileImagePath || '',
+    logoImagePath: settings?.logoImagePath || '',
     phone: settings?.phone || '',
     instagramHandle: settings?.instagramHandle || '',
     facebookUrl: settings?.facebookUrl || '',
@@ -84,7 +85,7 @@ router.put('/landing', protect, asyncHandler(async (req, res) => {
     heroOverlayOpacity, heroCtaPrimaryLabel, heroCtaSecondaryLabel, aboutSectionTitle, tiktokUrl,
   } = req.body;
   const data = {};
-  if (bio !== undefined) data.bio = bio;
+  if (bio !== undefined) data.bio = String(bio).slice(0, 800);
   if (phone !== undefined) data.phone = phone;
   if (instagramHandle !== undefined) data.instagramHandle = instagramHandle;
   if (facebookUrl !== undefined) data.facebookUrl = facebookUrl;
@@ -294,8 +295,25 @@ router.post('/hero-image', protect, upload.single('image'), validateImageMagicBy
 // POST /api/settings/profile-image  — ADMIN
 router.post('/profile-image', protect, upload.single('image'), validateImageMagicBytes, asyncHandler(async (req, res) => {
   if (!req.file) return res.status(400).json({ message: 'No image provided' });
-  const profileImagePath = await replaceUploadedFile(req.admin.id, 'profileImagePath', await s3.processUpload(req.file), { SiteSettings, fs });
+  const profileImagePath = await replaceUploadedFile(req.admin.id, 'profileImagePath', await s3.processUpload(req.file, req.admin.id), { SiteSettings, fs });
   res.json({ profileImagePath });
+}));
+
+// POST /api/settings/logo-image  — ADMIN
+router.post('/logo-image', protect, upload.single('image'), validateImageMagicBytes, asyncHandler(async (req, res) => {
+  if (!req.file) return res.status(400).json({ message: 'No image provided' });
+  const logoImagePath = await replaceUploadedFile(req.admin.id, 'logoImagePath', await s3.processUpload(req.file, req.admin.id), { SiteSettings, fs });
+  res.json({ logoImagePath });
+}));
+
+// DELETE /api/settings/logo-image  — ADMIN
+router.delete('/logo-image', protect, asyncHandler(async (req, res) => {
+  const existing = await SiteSettings.findOne({ adminId: req.admin.id });
+  if (existing?.logoImagePath) {
+    await s3.deleteUpload(existing.logoImagePath, UPLOADS_DIR);
+  }
+  await SiteSettings.upsert(req.admin.id, { logoImagePath: '' });
+  res.json({ logoImagePath: '' });
 }));
 
 module.exports = router;

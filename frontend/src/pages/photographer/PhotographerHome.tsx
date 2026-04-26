@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { usePhotographer } from './PhotographerLayout';
@@ -159,7 +159,7 @@ export const PhotographerHome = () => {
   const { username, photographer } = usePhotographer();
   const [videoActive, setVideoActive] = useState(false);
 
-  const { data: settings } = useQuery<PublicSettings>({
+  const { data: settings, isLoading: settingsLoading } = useQuery<PublicSettings>({
     queryKey: ['photographerSettings', username],
     queryFn: () => api.get(`/p/${username}/settings`).then((r) => r.data),
     staleTime: 5 * 60 * 1000,
@@ -171,8 +171,19 @@ export const PhotographerHome = () => {
     staleTime: 5 * 60 * 1000,
   });
 
-  const heroSrc = settings?.heroImagePath ? getImageUrl(settings.heroImagePath) : heroFallback;
+  // Don't fall back to the placeholder while settings are still loading — that
+  // causes a flash when the real image swaps in. Only use the fallback once we
+  // know there is no custom image.
+  const heroSrc = settings?.heroImagePath
+    ? getImageUrl(settings.heroImagePath)
+    : settingsLoading ? null : heroFallback;
+
   const profileSrc = settings?.profileImagePath ? getImageUrl(settings.profileImagePath) : aboutFallback;
+
+  // Fade the hero image in only after it has finished downloading so there is
+  // no jarring swap between a blank background and the image.
+  const [heroImgLoaded, setHeroImgLoaded] = useState(false);
+  useEffect(() => { setHeroImgLoaded(false); }, [heroSrc]);
   const bio = settings?.bio || t('about.text');
   const overlayClass = OVERLAY_CLASS[settings?.heroOverlayOpacity ?? 'medium'];
 
@@ -211,7 +222,14 @@ export const PhotographerHome = () => {
 
       {/* ── Hero ──────────────────────────────────────────────────────────── */}
       <section className='relative h-[85vh] min-h-[500px] flex items-center justify-center overflow-hidden'>
-        <img src={heroSrc} alt='Photography' className='absolute inset-0 w-full h-full object-cover' />
+        {heroSrc && (
+          <img
+            src={heroSrc}
+            alt='Photography'
+            onLoad={() => setHeroImgLoaded(true)}
+            className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-700 ${heroImgLoaded ? 'opacity-100' : 'opacity-0'}`}
+          />
+        )}
         <div className={`absolute inset-0 ${overlayClass}`} />
         <div className='relative z-10 text-center px-4 sm:px-6 max-w-2xl w-full'>
           <FadeIn>
@@ -416,7 +434,7 @@ export const PhotographerHome = () => {
         <FadeIn>
           <section
             className='relative section-spacing bg-cover bg-center overflow-hidden'
-            style={{ backgroundImage: `url(${heroSrc})` }}
+            style={heroSrc ? { backgroundImage: `url(${heroSrc})` } : undefined}
           >
             <div className='absolute inset-0 bg-background/60' />
             <div className='relative z-10 container-narrow text-center'>

@@ -230,9 +230,9 @@ export const SelectionGallery = ({ gallery, images, getImageUrl }: Props) => {
 
           {(gallery.videos ?? []).length > 0 && (
             <FadeIn>
-              <div className='mb-10 space-y-4'>
+              <div className='mb-10 flex flex-wrap gap-4 justify-center'>
                 {(gallery.videos ?? []).map((v) => (
-                  <div key={v.filename} className='rounded-2xl overflow-hidden border border-beige bg-black'>
+                  <div key={v.filename} className='rounded-2xl overflow-hidden border border-beige bg-black w-full max-w-sm'>
                     <div className='flex items-center gap-2 px-4 py-3 border-b' style={{ backgroundColor: 'color-mix(in srgb, var(--background) 90%, transparent)', borderBottomColor: 'var(--border)' }}>
                       <Video size={14} style={{ color: 'var(--muted-foreground)' }} />
                       <span className='text-sm font-sans font-medium truncate flex-1' style={{ color: 'var(--foreground)' }}>
@@ -247,7 +247,7 @@ export const SelectionGallery = ({ gallery, images, getImageUrl }: Props) => {
                         {t('gallery.download_video')}
                       </a>
                     </div>
-                    <video src={getImageUrl(v.path)} controls className='w-full max-h-[70vh]' />
+                    <video src={getImageUrl(v.path)} controls className='w-full max-h-[25vh]' />
                   </div>
                 ))}
               </div>

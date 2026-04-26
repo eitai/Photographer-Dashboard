@@ -31,6 +31,27 @@ async function start() {
     logger.warn('[migrate] storage_quota_bytes migration skipped:', err.message);
   }
 
+  try {
+    const migrationSql = require('fs').readFileSync(
+      require('path').join(__dirname, 'src/db/migrate_landing_sections.sql'),
+      'utf8'
+    );
+    await pool.query(migrationSql);
+    logger.info('[migrate] landing sections columns ensured');
+  } catch (err) {
+    logger.warn('[migrate] landing sections migration skipped:', err.message);
+  }
+
+  try {
+    await pool.query(`
+      ALTER TABLE site_settings
+        ADD COLUMN IF NOT EXISTS logo_image_path TEXT NOT NULL DEFAULT ''
+    `);
+    logger.info('[migrate] logo_image_path column ensured');
+  } catch (err) {
+    logger.warn('[migrate] logo_image_path migration skipped:', err.message);
+  }
+
   const PORT = process.env.PORT || 5000;
   const server = app.listen(PORT, () => {
     logger.info(`Koral API running on port ${PORT} [${process.env.NODE_ENV || 'development'}]`);

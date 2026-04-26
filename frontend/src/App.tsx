@@ -43,7 +43,7 @@ const AdminShowcase = lazy(() => import('./pages/admin/AdminShowcase').then((m) 
 const AdminUsers = lazy(() => import('./pages/admin/AdminUsers').then((m) => ({ default: m.AdminUsers })));
 const AdminContact = lazy(() => import('./pages/admin/AdminContact').then((m) => ({ default: m.AdminContact })));
 
-const queryClient = new QueryClient();
+export const queryClient = new QueryClient();
 
 // Layout wrapper for public pages (shows Navbar/Footer/WhatsApp)
 const PublicLayout = ({ children }: { children: React.ReactNode }) => (
