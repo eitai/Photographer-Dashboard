@@ -29,6 +29,8 @@ interface GalleriesSectionProps {
   createDeliveryGallery: (id: string) => void;
   reactivateGallery: (id: string) => void;
   reactivatingId: string | null;
+  setDeleteSubTarget: (t: { galleryId: string; submissionId: string } | null) => void;
+  setDeleteImageTarget: (t: { galleryId: string; submissionId: string; imageId: string } | null) => void;
 }
 
 export const GalleriesSection = ({
@@ -53,6 +55,8 @@ export const GalleriesSection = ({
   createDeliveryGallery,
   reactivateGallery,
   reactivatingId,
+  setDeleteSubTarget,
+  setDeleteImageTarget,
 }: GalleriesSectionProps) => {
   const { t } = useI18n();
   const [showGalleryForm, setShowGalleryForm] = useState(false);
@@ -178,6 +182,8 @@ export const GalleriesSection = ({
           createDeliveryGallery={createDeliveryGallery}
           reactivateGallery={reactivateGallery}
           reactivatingId={reactivatingId}
+          setDeleteSubTarget={setDeleteSubTarget}
+          setDeleteImageTarget={setDeleteImageTarget}
         />
       )}
     </div>

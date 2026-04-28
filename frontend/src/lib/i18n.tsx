@@ -199,10 +199,15 @@ const translations: Record<string, Record<Lang, string>> = {
   'admin.client.new_gallery': { he: 'גלריה חדשה', en: 'New gallery' },
   'admin.client.no_galleries': { he: 'אין גלריות מקושרות.', en: 'No galleries linked.' },
   'admin.client.copy_link': { he: 'העתק קישור', en: 'Copy link' },
+  'admin.client.copied': { he: 'הועתק!', en: 'Copied!' },
+  'admin.client.view_gallery': { he: 'צפה בגלריה', en: 'View gallery' },
   'admin.client.link_copied': { he: 'הקישור הועתק!', en: 'Link copied!' },
   'admin.client.delivery_suffix': { he: 'ערוך', en: 'Edited' },
   'admin.client.create_delivery': { he: 'צור גלריית מסירה', en: 'Create Delivery Gallery' },
   'admin.gallery.reactivate': { he: 'פתח מחדש לבחירה', en: 'Reopen for Selection' },
+  'admin.submissions.selected_count': { he: 'תמונות נבחרו', en: 'photos selected' },
+  'admin.submissions.download_zip': { he: 'הורד ZIP', en: 'Download ZIP' },
+  'admin.submissions.delete': { he: 'מחק בחירה', en: 'Delete Selection' },
   'admin.gallery.reactivating': { he: 'פותח...', en: 'Reopening...' },
   'admin.client.delivery_badge': { he: 'מסירה', en: 'Delivery' },
   'admin.client.delivery_header_ph': {
@@ -299,6 +304,7 @@ const translations: Record<string, Record<Lang, string>> = {
     he: 'כל הבחירות שנשלחו על ידי הלקוחה יימחקו. התמונות המקוריות לא יימחקו.',
     en: "All photos chosen by the client will be removed. The original files won't be deleted.",
   },
+  'admin.selections.download_image': { he: 'פתח תמונה', en: 'Open image' },
   'admin.selections.delete_image': { he: 'הסר תמונה', en: 'Remove image' },
   'admin.selections.delete_confirm': { he: 'הסרת תמונה מהבחירה', en: 'Remove image from selection' },
   'admin.selections.delete_body': {

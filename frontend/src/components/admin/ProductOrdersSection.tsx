@@ -17,7 +17,6 @@ const defaultForm = {
   name: '',
   type: 'album' as 'album' | 'print',
   maxPhotos: 20,
-  allowedGalleryIds: [] as string[],
 };
 
 export const ProductOrdersSection = ({ clientId, clientName, galleries }: Props) => {
@@ -42,24 +41,11 @@ export const ProductOrdersSection = ({ clientId, clientName, galleries }: Props)
     });
   };
 
-  const toggleGallery = (galleryId: string) => {
-    setForm((f) => {
-      const ids = f.allowedGalleryIds.includes(galleryId)
-        ? f.allowedGalleryIds.filter((id) => id !== galleryId)
-        : [...f.allowedGalleryIds, galleryId];
-      return { ...f, allowedGalleryIds: ids };
-    });
-  };
-
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     if (!form.name.trim()) {
       setError('Name is required');
-      return;
-    }
-    if (form.allowedGalleryIds.length === 0) {
-      setError('Select at least one gallery');
       return;
     }
     setCreating(true);
@@ -69,7 +55,7 @@ export const ProductOrdersSection = ({ clientId, clientName, galleries }: Props)
         name: form.name.trim(),
         type: form.type,
         maxPhotos: form.maxPhotos,
-        allowedGalleryIds: form.allowedGalleryIds,
+        allowedGalleryIds: galleries.map((g) => g._id),
       });
       setForm({ ...defaultForm });
       setShowForm(false);
@@ -174,33 +160,6 @@ export const ProductOrdersSection = ({ clientId, clientName, galleries }: Props)
             />
           </div>
 
-          {/* Allowed galleries */}
-          <div>
-            <label className='block text-xs text-warm-gray mb-2'>{t('admin.products.galleries_label')}</label>
-            {galleries.length === 0 ? (
-              <p className='text-xs text-warm-gray'>{t('admin.products.no_galleries')}</p>
-            ) : (
-              <div className='space-y-1.5'>
-                {galleries.map((g) => (
-                  <label key={g._id} className='flex items-center gap-2 text-sm text-charcoal cursor-pointer'>
-                    <input
-                      type='checkbox'
-                      checked={form.allowedGalleryIds.includes(g._id)}
-                      onChange={() => toggleGallery(g._id)}
-                      className='accent-blush rounded'
-                    />
-                    {g.name}
-                    {g.isDelivery && (
-                      <span className='text-[10px] bg-blush/20 text-blush px-1.5 py-0.5 rounded-full'>
-                        {t('admin.products.delivery_badge')}
-                      </span>
-                    )}
-                  </label>
-                ))}
-              </div>
-            )}
-          </div>
-
           {error && <p className='text-xs text-red-500'>{error}</p>}
 
           <div className='flex gap-3'>
@@ -254,8 +213,6 @@ export const ProductOrdersSection = ({ clientId, clientName, galleries }: Props)
 
                 <p className='text-xs text-warm-gray mt-1'>
                   {order.maxPhotos} {t('admin.products.max_photos')}
-                  {' · '}
-                  {order.allowedGalleryIds.map((g) => g.name).join(', ')}
                 </p>
 
                 {order.status === 'submitted' && order.selectedPhotoIds.length > 0 && (

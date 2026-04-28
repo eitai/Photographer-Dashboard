@@ -263,8 +263,11 @@ export function useDeleteSubmission(clientId: string) {
   return useMutation({
     mutationFn: ({ galleryId, submissionId }: { galleryId: string; submissionId: string }) =>
       galleryService.removeSubmission(galleryId, submissionId),
-    onSuccess: () =>
-      queryClient.invalidateQueries({ queryKey: queryKeys.galleriesByClient(clientId) }),
+    onSuccess: (_data, { galleryId }) => {
+      queryClient.setQueryData(queryKeys.submissions(galleryId), []);
+      queryClient.invalidateQueries({ queryKey: queryKeys.submissions(galleryId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.galleriesByClient(clientId) });
+    },
   });
 }
 

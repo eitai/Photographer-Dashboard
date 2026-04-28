@@ -283,8 +283,8 @@ router.post('/:id/reactivate', protect, asyncHandler(async (req, res) => {
   const gallery = await Gallery.findOne({ _id: req.params.id, adminId: req.admin.id });
   if (!gallery) return res.status(404).json({ message: 'Gallery not found' });
 
-  if (gallery.status !== 'selection_submitted')
-    return res.status(400).json({ message: 'Gallery is not in selection_submitted status' });
+  if (!['selection_submitted', 'in_editing', 'delivered'].includes(gallery.status))
+    return res.status(400).json({ message: 'Gallery cannot be reactivated from its current status' });
 
   gallery.status = 'viewed';
   await Gallery.save(gallery);

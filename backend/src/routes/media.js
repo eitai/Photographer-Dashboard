@@ -41,15 +41,10 @@ router.get('/*', asyncHandler(async (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
 
   const signedUrl = await s3.generatePresignedUrl(key);
-  const isVideo = VIDEO_EXT.test(key) || !!req.headers.range;
 
-  // ── Images: fast redirect ─────────────────────────────────────────────────
-  if (!isVideo) {
-    res.setHeader('Cache-Control', 'private, max-age=3600');
-    return res.redirect(302, signedUrl);
-  }
-
-  // ── Videos: proxy with range support ─────────────────────────────────────
+  // Proxy all content through the backend so fetch() in the browser stays
+  // same-origin and avoids S3 CORS restrictions. Range requests are forwarded
+  // for video seeking support.
   const upstreamHeaders = {};
   if (req.headers.range) upstreamHeaders['Range'] = req.headers.range;
 
@@ -59,7 +54,6 @@ router.get('/*', asyncHandler(async (req, res) => {
     return res.status(upstream.status).json({ message: 'Media unavailable' });
   }
 
-  // Forward content headers so the browser knows size, range, and type
   for (const h of ['content-type', 'content-length', 'content-range', 'accept-ranges']) {
     const val = upstream.headers.get(h);
     if (val) res.setHeader(h, val);

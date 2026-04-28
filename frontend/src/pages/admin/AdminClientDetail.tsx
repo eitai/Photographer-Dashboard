@@ -1,13 +1,11 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { AdminLayout } from '@/components/admin/AdminLayout';
 import { useI18n } from '@/lib/i18n';
 import { toast } from 'sonner';
-import * as galleryService from '@/services/galleryService';
 import { ArrowLeft } from 'lucide-react';
 import { ClientInfoCard } from '@/components/admin/ClientInfoCard';
 import { GalleriesSection } from '@/components/admin/GalleriesSection';
-import { SubmissionsSection } from '@/components/admin/SubmissionsSection';
 import { ConfirmationModals } from '@/components/admin/ConfirmationModals';
 import { ProductOrdersSection } from '@/components/admin/ProductOrdersSection';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
@@ -25,9 +23,7 @@ import {
   useDeleteSubmissionImage,
   queryKeys,
 } from '@/hooks/useQueries';
-import { downloadZip } from '@/lib/downloadZip';
 import type { Client } from '@/types/admin';
-import type { GallerySubmission } from '@/types/gallery';
 
 export const AdminClientDetail = () => {
   const { id } = useParams();
@@ -51,33 +47,6 @@ export const AdminClientDetail = () => {
   const deleteSubmissionImageMutation = useDeleteSubmissionImage(id!);
 
   // ---------------------------------------------------------------------------
-  // Submissions — prefetch for all galleries that may have a submission
-  // 'viewed' is included because a reactivated gallery keeps its previous submission
-  // ---------------------------------------------------------------------------
-  const submittedGalleries = galleries.filter((g) => ['viewed', 'selection_submitted', 'in_editing', 'delivered'].includes(g.status));
-
-  useEffect(() => {
-    const ids = submittedGalleries.map((g) => g._id).join(',');
-    if (!ids) return;
-    submittedGalleries.forEach((g) => {
-      queryClient.prefetchQuery({
-        queryKey: queryKeys.submissions(g._id),
-        queryFn: () => galleryService.fetchSubmissions(g._id),
-      });
-    });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [submittedGalleries.map((g) => g._id).join(',')]);
-
-  const submissions = useMemo(() => {
-    const result: Record<string, GallerySubmission[]> = {};
-    submittedGalleries.forEach((g) => {
-      const cached = queryClient.getQueryData<GallerySubmission[]>(queryKeys.submissions(g._id));
-      if (cached) result[g._id] = cached;
-    });
-    return result;
-  }, [galleries, queryClient]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // ---------------------------------------------------------------------------
   // Pure UI state (not server data)
   // ---------------------------------------------------------------------------
   const [editing, setEditing] = useState(false);
@@ -85,7 +54,6 @@ export const AdminClientDetail = () => {
   const [deliveryHeaderMessage, setDeliveryHeaderMessage] = useState('');
   const [showDeliveryFormFor, setShowDeliveryFormFor] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
-  const [downloading, setDownloading] = useState(false);
   const [resentId, setResentId] = useState<string | null>(null);
   const [sentSmsId, setSentSmsId] = useState<string | null>(null);
   const [deleteImageTarget, setDeleteImageTarget] = useState<{ galleryId: string; submissionId: string; imageId: string } | null>(null);
@@ -104,12 +72,6 @@ export const AdminClientDetail = () => {
     e.preventDefault();
     await updateClient.mutateAsync(form);
     setEditing(false);
-  };
-
-  const downloadAsZip = async (submission: GallerySubmission) => {
-    setDownloading(true);
-    await downloadZip(submission.selectedImageIds, 'selected-images', `selection-${submission._id}`);
-    setDownloading(false);
   };
 
   const createDeliveryGallery = async (originalGalleryId: string) => {
@@ -235,14 +197,6 @@ export const AdminClientDetail = () => {
             createDeliveryGallery={createDeliveryGallery}
             reactivateGallery={handleReactivateGallery}
             reactivatingId={reactivatingId}
-          />
-        </ErrorBoundary>
-        <ErrorBoundary label='Submissions'>
-          <SubmissionsSection
-            galleries={galleries}
-            submissions={submissions}
-            downloading={downloading}
-            downloadAsZip={downloadAsZip}
             setDeleteSubTarget={setDeleteSubTarget}
             setDeleteImageTarget={setDeleteImageTarget}
           />
