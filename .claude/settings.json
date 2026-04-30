@@ -62,7 +62,12 @@
       "Bash(node --check server.js)",
       "Bash(npx tsc *)",
       "WebSearch",
-      "WebFetch(domain:wasabi.com)"
+      "WebFetch(domain:wasabi.com)",
+      "Bash(psql postgresql://postgres:postgres@localhost:5432/koral -f src/db/migrations/005_preview_path.sql)",
+      "Bash(\"/c/Program Files/PostgreSQL/16/bin/psql.exe\" postgresql://postgres:postgres@localhost:5432/koral -f \"c:/Users/eitai/Desktop/codevalue/store test/backend/src/db/migrations/005_preview_path.sql\")",
+      "Bash(\"/c/Program Files/PostgreSQL/16/bin/psql.exe\" \"postgresql://postgres:postgres@localhost:5432/koral\" -f \"c:/Users/eitai/Desktop/codevalue/store test/backend/src/db/migrations/005_preview_path.sql\")",
+      "Bash(PGPASSWORD=postgres \"/c/Program Files/PostgreSQL/16/bin/psql.exe\" -h localhost -p 5432 -U postgres -d koral -c \"ALTER TABLE gallery_images ADD COLUMN IF NOT EXISTS preview_path VARCHAR; ALTER TABLE gallery_images ALTER COLUMN path DROP NOT NULL;\")",
+      "Bash(PGPASSWORD=postgres \"/c/Program Files/PostgreSQL/16/bin/psql.exe\" -h localhost -p 5432 -U postgres -d koral -c \"\\\\d gallery_images\")"
     ],
     "deny": [
       "Bash(taskkill *)",

@@ -16,8 +16,9 @@
 const { S3Client, DeleteObjectCommand, ListObjectsV2Command, GetObjectCommand } = require('@aws-sdk/client-s3');
 const { Upload } = require('@aws-sdk/lib-storage');
 const { getSignedUrl } = require('@aws-sdk/s3-request-presigner');
-const fs   = require('fs');
-const path = require('path');
+const fs    = require('fs');
+const path  = require('path');
+const sharp = require('sharp');
 
 // ── Config helper (reads env at call time) ────────────────────────────────────
 function cfg() {
@@ -73,6 +74,17 @@ function thumbnailKey(filename, adminId) {
   return adminId
     ? `admins/${adminId}/thumbnails/${filename}`
     : `uploads/thumbnails/${filename}`;
+}
+
+/**
+ * Build the S3 key for a preview file (WebP, max 2000px).
+ * With adminId:  admins/<adminId>/previews/<basename>.webp
+ * Without:       uploads/previews/<basename>.webp  (legacy fallback)
+ */
+function previewKey(basename, adminId) {
+  return adminId
+    ? `admins/${adminId}/previews/${basename}.webp`
+    : `uploads/previews/${basename}.webp`;
 }
 
 function getPublicUrl(key) {
@@ -169,6 +181,47 @@ async function processThumbnail(buffer, thumbFilename, thumbDir, adminId) {
 }
 
 /**
+ * Resize and compress a local image file to a WebP preview buffer.
+ * - Longest side capped at 2000 px (never enlarged)
+ * - WebP at 78% quality, metadata stripped
+ *
+ * @param {string} localPath  Absolute path to the source image file
+ * @returns {Promise<Buffer>}
+ */
+async function generatePreview(localPath) {
+  return sharp(localPath)
+    .withMetadata(false)
+    .resize({ width: 2000, height: 2000, fit: 'inside', withoutEnlargement: true })
+    .webp({ quality: 78 })
+    .toBuffer();
+}
+
+/**
+ * Generate a WebP preview and store it in S3 or on local disk.
+ * - S3 configured  → uploads to admins/<adminId>/previews/<basename>.webp
+ * - S3 not configured → writes to uploads/previews/<basename>.webp  (dev fallback)
+ *
+ * @param {string} localPath       Absolute path to the source image (multer temp file)
+ * @param {string} previewBasename Filename without extension (e.g. "abc123")
+ * @param {string} adminId         Admin UUID — used as S3 folder prefix
+ * @returns {Promise<string>}      Stored key or local path (same format as path / thumbnail_path)
+ */
+async function uploadPreview(localPath, previewBasename, adminId) {
+  const buffer = await generatePreview(localPath);
+  const filename = `${previewBasename}.webp`;
+
+  if (!isEnabled()) {
+    const previewDir = path.join(path.dirname(path.dirname(localPath)), 'previews');
+    if (!fs.existsSync(previewDir)) fs.mkdirSync(previewDir, { recursive: true });
+    fs.writeFileSync(path.join(previewDir, filename), buffer);
+    return `/uploads/previews/${filename}`;
+  }
+
+  const key = previewKey(previewBasename, adminId);
+  return await uploadBuffer(buffer, key, 'image/webp');
+}
+
+/**
  * Delete a stored file from S3 (full URL) or local disk (relative "/uploads/..." path).
  *
  * @param {string} storedPath  As saved in the DB
@@ -232,7 +285,7 @@ function _logStatus() {
 }
 
 // Wrap high-level exports to log status on first use
-const _orig = { processUpload, processThumbnail, deleteUpload };
+const _orig = { processUpload, processThumbnail, uploadPreview, deleteUpload };
 module.exports = {
   isEnabled,
   getPublicUrl,
@@ -241,8 +294,10 @@ module.exports = {
   uploadBuffer,
   deleteFile,
   generatePresignedUrl,
+  generatePreview,
   listAdminStorageBytes,
   processUpload:    (...a) => { _logStatus(); return _orig.processUpload(...a); },
   processThumbnail: (...a) => { _logStatus(); return _orig.processThumbnail(...a); },
+  uploadPreview:    (...a) => { _logStatus(); return _orig.uploadPreview(...a); },
   deleteUpload:     (...a) => { _logStatus(); return _orig.deleteUpload(...a); },
 };

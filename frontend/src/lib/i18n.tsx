@@ -97,12 +97,12 @@ const translations: Record<string, Record<Lang, string>> = {
   'gallery.thank_you': { he: 'תודה 🤍', en: 'Thank you 🤍' },
   'gallery.review_choices': { he: 'אסקור את בחירותייך בקפידה.', en: "I'll review your choices with care." },
   'gallery.images_selected': { he: 'תמונות נבחרו', en: 'images selected' },
-  'gallery.send_selection': { he: 'שלחי את הבחירה', en: 'Send My Selection' },
+  'gallery.send_selection': { he: 'הגש בחירה', en: 'Send My Selection' },
   'gallery.no_images': { he: 'אין תמונות בגלריה זו עדיין.', en: 'No images in this gallery yet.' },
   'gallery.select_photo': { he: 'בחרי תמונה', en: 'Select photo' },
   'gallery.photo_selected': { he: 'נבחרה', en: 'Selected' },
   'gallery.choose_more': { he: 'בחרי עוד', en: 'Choose more' },
-  'gallery.close_window': { he: 'סגרי חלון', en: 'Close window' },
+  'gallery.close_window': { he: 'סגור חלון', en: 'Close window' },
   'gallery.already_submitted': { he: 'הבחירה כבר נשלחה', en: 'Selection already submitted' },
   'gallery.already_submitted_desc': {
     he: 'כבר שלחת את בחירת התמונות שלך לגלריה זו.',
@@ -111,7 +111,7 @@ const translations: Record<string, Record<Lang, string>> = {
   'gallery.max_reached': { he: 'הגעת למקסימום הבחירות', en: 'Maximum selections reached' },
   'gallery.select_of': { he: 'מתוך', en: 'of' },
   // Delivery gallery (download-only)
-  'gallery.delivery_title': { he: 'התמונות המעובדות שלך', en: 'Your Edited Photos' },
+  'gallery.delivery_title': { he: 'התמונות שלכם מוכנות', en: 'Your Edited Photos' },
   'gallery.download_all': { he: 'הורדת הכל (ZIP)', en: 'Download All (ZIP)' },
   'gallery.download_photo': { he: 'הורדה', en: 'Download' },
   'gallery.preparing_zip': { he: 'מכין ZIP…', en: 'Preparing ZIP…' },
@@ -245,7 +245,7 @@ const translations: Record<string, Record<Lang, string>> = {
   'admin.gallery.reactivating': { he: 'פותח...', en: 'Reopening...' },
   'admin.client.delivery_badge': { he: 'מסירה', en: 'Delivery' },
   'admin.client.delivery_header_ph': {
-    he: 'הודעה ללקוחה (למשל: "התמונות המעובדות שלך מוכנות 🤍")',
+    he: 'הודעה ללקוחה (למשל: "התמונות שלכם מוכנות מוכנות 🤍")',
     en: 'Message to client (e.g. "Your edited photos are ready 🤍")',
   },
   'admin.client.creating_delivery': { he: 'יוצר…', en: 'Creating…' },

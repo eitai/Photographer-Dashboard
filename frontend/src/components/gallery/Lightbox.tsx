@@ -6,6 +6,7 @@ import { BeforeAfterSlider } from "./BeforeAfterSlider";
 export interface LightboxImage {
   _id: string;
   path: string;
+  previewPath?: string;
   filename?: string;
   originalName?: string;
   thumbnailPath?: string;
@@ -95,8 +96,8 @@ export const Lightbox = ({
         <X size={18} />
       </button>
 
-      {/* Download */}
-      {showDownload && onDownload && (
+      {/* Download — only shown when the original path is available */}
+      {showDownload && onDownload && img.path && (
         <button
           onClick={(e) => { e.stopPropagation(); onDownload(img.path, filename); }}
           className="absolute top-4 right-16 w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors z-10"
@@ -131,7 +132,8 @@ export const Lightbox = ({
         </button>
       )}
 
-      {/* Main image / before-after */}
+      {/* Main image / before-after — use previewPath (compressed WebP) for display;
+          fall back to path for images that predate the preview generation */}
       {img.beforePath ? (
         <div
           className="relative w-[min(85vw,900px)] aspect-[3/2] rounded-xl overflow-hidden"
@@ -139,13 +141,13 @@ export const Lightbox = ({
         >
           <BeforeAfterSlider
             beforeSrc={getImageUrl(img.beforePath)}
-            afterSrc={getImageUrl(img.path)}
+            afterSrc={getImageUrl(img.previewPath ?? img.path)}
             alt={img.originalName || filename}
           />
         </div>
       ) : (
         <img
-          src={getImageUrl(img.path)}
+          src={getImageUrl(img.previewPath ?? img.path)}
           alt={img.originalName || filename}
           className="max-w-full max-h-[85vh] rounded-xl object-contain px-16"
           onClick={(e) => e.stopPropagation()}

@@ -15,8 +15,54 @@ const { withTransaction } = require('../utils/transaction');
 const { uploadVideo } = require('../middleware/upload');
 const { UUID_RE } = require('../utils/uuid');
 const s3 = require('../config/s3');
+const pool = require('../db');
+const logger = require('../utils/logger');
 
 const UPLOADS_DIR = path.join(__dirname, '../../uploads');
+
+/**
+ * Fire-and-forget: delete S3 originals for images that were NOT selected by the client.
+ * Runs after the gallery status has been set to 'delivered'. Nulls out `path` in the DB
+ * for each cleaned image so the app knows the original is gone.
+ *
+ * Only runs for non-delivery galleries (the selection galleries that clients browsed).
+ *
+ * @param {string} galleryId  UUID of the gallery being delivered
+ */
+async function cleanupNonSelectedOriginals(galleryId) {
+  try {
+    const submissions = await GallerySubmission.find({ galleryId });
+    const selectedIds = new Set(
+      submissions.flatMap((s) => (s.selectedImageIds || []).map((id) => String(id)))
+    );
+
+    const images = await GalleryImage.find({ galleryId });
+    const toClean = images.filter((img) => !selectedIds.has(String(img.id)));
+
+    if (!toClean.length) {
+      logger.info(`[cleanup] gallery ${galleryId} — no originals to clean up`);
+      return;
+    }
+
+    let cleaned = 0;
+    for (const img of toClean) {
+      // Delete the original from S3 or local disk
+      if (img.path) {
+        await s3.deleteUpload(img.path, UPLOADS_DIR);
+      }
+      // Null out the path column so the app knows the original is gone
+      await pool.query(
+        'UPDATE gallery_images SET path = NULL, updated_at = NOW() WHERE id = $1',
+        [img.id]
+      );
+      cleaned++;
+    }
+
+    logger.info(`[cleanup] gallery ${galleryId} — deleted ${cleaned} non-selected originals`);
+  } catch (err) {
+    logger.error(`[cleanup] gallery ${galleryId} — error during original cleanup: ${err.message}`);
+  }
+}
 
 const router = express.Router();
 
@@ -172,6 +218,10 @@ router.post('/:id/delivery', protect, asyncHandler(async (req, res) => {
   });
 
   res.status(201).json(delivery);
+
+  // Fire-and-forget: the original (selection) gallery is now delivered — clean up its non-selected originals.
+  // `original` is the selection gallery (isDelivery === false by definition here).
+  setImmediate(() => cleanupNonSelectedOriginals(original.id));
 }));
 
 // POST /api/galleries/:id/resend-email
@@ -256,6 +306,8 @@ router.put('/:id', protect, asyncHandler(async (req, res) => {
   const { name, clientName, headerMessage, isActive, expiresAt, status, maxSelections } = req.body;
 
   // Validate status transition if status is being changed
+  let previousStatus = null;
+  let isDeliveryGallery = false;
   if (status) {
     const current = await Gallery.findOne({ _id: req.params.id, adminId: req.admin.id });
     if (!current) return res.status(404).json({ message: 'Gallery not found' });
@@ -265,6 +317,8 @@ router.put('/:id', protect, asyncHandler(async (req, res) => {
         message: `Cannot transition gallery from '${current.status}' to '${status}'`,
       });
     }
+    previousStatus = current.status;
+    isDeliveryGallery = Boolean(current.isDelivery);
   }
 
   const gallery = await Gallery.findOneAndUpdate(
@@ -273,6 +327,12 @@ router.put('/:id', protect, asyncHandler(async (req, res) => {
   );
   if (!gallery) return res.status(404).json({ message: 'Gallery not found' });
   res.json(gallery);
+
+  // Fire-and-forget: clean up non-selected originals when a selection gallery is delivered.
+  // Only applies to non-delivery galleries (delivery galleries hold the edited files, not originals).
+  if (status === 'delivered' && previousStatus !== 'delivered' && !isDeliveryGallery) {
+    setImmediate(() => cleanupNonSelectedOriginals(req.params.id));
+  }
 }));
 
 // POST /api/galleries/:id/reactivate  — reset a submitted gallery back to 'viewed' and delete its submissions
@@ -298,21 +358,18 @@ router.delete('/:id', protect, asyncHandler(async (req, res) => {
   const gallery = await Gallery.findOneAndDelete({ _id: req.params.id, adminId: req.admin.id });
   if (!gallery) return res.status(404).json({ message: 'Gallery not found' });
 
-  // Clean up image files from disk (DB rows cascade-delete via FK)
+  // Clean up image files from S3 or local disk (DB rows cascade-delete via FK)
   const images = await GalleryImage.find({ galleryId: req.params.id });
-  const THUMB_DIR = path.join(__dirname, '../../uploads/thumbnails');
-  for (const img of images) {
-    const filePath = path.join(__dirname, '../../uploads', img.filename);
-    if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
-    if (img.thumbnailPath) {
-      const thumbPath = path.join(THUMB_DIR, path.basename(img.thumbnailPath));
-      if (fs.existsSync(thumbPath)) fs.unlinkSync(thumbPath);
-    }
-    if (img.beforePath) {
-      const beforePath = path.join(__dirname, '../../uploads', path.basename(img.beforePath));
-      if (fs.existsSync(beforePath)) fs.unlinkSync(beforePath);
-    }
-  }
+  const THUMB_DIR    = path.join(__dirname, '../../uploads/thumbnails');
+  const PREVIEW_DIR  = path.join(__dirname, '../../uploads/previews');
+  await Promise.all(
+    images.flatMap((img) => [
+      img.path          ? s3.deleteUpload(img.path,          UPLOADS_DIR) : Promise.resolve(),
+      img.thumbnailPath ? s3.deleteUpload(img.thumbnailPath, THUMB_DIR)   : Promise.resolve(),
+      img.previewPath   ? s3.deleteUpload(img.previewPath,   PREVIEW_DIR) : Promise.resolve(),
+      img.beforePath    ? s3.deleteUpload(img.beforePath,    UPLOADS_DIR) : Promise.resolve(),
+    ])
+  );
 
   // Clean up video files from disk
   if (Array.isArray(gallery.videos)) {

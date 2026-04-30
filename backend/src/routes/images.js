@@ -16,8 +16,10 @@ const s3 = require('../config/s3');
 const router = express.Router({ mergeParams: true });
 
 const UPLOADS_DIR = path.join(__dirname, '../../uploads');
-const THUMB_DIR = path.join(__dirname, '../../uploads/thumbnails');
-if (!fs.existsSync(THUMB_DIR)) fs.mkdirSync(THUMB_DIR, { recursive: true });
+const THUMB_DIR   = path.join(__dirname, '../../uploads/thumbnails');
+const PREVIEW_DIR = path.join(__dirname, '../../uploads/previews');
+if (!fs.existsSync(THUMB_DIR))   fs.mkdirSync(THUMB_DIR,   { recursive: true });
+if (!fs.existsSync(PREVIEW_DIR)) fs.mkdirSync(PREVIEW_DIR, { recursive: true });
 
 // GET /api/galleries/:galleryId/images  — PUBLIC
 // Optional: ?page=1&limit=50 for paginated response { images, total, page, totalPages }
@@ -60,24 +62,46 @@ router.post('/', protect, checkQuota, upload.array('images', 5000), validateImag
     const originalImages = selectedIds.length
       ? await GalleryImage.find({ _id: { $in: selectedIds } })
       : [];
-    selectedImageMap = Object.fromEntries(originalImages.map((img) => [img.id, img]));
+    selectedImageMap = Object.fromEntries(originalImages.map((img) => [path.parse(img.filename).name, img]));
   }
 
   const imageDocs = await Promise.all(
     req.files.map(async (file, i) => {
       const thumbFilename = `thumb_${path.parse(file.filename).name}.jpg`;
 
-      // Generate thumbnail as buffer (no disk write — goes straight to S3 or local)
-      const thumbBuffer = await sharp(file.path)
-        .withMetadata(false)
-        .resize({ width: 800, withoutEnlargement: true })
-        .jpeg({ quality: 78 })
-        .toBuffer();
+      // Generate thumbnail and preview buffers from the local temp file before
+      // processUpload deletes it. Both Sharp operations read the same source path.
+      const [thumbBuffer, previewBuffer] = await Promise.all([
+        sharp(file.path)
+          .withMetadata(false)
+          .resize({ width: 800, withoutEnlargement: true })
+          .jpeg({ quality: 78 })
+          .toBuffer(),
+        s3.generatePreview(file.path),
+      ]);
 
-      // Upload to S3 (or local disk if S3 not configured). Throws on failure — no silent fallback.
-      const [imagePath, thumbnailPath] = await Promise.all([
+      const previewBasename = path.parse(file.filename).name;
+      const previewFilename = `${previewBasename}.webp`;
+
+      // Store the preview buffer (S3 or local disk fallback).
+      // Buffers are already in memory so processUpload can safely unlink the temp file.
+      async function storePreview() {
+        if (s3.isEnabled()) {
+          return s3.uploadBuffer(
+            previewBuffer,
+            `admins/${req.admin.id}/previews/${previewFilename}`,
+            'image/webp'
+          );
+        }
+        fs.writeFileSync(path.join(PREVIEW_DIR, previewFilename), previewBuffer);
+        return `/uploads/previews/${previewFilename}`;
+      }
+
+      // Upload original, thumbnail, and preview concurrently.
+      const [imagePath, thumbnailPath, previewPath] = await Promise.all([
         s3.processUpload(file, req.admin.id),
         s3.processThumbnail(thumbBuffer, thumbFilename, THUMB_DIR, req.admin.id),
+        storePreview(),
       ]);
       const nameWithoutExt = path.parse(file.originalname).name;
       const matchedOriginal = selectedImageMap[nameWithoutExt];
@@ -88,6 +112,7 @@ router.post('/', protect, checkQuota, upload.array('images', 5000), validateImag
         originalName: file.originalname,
         path: imagePath,
         thumbnailPath,
+        previewPath,
         beforePath: matchedOriginal ? matchedOriginal.path : undefined,
         sortOrder: i,
         size: file.size,
@@ -130,11 +155,12 @@ router.delete('/:imageId', protect, asyncHandler(async (req, res) => {
   const gallery = await Gallery.findOne({ _id: image.galleryId, adminId: req.admin.id });
   if (!gallery) return res.status(403).json({ message: 'Forbidden' });
 
-  // Delete original + thumbnail from S3 or local disk
+  // Delete original + thumbnail + preview from S3 or local disk
   await Promise.all([
-    s3.deleteUpload(image.path, UPLOADS_DIR),
-    image.thumbnailPath ? s3.deleteUpload(image.thumbnailPath, THUMB_DIR) : Promise.resolve(),
-    image.beforePath    ? s3.deleteUpload(image.beforePath, UPLOADS_DIR)  : Promise.resolve(),
+    image.path          ? s3.deleteUpload(image.path,          UPLOADS_DIR) : Promise.resolve(),
+    image.thumbnailPath ? s3.deleteUpload(image.thumbnailPath, THUMB_DIR)   : Promise.resolve(),
+    image.previewPath   ? s3.deleteUpload(image.previewPath,   PREVIEW_DIR) : Promise.resolve(),
+    image.beforePath    ? s3.deleteUpload(image.beforePath,    UPLOADS_DIR) : Promise.resolve(),
   ]);
 
   await GalleryImage.findByIdAndDelete(req.params.imageId);

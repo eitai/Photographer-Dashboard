@@ -73,14 +73,15 @@ async function insertMany(docs) {
   for (const doc of docs) {
     const { rows } = await pool.query(
       `INSERT INTO gallery_images
-         (gallery_id, filename, original_name, path, thumbnail_path, before_path, sort_order, size)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
+         (gallery_id, filename, original_name, path, thumbnail_path, preview_path, before_path, sort_order, size)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *`,
       [
         doc.galleryId,
         doc.filename,
         doc.originalName || null,
         doc.path,
         doc.thumbnailPath || null,
+        doc.previewPath || null,
         doc.beforePath || null,
         doc.sortOrder || 0,
         doc.size || 0,
@@ -94,9 +95,15 @@ async function insertMany(docs) {
 async function save(image) {
   const { rows } = await pool.query(
     `UPDATE gallery_images
-     SET before_path = $1, thumbnail_path = $2, sort_order = $3, updated_at = NOW()
-     WHERE id = $4 RETURNING *`,
-    [image.beforePath || null, image.thumbnailPath || null, image.sortOrder || 0, image.id]
+     SET before_path = $1, thumbnail_path = $2, preview_path = $3, sort_order = $4, updated_at = NOW()
+     WHERE id = $5 RETURNING *`,
+    [
+      image.beforePath   || null,
+      image.thumbnailPath || null,
+      image.previewPath  || null,
+      image.sortOrder    || 0,
+      image.id,
+    ]
   );
   const updated = rowToCamel(rows[0]);
   Object.assign(image, updated);

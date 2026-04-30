@@ -54,7 +54,7 @@ export async function downloadZip(
         const url = getImageUrl(img.path);
         const blob = await fetchWithTimeout(url);
         if (blob) {
-          const name = img.originalName || img.filename;
+          const name = img.filename;
           const ext = name.includes('.') ? `.${name.split('.').pop()}` : '';
           folder.file(`${name.replace(/\.[^.]+$/, '') || img._id}${ext}`, blob);
         }

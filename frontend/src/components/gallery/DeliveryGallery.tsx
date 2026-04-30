@@ -20,36 +20,55 @@ export const DeliveryGallery = ({ gallery, images, getImageUrl }: Props) => {
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const [preparingZip, setPreparingZip] = useState(false);
 
-  const handleDownload = (path: string, filename: string) => {
+  const handleDownload = async (path: string, filename: string) => {
+    const res = await fetch(getImageUrl(path));
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
-    link.href = getImageUrl(path);
+    link.href = url;
     link.download = filename;
-    link.target = '_blank';
-    document.body.appendChild(link);
     link.click();
-    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   };
 
   const handleDownloadAll = async () => {
     setPreparingZip(true);
-    // Map GalleryImage to ZipImageEntry shape — use filename as _id for named files
-    const zipImages = images.map((img) => ({
-      _id: img.originalName || img.filename,
-      path: img.path,
-      filename: img.filename,
-    }));
+    // Map GalleryImage to ZipImageEntry shape — exclude images whose original was deleted (path is null)
+    const zipImages = images
+      .filter((img) => img.path)
+      .map((img) => ({
+        _id: img.originalName || img.filename,
+        path: img.path,
+        filename: img.filename,
+      }));
     await downloadZip(zipImages, 'photos', gallery.name);
     setPreparingZip(false);
   };
 
+  const bannerImage = images[0];
+
   return (
-    <main className='pt-16'>
+    <main>
+      {/* Hero banner — first delivery image, no overlay text */}
+      {bannerImage && (
+        <div className='relative w-full h-64 md:h-80 overflow-hidden'>
+          <img
+            src={getImageUrl(bannerImage.previewPath ?? bannerImage.thumbnailPath ?? bannerImage.path)}
+            alt={gallery.clientName || ''}
+            className='w-full h-full object-cover'
+          />
+        </div>
+      )}
+
       <section className='section-spacing'>
         <div className='container-narrow'>
           <FadeIn>
             <div className='text-center mb-10'>
-              <p className=' text-2xl md:text-3xl text-foreground mb-2'>{gallery.headerMessage || t('gallery.delivery_title')}</p>
-              {gallery.clientName && <p className='text-muted-foreground'>{gallery.clientName}</p>}
+              <p className='text-2xl md:text-3xl text-foreground mb-2'>
+                {gallery.clientName
+                  ? `${gallery.clientName}, ${t('gallery.delivery_title').toLowerCase()}`
+                  : t('gallery.delivery_title')}
+              </p>
               {images.length > 0 && (
                 <button
                   onClick={handleDownloadAll}
@@ -103,7 +122,7 @@ export const DeliveryGallery = ({ gallery, images, getImageUrl }: Props) => {
                     </div>
                   ) : (
                     <img
-                      src={getImageUrl(img.thumbnailPath || img.path)}
+                      src={getImageUrl(img.thumbnailPath || img.previewPath || img.path)}
                       alt={img.originalName || img.filename}
                       className='w-full h-auto block'
                       loading='lazy'
@@ -119,13 +138,15 @@ export const DeliveryGallery = ({ gallery, images, getImageUrl }: Props) => {
                     <Maximize2 size={14} />
                   </button>
 
-                  <button
-                    onClick={() => handleDownload(img.path, img.filename)}
-                    className='absolute top-2 end-2 w-8 h-8 rounded-full bg-black/40 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200'
-                    aria-label={t('gallery.download_photo')}
-                  >
-                    <Download size={14} />
-                  </button>
+                  {img.path && (
+                    <button
+                      onClick={() => handleDownload(img.path, img.filename)}
+                      className='absolute top-2 end-2 w-8 h-8 rounded-full bg-black/40 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200'
+                      aria-label={t('gallery.download_photo')}
+                    >
+                      <Download size={14} />
+                    </button>
+                  )}
                 </div>
               </FadeIn>
             ))}

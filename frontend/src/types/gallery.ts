@@ -3,6 +3,7 @@ export interface GalleryImage {
   filename: string;
   originalName: string;
   path: string;
+  previewPath?: string;
   thumbnailPath?: string;
   beforePath?: string;
   sortOrder: number;
