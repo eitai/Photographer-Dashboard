@@ -48,10 +48,13 @@ function clearAuthAndRedirect() {
   window.location.replace('/admin');
 }
 
-// Handle 401 — clear local user state and redirect to login
+// Handle 401 — clear local user state and redirect to login.
+// Skip cancelled requests: when queryClient.clear() aborts an in-flight /auth/me
+// during logout, we don't want that stale 401 to interrupt a concurrent login.
 api.interceptors.response.use(
   (res) => res,
   (err) => {
+    if (err.code === 'ERR_CANCELED') return Promise.reject(err);
     if (err.response?.status === 401) {
       clearAuthAndRedirect();
     }
@@ -60,8 +63,10 @@ api.interceptors.response.use(
 );
 
 // ---- Auth ----
-export const verifyAuth = (): Promise<{ admin: import('@/store/authStore').AdminUser }> =>
-  api.get('/auth/me').then((r) => r.data);
+// Accepts the AbortSignal from React Query so the request is properly cancelled
+// when queryClient.clear() is called (e.g. on logout).
+export const verifyAuth = ({ signal }: { signal: AbortSignal }): Promise<{ admin: import('@/store/authStore').AdminUser }> =>
+  api.get('/auth/me', { signal }).then((r) => r.data);
 
 // ---- Storage ----
 export const getMyStorage = (): Promise<import('@/types/admin').StorageStats> =>

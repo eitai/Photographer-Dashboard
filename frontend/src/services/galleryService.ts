@@ -12,7 +12,7 @@ export const fetchGalleries = (clientId: string): Promise<GalleryData[]> =>
 export const fetchSubmissions = (galleryId: string): Promise<GallerySubmission[]> =>
   api.get(`/galleries/${galleryId}/submissions`).then((r) => r.data);
 
-export const createGallery = (data: { name: string; headerMessage: string; maxSelections: number; clientId: string; clientName: string }) =>
+export const createGallery = (data: { name: string; headerMessage: string; maxSelections: number; clientId: string; clientName: string; expiresAt?: string | null }) =>
   api.post('/galleries', data).then((r) => r.data);
 
 export const createDelivery = (galleryId: string, data: { headerMessage: string; name?: string }) =>

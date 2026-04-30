@@ -96,7 +96,7 @@ export const Footer = ({ social, studioName }: FooterProps = {}) => {
         )}
 
         <p className='text-xs text-muted-foreground'>
-          © {new Date().getFullYear()} {studioName || 'Koral Photography'}. {t('footer.rights')}.
+          © {new Date().getFullYear()} {studioName || 'LIGHT STUDIO'}. {t('footer.rights')}.
         </p>
       </div>
     </footer>

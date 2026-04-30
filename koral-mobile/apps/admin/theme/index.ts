@@ -1,5 +1,5 @@
 /**
- * Koral Light Studio — Mobile Design Tokens
+ * LIGHT STUDIO — Mobile Design Tokens
  *
  * Single source of truth for all visual constants used across the admin app.
  * All values are React Native / StyleSheet compatible (no Tailwind).

@@ -24,9 +24,9 @@ export const Portfolio = () => {
   return (
     <main className='pt-16'>
       <Helmet>
-        <title>{t('portfolio.title')} | Koral Photography</title>
-        <meta name='description' content='צפו בגלריית הצילומים של קורל — משפחות, הריון, ניו בורן ומיתוג אישי בצפון הארץ.' />
-        <meta property='og:title' content={`${t('portfolio.title')} | Koral Photography`} />
+        <title>{t('portfolio.title')} | LIGHT STUDIO</title>
+        <meta name='description' content='צפו בגלריית הצילומים של הסטודיו — משפחות, הריון, ניו בורן ומיתוג אישי בצפון הארץ.' />
+        <meta property='og:title' content={`${t('portfolio.title')} | LIGHT STUDIO`} />
         <meta property='og:url' content={window.location.href} />
         <link rel='canonical' href={window.location.href} />
       </Helmet>

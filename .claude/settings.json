@@ -55,7 +55,14 @@
       "Bash(curl -v \"http://localhost:5000/api/media/admins/8fd31cab-daec-44b9-80c2-1cbf91525ea7/thumbnails/thumb_d3ae29038a4a4cc8c8deb433438ab5db.jpg\")",
       "Bash(curl -s \"http://localhost:5000/api/media/admins/8fd31cab-daec-44b9-80c2-1cbf91525ea7/thumbnails/thumb_d3ae29038a4a4cc8c8deb433438ab5db.jpg\" -o /dev/null -w \"HTTP status: %{http_code}\\\\nRedirect to: %{redirect_url}\\\\n\")",
       "Bash(curl -sL \"http://localhost:5000/api/media/admins/8fd31cab-daec-44b9-80c2-1cbf91525ea7/thumbnails/thumb_d3ae29038a4a4cc8c8deb433438ab5db.jpg\" -o /dev/null -w \"Final HTTP status: %{http_code}\\\\n\")",
-      "WebFetch(domain:rememberoren.co.il)"
+      "WebFetch(domain:rememberoren.co.il)",
+      "Bash(node --check src/routes/auth.js)",
+      "Bash(node --check src/models/Admin.js)",
+      "Bash(node --check src/utils/formatAdmin.js)",
+      "Bash(node --check server.js)",
+      "Bash(npx tsc *)",
+      "WebSearch",
+      "WebFetch(domain:wasabi.com)"
     ],
     "deny": [
       "Bash(taskkill *)",

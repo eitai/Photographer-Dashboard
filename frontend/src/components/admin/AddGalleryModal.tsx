@@ -18,6 +18,7 @@ interface FormState {
   name: string;
   headerMessage: string;
   maxSelections: number;
+  expiresAt: string;
 }
 
 export const AddGalleryModal = ({
@@ -35,6 +36,7 @@ export const AddGalleryModal = ({
     name: '',
     headerMessage: '',
     maxSelections: 10,
+    expiresAt: '',
   });
   const [saving, setSaving] = useState(false);
   const [emailSent, setEmailSent] = useState<boolean | null>(null);
@@ -54,6 +56,7 @@ export const AddGalleryModal = ({
         maxSelections: form.maxSelections,
         clientId: selectedClient._id,
         clientName: selectedClient.name,
+        expiresAt: form.expiresAt ? new Date(form.expiresAt).toISOString() : null,
       });
       setEmailSent(data.emailSent ?? null);
       await queryClient.invalidateQueries({ queryKey: ['galleries'] });
@@ -166,6 +169,28 @@ export const AddGalleryModal = ({
               onChange={(e) => setForm((f) => ({ ...f, maxSelections: Number(e.target.value) }))}
               className='w-full px-3 py-2 rounded-lg border border-beige bg-card text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-blush/50'
             />
+          </div>
+
+          {/* Expiry date (optional) */}
+          <div>
+            <label className='block text-xs text-warm-gray mb-1'>{t('admin.gallery.expires_at_label')}</label>
+            <div className='flex items-center gap-2'>
+              <input
+                type='datetime-local'
+                value={form.expiresAt}
+                onChange={(e) => setForm((f) => ({ ...f, expiresAt: e.target.value }))}
+                className='flex-1 px-3 py-2 rounded-lg border border-beige bg-card text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-blush/50'
+              />
+              {form.expiresAt && (
+                <button
+                  type='button'
+                  onClick={() => setForm((f) => ({ ...f, expiresAt: '' }))}
+                  className='shrink-0 text-xs text-warm-gray hover:text-rose-500 transition-colors px-2 py-1 rounded-lg border border-beige hover:border-rose-200 hover:bg-rose-50'
+                >
+                  {t('admin.gallery.expires_at_clear')}
+                </button>
+              )}
+            </div>
           </div>
 
           {/* Actions */}

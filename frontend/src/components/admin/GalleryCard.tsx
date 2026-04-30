@@ -11,6 +11,27 @@ import { getImageUrl } from '@/lib/api';
 import { downloadZip } from '@/lib/downloadZip';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
+function useExpiryBadge(expiresAt: string | null | undefined, t: (key: string) => string) {
+  if (!expiresAt) return null;
+  const exp = new Date(expiresAt);
+  const now = new Date();
+  const diffMs = exp.getTime() - now.getTime();
+  const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+  if (diffMs < 0) {
+    return { label: t('admin.gallery.badge_expired'), className: 'bg-rose-100 text-rose-700 border-rose-200' };
+  }
+  if (diffDays === 0) {
+    return { label: t('admin.gallery.badge_expires_today'), className: 'bg-orange-100 text-orange-700 border-orange-200' };
+  }
+  if (diffDays === 1) {
+    return { label: t('admin.gallery.badge_expires_in_1_day'), className: 'bg-amber-100 text-amber-700 border-amber-200' };
+  }
+  if (diffDays <= 7) {
+    return { label: t('admin.gallery.badge_expires_in_days').replace('{n}', String(diffDays)), className: 'bg-amber-50 text-amber-600 border-amber-200' };
+  }
+  return { label: t('admin.gallery.badge_expires_in_days').replace('{n}', String(diffDays)), className: 'bg-gray-100 text-warm-gray border-gray-200' };
+}
+
 const Tip = ({ label, children }: { label: string; children: React.ReactNode }) => (
   <Tooltip>
     <TooltipTrigger asChild>
@@ -76,6 +97,7 @@ export const GalleryCard = ({
   const hasDelivery = !!delivery || galleries.some((g2) => g2.deliveryOf === g._id);
   const { data: previewImages = [] } = useGalleryPreviewImages(g._id);
   const { data: submissions = [] } = useSubmissions(g._id);
+  const expiryBadge = useExpiryBadge(g.expiresAt, t);
   const submission = submissions[0] ?? null;
 
   const [dlProgress, setDlProgress] = useState<{ done: number; total: number } | null>(null);
@@ -113,6 +135,11 @@ export const GalleryCard = ({
               <Mail size={9} />
               {new Date(g.lastEmailSentAt).toLocaleDateString()}
             </p>
+          )}
+          {expiryBadge && (
+            <span className={`inline-flex items-center gap-1 mt-1.5 px-1.5 py-0.5 rounded-md text-[10px] font-medium border ${expiryBadge.className}`}>
+              {expiryBadge.label}
+            </span>
           )}
         </div>
 

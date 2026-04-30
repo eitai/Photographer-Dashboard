@@ -27,9 +27,9 @@ export const Blog = () => {
   return (
     <main className='pt-16'>
       <Helmet>
-        <title>{t('blog.title')} | Koral Photography</title>
+        <title>{t('blog.title')} | LIGHT STUDIO</title>
         <meta name='description' content={t('blog.subtitle')} />
-        <meta property='og:title' content={`${t('blog.title')} | Koral Photography`} />
+        <meta property='og:title' content={`${t('blog.title')} | LIGHT STUDIO`} />
         <meta property='og:description' content={t('blog.subtitle')} />
         <meta property='og:url' content={window.location.href} />
         <link rel='canonical' href={window.location.href} />

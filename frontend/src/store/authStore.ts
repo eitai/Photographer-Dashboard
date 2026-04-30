@@ -9,6 +9,9 @@ export interface AdminUser {
   role: 'admin' | 'superadmin';
   username: string | null;
   studioName: string | null;
+  ssoEnabled: boolean;
+  firstLogin: boolean;
+  googleEmail: string | null;
 }
 
 interface AuthState {
@@ -39,7 +42,14 @@ const _stored = localStorage.getItem('koral_admin_user');
 let _initialAdmin: AdminUser | null = null;
 if (_stored) {
   try {
-    _initialAdmin = JSON.parse(_stored);
+    const parsed = JSON.parse(_stored);
+    // Backfill optional SSO fields that may be absent in older cached objects
+    _initialAdmin = {
+      ssoEnabled: false,
+      firstLogin: false,
+      googleEmail: null,
+      ...parsed,
+    };
   } catch {
     localStorage.removeItem('koral_admin_user');
   }
@@ -52,14 +62,13 @@ export const useAuthStore = create<AuthState>((set) => ({
   theme: _initialTheme,
 
   login: async (email, password) => {
-    // Clear any cached data from a previous session before loading the new one.
-    queryClient.clear();
     const payload = email.includes('@') ? { email, password } : { username: email, password };
     const res = await api.post('/auth/login', payload);
     const { admin: adminData } = res.data as { admin: AdminUser };
-    // The server sets the httpOnly koral_token cookie in the Set-Cookie header.
-    // We never receive or store the token value in JS.
-    // koral_admin_user caches the profile object for optimistic UI hydration.
+    // Clear stale cache from a previous session AFTER the new credentials arrive,
+    // not before — clearing before the POST was causing in-flight /auth/me requests
+    // (aborted during logout) to race with the login and trigger clearAuthAndRedirect.
+    queryClient.clear();
     localStorage.setItem('koral_admin_user', JSON.stringify(adminData));
     set({ admin: adminData });
     return adminData;

@@ -56,7 +56,7 @@ export const BlogPost = () => {
   return (
     <main className='pt-16'>
       <Helmet>
-        <title>{post.seoTitle || post.title} | Koral Photography</title>
+        <title>{post.seoTitle || post.title} | LIGHT STUDIO</title>
         <meta name='description' content={post.seoDescription || post.title} />
         <meta property='og:title' content={post.seoTitle || post.title} />
         <meta property='og:description' content={post.seoDescription || post.title} />
@@ -76,7 +76,7 @@ export const BlogPost = () => {
             description: post.seoDescription || '',
             image: postImage,
             datePublished: post.publishedAt || post.createdAt,
-            author: { '@type': 'Person', name: 'Koral Photography' },
+            author: { '@type': 'Person', name: 'LIGHT STUDIO' },
           })}
         </script>
       </Helmet>

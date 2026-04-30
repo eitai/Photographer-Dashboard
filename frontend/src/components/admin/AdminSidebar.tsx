@@ -45,7 +45,7 @@ export const AdminSidebar = ({ isOpen, onClose }: AdminSidebarProps) => {
     >
       {/* Logo */}
       <div className='h-16 px-6 border-b border-gray-100 flex items-center'>
-        <img src='/logos/03_logo_horizontal_transparent.png' alt='Koral Light Studio' className='h-full w-full object-contain py-2 transition-transform duration-200 hover:scale-110' />
+        <img src='/logos/03_logo_horizontal_transparent.png' alt='LIGHT STUDIO' className='h-full w-full object-contain py-2 transition-transform duration-200 hover:scale-110' />
       </div>
 
       {/* Navigation */}

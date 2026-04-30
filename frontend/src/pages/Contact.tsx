@@ -72,9 +72,9 @@ export const Contact = () => {
   return (
     <main className='pt-16'>
       <Helmet>
-        <title>{t('contact.title')} | Koral Photography</title>
+        <title>{t('contact.title')} | LIGHT STUDIO</title>
         <meta name='description' content={t('contact.subtitle')} />
-        <meta property='og:title' content={`${t('contact.title')} | Koral Photography`} />
+        <meta property='og:title' content={`${t('contact.title')} | LIGHT STUDIO`} />
         <meta property='og:url' content={window.location.href} />
         <link rel='canonical' href={window.location.href} />
       </Helmet>

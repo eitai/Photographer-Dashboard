@@ -21,6 +21,7 @@ export interface GalleryData {
   isActive: boolean;
   deliveryOf?: string;
   lastEmailSentAt?: string;
+  expiresAt?: string | null;
   status: 'gallery_sent' | 'viewed' | 'selection_submitted' | 'in_editing' | 'delivered';
   videos?: { path: string; filename: string; originalName: string }[];
   previousSelectionIds?: string[];

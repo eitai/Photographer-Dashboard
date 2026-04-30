@@ -34,6 +34,15 @@ async function findOne(filter) {
   return rows[0] ? rowToCamel(rows[0]) : null;
 }
 
+async function findByGoogleId(googleId) {
+  if (!googleId) return null;
+  const { rows } = await pool.query(
+    'SELECT * FROM admins WHERE google_id = $1 LIMIT 1',
+    [googleId]
+  );
+  return rows[0] ? rowToCamel(rows[0]) : null;
+}
+
 async function find() {
   const { rows } = await pool.query(
     `SELECT
@@ -97,6 +106,10 @@ async function findByIdAndUpdate(id, update) {
     username: 'username',
     studioName: 'studio_name',
     pushToken: 'push_token',
+    googleId: 'google_id',
+    googleEmail: 'google_email',
+    ssoEnabled: 'sso_enabled',
+    firstLogin: 'first_login',
   };
   const src = update.$set || update;
   for (const [k, v] of Object.entries(src)) {
@@ -138,6 +151,7 @@ async function updatePassword(id, newPassword) {
 module.exports = {
   findById,
   findOne,
+  findByGoogleId,
   find,
   countDocuments,
   create,

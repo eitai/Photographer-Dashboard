@@ -46,7 +46,7 @@ export const Navbar = ({ photographerName, logoUrl, username, social }: NavbarPr
         <Link to={`${base}/`} className='flex items-center shrink-0'>
           {logoUrl
             ? <img src={logoUrl} alt={photographerName || 'Studio logo'} className='h-8 w-auto object-contain' />
-            : <span className='text-xl tracking-wide text-foreground'>{photographerName || 'Koral Photography'}</span>
+            : <span className='text-xl tracking-wide text-foreground'>{photographerName || 'LIGHT STUDIO'}</span>
           }
         </Link>
 

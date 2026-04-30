@@ -455,7 +455,7 @@ export const ClientProductsPage = () => {
 
       {/* Footer */}
       <footer className='text-center py-8 mt-4'>
-        <p className='text-xs text-warm-gray/60'>Koral Light Studio</p>
+        <p className='text-xs text-warm-gray/60'>LIGHT STUDIO</p>
       </footer>
     </main>
   );

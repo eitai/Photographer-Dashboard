@@ -28,8 +28,8 @@ const translations: Record<string, Record<Lang, string>> = {
   // About
   'about.title': { he: 'קצת עליי', en: 'About Me' },
   'about.text': {
-    he: 'שלום, אני קורל. צלמת משפחות, הריון וניו בורן בצפון הארץ. אני מאמינה שהרגעים הכי יפים הם אלה שקורים כשלא שמים לב — חיבוק ספונטני, מבט חטוף, צחוק של ילד. אני כאן כדי לתפוס את האור שבתוך המשפחה שלכם.',
-    en: "Hi, I'm Koral. A family, maternity, and newborn photographer in Northern Israel. I believe the most beautiful moments are the ones that happen when no one is watching — a spontaneous hug, a stolen glance, a child's laughter. I'm here to capture the light within your family.",
+    he: 'שלום, אני הצלמת שלך. צלמת משפחות, הריון וניו בורן בצפון הארץ. אני מאמינה שהרגעים הכי יפים הם אלה שקורים כשלא שמים לב — חיבוק ספונטני, מבט חטוף, צחוק של ילד. אני כאן כדי לתפוס את האור שבתוך המשפחה שלכם.',
+    en: "Hi, I'm your photographer. A family, maternity, and newborn photographer in Northern Israel. I believe the most beautiful moments are the ones that happen when no one is watching — a spontaneous hug, a stolen glance, a child's laughter. I'm here to capture the light within your family.",
   },
 
   // Portfolio
@@ -48,13 +48,13 @@ const translations: Record<string, Record<Lang, string>> = {
   // Testimonials
   'testimonials.title': { he: 'מה אומרים עליי', en: 'Kind Words' },
   'testimonial.1.text': {
-    he: 'קורל יצרה אווירה כל כך נעימה שהילדים פשוט היו טבעיים. התמונות יצאו מדהימות.',
-    en: 'Koral created such a warm atmosphere that the kids were completely natural. The photos came out amazing.',
+    he: 'הצלמת יצרה אווירה כל כך נעימה שהילדים פשוט היו טבעיים. התמונות יצאו מדהימות.',
+    en: 'She created such a warm atmosphere that the kids were completely natural. The photos came out amazing.',
   },
   'testimonial.1.name': { he: 'מיכל ודני', en: 'Michal & Danny' },
   'testimonial.2.text': {
-    he: 'הצילומים של ההריון היו חוויה מרגשת. קורל ידעה בדיוק איך לגרום לי להרגיש יפה ונינוחה.',
-    en: 'The maternity shoot was such an emotional experience. Koral knew exactly how to make me feel beautiful and relaxed.',
+    he: 'הצילומים של ההריון היו חוויה מרגשת. היא ידעה בדיוק איך לגרום לי להרגיש יפה ונינוחה.',
+    en: 'The maternity shoot was such an emotional experience. She knew exactly how to make me feel beautiful and relaxed.',
   },
   'testimonial.2.name': { he: 'שירה כ.', en: 'Shira K.' },
   'testimonial.3.text': {
@@ -144,6 +144,40 @@ const translations: Record<string, Record<Lang, string>> = {
   'admin.login.error': { he: 'אימייל או סיסמה שגויים', en: 'Invalid email or password' },
   'admin.login.signing_in': { he: 'מתחבר…', en: 'Signing in…' },
   'admin.login.sign_in': { he: 'כניסה', en: 'Sign in' },
+  'admin.login.or': { he: 'או', en: 'or' },
+  'admin.login.google': { he: 'כניסה עם Google', en: 'Sign in with Google' },
+  'admin.login.sso_error': { he: 'הכניסה עם Google נכשלה. אנא נסה שוב.', en: 'Google sign-in failed. Please try again.' },
+  'admin.login.sso_error_no_account': { he: 'לא נמצא חשבון מנהל עם אימייל זה.', en: 'No admin account found for this Google email.' },
+  'admin.login.sso_error_disabled': {
+    he: 'כניסה עם Google אינה מופעלת לחשבון זה.',
+    en: 'Google SSO is not enabled for this account.',
+  },
+
+  // ── Admin: SSO Setup Modal ──────────────────────────────────────────────────
+  'admin.sso_modal.title': { he: 'הגדרת כניסה עם Google', en: 'Set Up Google Sign-In' },
+  'admin.sso_modal.description': {
+    he: 'ניתן להגדיר כניסה מהירה עם חשבון Google שלך. ניתן לעשות זאת כאן או בהגדרות ← אבטחה.',
+    en: 'You can set up quick sign-in with your Google account. Do it here or later in Settings → Security.',
+  },
+  'admin.sso_modal.setup_now': { he: 'הגדרה עכשיו', en: 'Set up now' },
+  'admin.sso_modal.maybe_later': { he: 'אולי אחר כך', en: 'Maybe later' },
+
+  // ── Admin: Settings → Security tab ─────────────────────────────────────────
+  'admin.settings.tab.security': { he: 'אבטחה', en: 'Security' },
+  'admin.settings.sso.title': { he: 'כניסה עם Google (SSO)', en: 'Google Sign-In (SSO)' },
+  'admin.settings.sso.description': {
+    he: 'חברו חשבון Google כדי להתחבר בלחיצה אחת ללא צורך בסיסמה.',
+    en: 'Connect a Google account to sign in with one click, without a password.',
+  },
+  'admin.settings.sso.connected': { he: 'מחובר', en: 'Connected' },
+  'admin.settings.sso.not_connected': { he: 'לא מחובר', en: 'Not connected' },
+  'admin.settings.sso.connect': { he: 'חיבור חשבון Google', en: 'Connect Google Account' },
+  'admin.settings.sso.disconnect': { he: 'ניתוק', en: 'Disconnect' },
+  'admin.settings.sso.disconnecting': { he: 'מנתק…', en: 'Disconnecting…' },
+  'admin.settings.sso.linked_success': { he: 'חשבון Google חובר בהצלחה!', en: 'Google account linked successfully!' },
+  'admin.settings.sso.unlink_success': { he: 'חשבון Google נותק.', en: 'Google account disconnected.' },
+  'admin.settings.sso.enabled_label': { he: 'מאפשר כניסה עם Google', en: 'Allow Google sign-in' },
+  'admin.settings.sso.toggle_failed': { he: 'שגיאה בשינוי ההגדרה', en: 'Failed to update setting' },
 
   // ── Admin: Dashboard ────────────────────────────────────────────────────────
   'admin.dashboard.greeting': { he: 'בוקר טוב', en: 'Good morning' },
@@ -378,6 +412,19 @@ const translations: Record<string, Record<Lang, string>> = {
   'admin.contact.load_failed': { he: 'טעינת הפניות נכשלה', en: 'Failed to load messages' },
   'admin.contact.delete_failed': { he: 'מחיקת הפנייה נכשלה', en: 'Failed to delete message' },
   'admin.nav.contact': { he: 'פניות', en: 'Contact' },
+
+  // ── Admin: Gallery expiry ────────────────────────────────────────────────────
+  'admin.gallery.expires_at_label': { he: 'תאריך מחיקה אוטומטית (אופציונלי)', en: 'Auto-delete date (optional)' },
+  'admin.gallery.expires_at_placeholder': { he: 'לא מוגדר', en: 'Not set' },
+  'admin.gallery.expires_at_clear': { he: 'נקה תאריך', en: 'Clear date' },
+  'admin.gallery.expires_at_save': { he: 'שמור תאריך מחיקה', en: 'Save expiry' },
+  'admin.gallery.expires_at_saving': { he: 'שומר…', en: 'Saving…' },
+  'admin.gallery.expires_at_saved': { he: 'תאריך המחיקה נשמר', en: 'Expiry saved' },
+  'admin.gallery.expires_at_save_failed': { he: 'שמירת תאריך המחיקה נכשלה', en: 'Failed to save expiry' },
+  'admin.gallery.badge_expired': { he: 'פג תוקף', en: 'Expired' },
+  'admin.gallery.badge_expires_today': { he: 'פג היום', en: 'Expires today' },
+  'admin.gallery.badge_expires_in_days': { he: 'פג בעוד {n} ימים', en: 'Expires in {n} days' },
+  'admin.gallery.badge_expires_in_1_day': { he: 'פג מחר', en: 'Expires tomorrow' },
 
   // ── Admin: Gallery in-editing action ────────────────────────────────────────
   'admin.gallery.mark_in_editing': { he: 'סמן כבעריכה', en: 'Mark as In Editing' },
@@ -710,16 +757,16 @@ const translations: Record<string, Record<Lang, string>> = {
   'landing.nav.get_started': { he: 'להתחלה', en: 'Get Started' },
 
   // Hero
-  'landing.hero.badge': { he: 'הכלי שצלמים ישראלים חיכו לו', en: 'Photography studio management — simplified' },
-  'landing.hero.h1_line1': { he: 'ניהול גלריות', en: 'Gallery management' },
-  'landing.hero.h1_mid': { he: 'שהפך ל', en: 'made' },
-  'landing.hero.h1_accent': { he: 'ביופי', en: 'beautifully' },
-  'landing.hero.h1_post': { he: 'פשוט', en: 'simple' },
+  'landing.hero.badge': { he: 'כלי ניהול לצלמים — פשוט וחזק', en: 'Photography management — simple & powerful' },
+  'landing.hero.h1_line1': { he: 'הדרך החכמה לנהל', en: 'The smart way to manage' },
+  'landing.hero.h1_mid': { he: 'לקוחות וגלריות', en: 'clients and galleries' },
+  'landing.hero.h1_accent': { he: 'צילום', en: 'photography' },
+  'landing.hero.h1_post': { he: '', en: '' },
   'landing.hero.subtitle': {
-    he: 'מעלים גלריות, שולחים קישורים פרטיים ללקוחות, עוקבים אחרי בחירות בזמן אמת ומוכרים מוצרים — הכל ממקום אחד, בלי בלגן.',
-    en: 'Upload galleries, share private client links, track selections in real time, and sell prints — all without leaving your dashboard.',
+    he: 'כל תהליך העבודה שלך במקום אחד — העלאה, שיתוף, בחירה ומסירה. פחות התעסקות, יותר זמן לצלם.',
+    en: 'Your entire workflow in one place — upload, share, select, and deliver. Less admin, more time behind the lens.',
   },
-  'landing.hero.cta_trial': { he: 'התחילו בחינם', en: 'Start Free Trial' },
+  'landing.hero.cta_trial': { he: 'התחילו עכשיו', en: 'Get Started Now' },
   'landing.hero.cta_how': { he: 'ראו איך זה עובד', en: 'See How It Works' },
 
   // Browser mockup demo labels
@@ -737,6 +784,21 @@ const translations: Record<string, Record<Lang, string>> = {
   'landing.stats.satisfaction': { he: 'שביעות רצון', en: 'client satisfaction' },
   'landing.stats.rating': { he: 'דירוג ממוצע', en: 'photographer rating' },
 
+  // Specialty slider (auto-cycling section)
+  'landing.slider.label': { he: 'כל סוגי הצילום במקום אחד', en: 'Every photography specialty, one platform' },
+  'landing.slider.desc': {
+    he: 'לא משנה מה אתם מצלמים — המערכת מתאימה את עצמה אליכם.',
+    en: 'Whatever you shoot — the platform fits you.',
+  },
+  'landing.slider.family': { he: 'צילומי משפחה', en: 'Family Photography' },
+  'landing.slider.maternity': { he: 'צילומי הריון', en: 'Maternity Photography' },
+  'landing.slider.newborn': { he: 'צילומי ניו בורן', en: 'Newborn Photography' },
+  'landing.slider.events': { he: 'אירועים ובר/בת מצווה', en: "Events & B'nei Mitzvah" },
+  'landing.slider.branding': { he: 'צילומי תדמית', en: 'Personal Branding' },
+  'landing.slider.wedding': { he: 'חתונות', en: 'Weddings' },
+  'landing.slider.boudoir': { he: 'בוק אישי', en: 'Boudoir' },
+  'landing.slider.business': { he: 'צילום עסקי', en: 'Commercial Photography' },
+
   // Photographer tags marquee
   'landing.tags.wedding': { he: 'חתונות', en: 'Wedding' },
   'landing.tags.portrait': { he: 'פורטרט', en: 'Portrait' },
@@ -753,80 +815,80 @@ const translations: Record<string, Record<Lang, string>> = {
 
   // Features section
   'landing.features.label': { he: 'יכולות', en: 'Features' },
-  'landing.features.heading_pre': { he: 'בנוי בדיוק לצרכים של', en: 'Built for how photographers' },
-  'landing.features.heading_accent': { he: 'באמת', en: 'actually' },
-  'landing.features.heading_post': { he: 'צלמים', en: 'work' },
+  'landing.features.heading_pre': { he: 'כל מה שצריך', en: 'Everything you need' },
+  'landing.features.heading_accent': { he: 'כדי לנהל', en: 'to run' },
+  'landing.features.heading_post': { he: 'את העסק שלך', en: 'your photography business' },
 
-  'landing.feature.upload.title': { he: 'העלאת גלריה חכמה', en: 'Smart Gallery Upload' },
+  'landing.feature.upload.title': { he: 'ניהול לקוחות וגלריות', en: 'Client & Gallery Management' },
   'landing.feature.upload.desc': {
-    he: 'מעלים עד 1,000 תמונות בבת אחת — המערכת מבצעת אופטימיזציה אוטומטית. הלקוח מקבל קישור פרטי, לא קישור WeTransfer.',
-    en: 'Bulk-upload 1,000 photos with auto-optimization. Clients get a private link, not a zip file.',
+    he: 'כל לקוח מקבל גלריה מסודרת עם גישה פרטית.',
+    en: 'Every client gets a dedicated gallery with private access.',
   },
-  'landing.feature.alerts.title': { he: 'עדכונים בזמן אמת', en: 'Instant Client Alerts' },
+  'landing.feature.alerts.title': { he: 'שיתוף קישורים חכמים', en: 'Smart Link Sharing' },
   'landing.feature.alerts.desc': {
-    he: 'מקבלים התראה ברגע שלקוח פתח את הגלריה או שלח בחירות. לא צריך לרדוף אחרי אף אחד.',
-    en: 'Get notified the second a client views their gallery or submits a selection. Zero chasing.',
+    he: 'שליחת גלריה בלחיצה אחת — בלי מיילים מסובכים.',
+    en: 'Send a gallery in one click — no complicated emails.',
   },
-  'landing.feature.pipeline.title': { he: 'Pipeline מעקב עבודות', en: 'Selection Pipeline' },
+  'landing.feature.pipeline.title': { he: 'מעקב סטטוס אוטומטי', en: 'Automated Status Tracking' },
   'landing.feature.pipeline.desc': {
-    he: 'כל עבודה בסטטוס ברור: נשלחה ← נצפתה ← בחירות התקבלו ← בעריכה ← נמסרה. שום עבודה לא נופלת בין הכיסאות.',
-    en: 'Track every job: Gallery Sent → Viewed → Selections In → Editing → Delivered. Nothing falls through.',
+    he: 'תמיד יודעים איפה כל פרויקט עומד.',
+    en: 'Always know exactly where every project stands.',
   },
-  'landing.feature.store.title': { he: 'חנות מוצרים מובנית', en: 'Built-in Product Store' },
+  'landing.feature.store.title': { he: 'בחירת תמונות פשוטה', en: 'Easy Photo Selection' },
   'landing.feature.store.desc': {
-    he: 'מוכרים אלבומים, הדפסים וקנבסים ישירות בתוך הגלריה. ההזמנות מגיעות לדשבורד — בלי אינטגרציות חיצוניות.',
-    en: 'Sell albums, prints, and canvases without a third-party cart. Orders land right in your dashboard.',
+    he: 'הלקוח בוחר — ואתם רואים הכל מסודר.',
+    en: 'Clients choose — and you see everything organized.',
   },
-  'landing.feature.themes.title': { he: '11 תבניות לתיק העבודות', en: '11 Portfolio Themes' },
+  'landing.feature.themes.title': { he: 'מכירת מוצרים', en: 'Sell Products' },
   'landing.feature.themes.desc': {
-    he: 'דף תיק עבודות ציבורי, 11 תבניות מעוצבות, מיתוג מלא. עולה לאוויר תוך 5 דקות.',
-    en: 'Your public portfolio, 11 themes, fully brandable. Live in 5 minutes.',
+    he: 'הוספת אלבומים, הדפסות ומוצרים ישירות מהמערכת.',
+    en: 'Add albums, prints, and products directly from the system.',
   },
-  'landing.feature.bilingual.title': { he: 'עברית ואנגלית — ילידים', en: 'Hebrew & English' },
+  'landing.feature.bilingual.title': { he: 'דף נחיתה אישי', en: 'Personal Landing Page' },
   'landing.feature.bilingual.desc': {
-    he: 'תמיכה מלאה ב-RTL/LTR — ממשק, גלריות, התראות וחוויית הלקוח בשתי השפות, ללא פשרות.',
-    en: 'Full RTL/LTR — galleries, notifications, and the client experience, in both languages.',
+    he: 'עמוד משלכם — ניתן לעריכה מלאה בלי קוד.',
+    en: 'Your own page — fully editable without any code.',
   },
 
   // Workflow section
   'landing.workflow.label': { he: 'איך זה עובד', en: 'How It Works' },
   'landing.workflow.heading_l1': { he: 'מהעלאה למסירה', en: 'From upload to delivery' },
-  'landing.workflow.heading_in': { he: 'רק ב', en: 'in' },
-  'landing.workflow.heading_num': { he: 'ארבעה', en: 'four' },
+  'landing.workflow.heading_in': { he: 'ב', en: 'in' },
+  'landing.workflow.heading_num': { he: '4', en: '4' },
   'landing.workflow.heading_end': { he: 'שלבים פשוטים', en: 'simple steps' },
 
   'landing.step.1.title': { he: 'העלאה', en: 'Upload' },
   'landing.step.1.desc': {
-    he: 'בוחרים את התמונות, גוררים פנימה. המערכת מטפלת בשינוי גודל, דחיסה ואחסון — הכל אוטומטי.',
-    en: 'Select your exported images and drag them in. We resize, compress, and store everything automatically.',
+    he: 'מעלים את התמונות בקלות ובמהירות.',
+    en: 'Upload your photos quickly and easily.',
   },
   'landing.step.2.title': { he: 'שיתוף', en: 'Share' },
   'landing.step.2.desc': {
-    he: 'בלחיצה אחת נוצר קישור גלריה פרטי ללקוח — עובד על כל טלפון, טאבלט ומחשב, ללא הורדת אפליקציה.',
-    en: 'One click generates a private gallery link for your client — works on any phone, tablet, or desktop.',
+    he: 'נשלח ללקוח קישור פרטי לגלריה.',
+    en: 'Send your client a private gallery link.',
   },
   'landing.step.3.title': { he: 'בחירה', en: 'Select' },
   'landing.step.3.desc': {
-    he: 'הלקוחות גולשים, מסמנים מועדפות ושולחים — הכל בתוך הגלריה הפרטית שלהם. ללא אפליקציה, ללא הרשמה.',
-    en: 'Clients browse, heart their favourites, and submit — all inside their private gallery. No app needed.',
+    he: 'הלקוח בוחר תמונות ומוצרים.',
+    en: 'The client selects photos and products.',
   },
   'landing.step.4.title': { he: 'מסירה', en: 'Deliver' },
   'landing.step.4.desc': {
-    he: 'עוברים על הבחירות, מטפלים בהזמנות מוצרים, מסמנים את העבודה כנמסרה. ה-pipeline מתקדם מעצמו.',
-    en: 'Review selections, process product orders, mark the job Delivered. The pipeline moves itself.',
+    he: 'אתם סוגרים את הפרויקט — בלי כאב ראש.',
+    en: 'You close the project — headache-free.',
   },
 
   // Real-time tracking split
-  'landing.tracking.label': { he: 'מעקב בזמן אמת', en: 'Real-time Tracking' },
-  'landing.tracking.heading_pre': { he: 'תמיד תדעו בדיוק איפה כל פרויקט', en: 'Know exactly where every project' },
+  'landing.tracking.label': { he: 'סטטוס ומעקב', en: 'Status & Tracking' },
+  'landing.tracking.heading_pre': { he: 'תמיד יודעים איפה כל פרויקט', en: 'Always know where every project' },
   'landing.tracking.heading_accent': { he: 'עומד', en: 'stands' },
   'landing.tracking.p1': {
-    he: 'רואים בדיוק איפה עומדת גלריית החתונה של שרה ודוד — בלי לשלוח ולו מייל מעקב אחד.',
-    en: "Know exactly where Sarah's wedding gallery stands — without sending a single follow-up email.",
+    he: 'ראו בזמן אמת מי פתח גלריה, מי בחר תמונות ומי עדיין לא הגיב.',
+    en: 'See in real time who opened a gallery, who selected photos, and who has not responded yet.',
   },
   'landing.tracking.p2': {
-    he: 'התראות חיות מגיעות ברגע שלקוח פתח את הגלריה, סימן מועדפת, או הזמין מוצר. ה-pipeline מתעדכן אוטומטית — בלי עבודה ידנית.',
-    en: 'Live notifications fire the moment a client views their gallery, marks a favourite, or places a product order. Your pipeline updates itself.',
+    he: 'כל התהליך מנוהל אוטומטית — בלי לרדוף אחרי לקוחות.',
+    en: 'The entire process is managed automatically — no more chasing clients.',
   },
   'landing.tracking.cta': { he: '← כנסו לדשבורד', en: 'See the dashboard →' },
   'landing.tracking.live_activity': { he: 'פעילות חיה', en: 'Live Activity' },
@@ -847,15 +909,15 @@ const translations: Record<string, Record<Lang, string>> = {
   'landing.notif.4.sub': { he: 'מיכל ר. · בת מצווה · לפני 3 שעות', en: 'Michal R. · Bat Mitzvah · 3 hr ago' },
 
   // Client experience section
-  'landing.client.label': { he: 'חוויית לקוח', en: 'Client Experience' },
-  'landing.client.heading_pre': { he: 'גלריה שהלקוחות שלכם', en: 'A gallery your clients will' },
-  'landing.client.heading_accent': { he: 'יאהבו', en: 'love' },
-  'landing.client.heading_post': { he: 'לגלוש בה', en: 'to browse' },
-  'landing.client.bullet1': { he: 'ללא הורדת אפליקציה — עובד בדפדפן', en: 'No app download required' },
-  'landing.client.bullet2': { he: 'מותאם לכל מכשיר ולכל מסך', en: 'Works on any device, any screen size' },
-  'landing.client.bullet3': { he: 'שליחת בחירות בכמה שניות', en: 'Selections submitted in seconds' },
+  'landing.client.label': { he: 'חווית לקוח', en: 'Client Experience' },
+  'landing.client.heading_pre': { he: 'חוויה מקצועית', en: 'A professional experience' },
+  'landing.client.heading_accent': { he: 'שמרגישים', en: 'they will remember' },
+  'landing.client.heading_post': { he: '', en: '' },
+  'landing.client.bullet1': { he: 'גלישה נוחה מכל מכשיר — ללא הורדת אפליקציה', en: 'Browse on any device — no app download needed' },
+  'landing.client.bullet2': { he: 'ממשק ברור ויפה לבחירת תמונות', en: 'Beautiful, intuitive photo selection interface' },
+  'landing.client.bullet3': { he: 'חוויה שמעלה את הערך של השירות שלכם', en: 'An experience that elevates the value of your service' },
   'landing.client.cta': { he: 'לדמו הגלריה', en: 'Try the gallery demo' },
-  'landing.phone.gallery': { he: 'גלריית קורל', en: 'Koral Gallery' },
+  'landing.phone.gallery': { he: 'הגלריה שלי', en: 'My Gallery' },
   'landing.phone.session': { he: 'שרה ודוד · חתונה', en: 'Sarah & David · Wedding' },
   'landing.phone.submit': { he: 'שליחת הבחירות שלי', en: 'Submit My Selections' },
 
@@ -871,12 +933,12 @@ const translations: Record<string, Record<Lang, string>> = {
   'landing.brand.theme_suffix': { he: 'ערכת נושא', en: 'Theme' },
 
   // Products split
-  'landing.products.label': { he: 'מכירת מוצרים', en: 'Sell Products' },
-  'landing.products.heading_pre': { he: 'אלבומים, הדפסים וקנבסים —', en: 'Albums, prints & canvases —' },
-  'landing.products.heading_accent': { he: 'כבר בפנים', en: 'built in' },
+  'landing.products.label': { he: 'מוצרים', en: 'Products & Languages' },
+  'landing.products.heading_pre': { he: 'יותר מכירות,', en: 'More sales,' },
+  'landing.products.heading_accent': { he: 'פחות התעסקות', en: 'less hassle' },
   'landing.products.desc': {
-    he: 'מציעים מוצרים פיזיים ישירות בתוך גלריית הלקוח. הלקוחות בוחרים, אתם מממשים — ללא אינטגרציות חיצוניות, ללא עמלות לצד שלישי.',
-    en: 'Offer physical products directly inside the client gallery. Clients choose, you fulfil — no third-party integrations, no extra subscriptions.',
+    he: 'מוכרים אלבומים, הדפסות ומוצרים ישירות מתוך הגלריה. תמיכה מלאה בעברית ואנגלית — לכל סוגי הלקוחות.',
+    en: 'Sell albums, prints, and products directly from the gallery. Full Hebrew and English support — for every type of client.',
   },
   'landing.products.cta': { he: '← לאפשרויות המוצרים', en: 'See product options →' },
   'landing.products.albums': { he: 'אלבומים', en: 'Albums' },
@@ -893,43 +955,43 @@ const translations: Record<string, Record<Lang, string>> = {
   },
 
   // Testimonials
-  'landing.testimonials.label': { he: 'מה אומרים עלינו', en: 'Testimonials' },
-  'landing.testimonials.heading_pre': { he: 'צלמים כבר מכורים', en: 'Photographers love' },
+  'landing.testimonials.label': { he: 'המלצות', en: 'Testimonials' },
+  'landing.testimonials.heading_pre': { he: 'מה אומרים עלינו', en: 'What our clients say' },
   'landing.testimonial.1.quote': {
-    he: 'סוף סוף מערכת שמבינה איך צלמים עובדים בפועל. לא עוד גוגל שיטס ו-WeTransfer.',
-    en: 'Finally, a tool that understands how photographers actually work.',
+    he: 'חסך לי שעות של עבודה כל שבוע',
+    en: 'Saved me hours of work every week',
   },
   'landing.testimonial.1.name': { he: 'מיכל ר.', en: 'Michal R.' },
   'landing.testimonial.1.role': { he: 'צלמת חתונות, תל אביב', en: 'Wedding Photographer' },
   'landing.testimonial.2.quote': {
-    he: 'הלקוחות שלי מתאהבים בחוויית הגלריה. בחירות שנהגו לקחת שבועות — היום מסתיימות תוך יומיים.',
-    en: "My clients love their private gallery experience. Selections used to take weeks — now it's days.",
+    he: 'הלקוחות שלי עפים על זה',
+    en: 'My clients absolutely love it',
   },
   'landing.testimonial.2.name': { he: 'אמיר ק.', en: 'Amir K.' },
   'landing.testimonial.2.role': { he: 'צלם פורטרט ועסקי, חיפה', en: 'Portrait Photographer' },
   'landing.testimonial.3.quote': {
-    he: 'ה-pipeline הוא המשחק-מחליף בשבילי. אני רואה בדיוק באיזה שלב כל עבודה, בלי לחפש בוואטסאפ.',
-    en: 'The pipeline view is everything. I know exactly where every job stands at a glance.',
+    he: 'המערכת הכי נוחה שעבדתי איתה',
+    en: 'The most intuitive system I have ever worked with',
   },
   'landing.testimonial.3.name': { he: 'לירון ס.', en: 'Liron S.' },
   'landing.testimonial.3.role': { he: 'צלם משפחות וניו בורן, ירושלים', en: 'Family Photographer' },
 
   // CTA
-  'landing.cta.heading_pre': { he: 'מוכנים לשדרג את', en: 'Ready to simplify your' },
-  'landing.cta.heading_accent': { he: 'תהליך העבודה שלכם?', en: 'gallery workflow?' },
+  'landing.cta.heading_pre': { he: 'מוכנים לייעל', en: 'Ready to streamline' },
+  'landing.cta.heading_accent': { he: 'את העסק שלכם?', en: 'your photography business?' },
   'landing.cta.desc': {
-    he: 'הצטרפו לצלמים שמעניקים ללקוחותיהם חוויה שאי אפשר לשכוח — עם Koral Light Studio.',
-    en: 'Join photographers delivering better client experiences with Koral Light Studio.',
+    he: 'הצטרפו למאות צלמים שכבר עובדים חכם יותר',
+    en: 'Join hundreds of photographers already working smarter',
   },
-  'landing.cta.primary': { he: 'התחילו בחינם', en: 'Get Started Free' },
-  'landing.cta.secondary': { he: 'לדמו חי', en: 'Book a Demo' },
+  'landing.cta.primary': { he: 'התחילו עכשיו', en: 'Get Started Now' },
+  'landing.cta.secondary': { he: 'צפו בדמו', en: 'Watch Demo' },
   'landing.cta.footnote': { he: 'חינמי לצמיתות. ללא כרטיס אשראי.', en: 'Free forever. No credit card required.' },
 
   // Footer
   'landing.footer.pricing': { he: 'מחירים', en: 'Pricing' },
   'landing.footer.support': { he: 'תמיכה', en: 'Support' },
   'landing.footer.privacy': { he: 'מדיניות פרטיות', en: 'Privacy' },
-  'landing.footer.copyright': { he: '© 2026 Koral Light Studio', en: '© 2026 Koral Light Studio' },
+  'landing.footer.copyright': { he: '© 2026 LIGHT STUDIO', en: '© 2026 LIGHT STUDIO' },
 
   // ── Public: Services section ─────────────────────────────────────────────────
   'services.title': { he: 'השירותים שלי', en: 'My Services' },
@@ -971,6 +1033,66 @@ const translations: Record<string, Record<Lang, string>> = {
   'admin.status.selection_submitted': { he: 'בחירה הוגשה', en: 'Selection Submitted' },
   'admin.status.in_editing': { he: 'בעריכה', en: 'In Editing' },
   'admin.status.delivered': { he: 'נמסר', en: 'Delivered' },
+
+  // Landing: Pricing section
+  'landing.pricing.label': { he: 'תמחור', en: 'Pricing' },
+  'landing.pricing.heading_pre': { he: 'תמחור שקוף,', en: 'Simple, transparent' },
+  'landing.pricing.heading_accent': { he: 'ללא הפתעות', en: 'pricing' },
+  'landing.pricing.period': { he: 'לחודש', en: 'per month' },
+  'landing.pricing.free.name': { he: 'חינמי', en: 'Free' },
+  'landing.pricing.free.desc': { he: 'להתחיל ולגלות', en: 'To get started' },
+  'landing.pricing.free.cta': { he: 'הצטרפו חינם', en: 'Get started free' },
+  'landing.pricing.free.f1': { he: '1 גלריה פעילה', en: '1 active gallery' },
+  'landing.pricing.free.f2': { he: 'עד 100 תמונות לגלריה', en: 'Up to 100 photos per gallery' },
+  'landing.pricing.free.f3': { he: 'דף תיק עבודות בסיסי', en: 'Basic portfolio page' },
+  'landing.pricing.free.f4': { he: 'שיתוף לקוחות בקישור', en: 'Client link sharing' },
+  'landing.pricing.pro.name': { he: 'פרו', en: 'Pro' },
+  'landing.pricing.pro.badge': { he: 'הכי פופולרי', en: 'Most Popular' },
+  'landing.pricing.pro.desc': { he: 'לצלמים מקצועיים', en: 'For professional photographers' },
+  'landing.pricing.pro.cta': { he: 'התחילו עם פרו', en: 'Start with Pro' },
+  'landing.pricing.pro.f1': { he: 'גלריות ללא הגבלה', en: 'Unlimited galleries' },
+  'landing.pricing.pro.f2': { he: 'עד 500 תמונות לגלריה', en: 'Up to 500 photos per gallery' },
+  'landing.pricing.pro.f3': { he: 'כל 11 תבניות הפורטפוליו', en: 'All 11 portfolio themes' },
+  'landing.pricing.pro.f4': { he: 'חנות מוצרים מובנית', en: 'Built-in product store' },
+  'landing.pricing.pro.f5': { he: 'עדכונים בזמן אמת ופייפליין', en: 'Real-time alerts & pipeline' },
+  'landing.pricing.pro.f6': { he: 'תמיכה מועדפת', en: 'Priority support' },
+  'landing.pricing.studio.name': { he: 'סטודיו', en: 'Studio' },
+  'landing.pricing.studio.desc': { he: 'לסטודיו גדול', en: 'For growing studios' },
+  'landing.pricing.studio.cta': { he: 'דברו איתנו', en: 'Contact sales' },
+  'landing.pricing.studio.f1': { he: 'הכל בפרו, ועוד', en: 'Everything in Pro, plus' },
+  'landing.pricing.studio.f2': { he: 'מספר משתמשים לסטודיו', en: 'Multiple team members' },
+  'landing.pricing.studio.f3': { he: 'דומיין מותאם אישית', en: 'Custom domain' },
+  'landing.pricing.studio.f4': { he: 'אנליטיקס מתקדם', en: 'Advanced analytics' },
+  'landing.pricing.studio.f5': { he: 'SLA ותמיכה 24/7', en: 'SLA & 24/7 support' },
+
+  // Landing: FAQ section
+  'landing.faq.label': { he: 'שאלות נפוצות', en: 'FAQ' },
+  'landing.faq.heading': { he: 'כל מה שרציתם לדעת', en: 'Everything you need to know' },
+  'landing.faq.q1': { he: 'האם הפלן החינמי באמת חינמי?', en: 'Is the free plan really free?' },
+  'landing.faq.a1': {
+    he: 'כן לחלוטין. אין צורך בכרטיס אשראי. הפלן החינמי כולל גלריה אחת פעילה עם עד 100 תמונות.',
+    en: 'Yes, completely. No credit card required. The free plan includes 1 active gallery with up to 100 photos.',
+  },
+  'landing.faq.q2': { he: 'האם הלקוחות שלי צריכים להוריד אפליקציה?', en: 'Do my clients need to download an app?' },
+  'landing.faq.a2': {
+    he: 'לא. הלקוחות מקבלים קישור ייחודי ופותחים את הגלריה ישירות בדפדפן — ללא הרשמה, ללא הורדה.',
+    en: 'No. Clients receive a unique link and open their gallery directly in the browser — no signup, no download.',
+  },
+  'landing.faq.q3': { he: 'האם אני יכול להתאים את עיצוב דף תיק העבודות שלי?', en: 'Can I customize my portfolio theme?' },
+  'landing.faq.a3': {
+    he: 'כן! יש 11 תבניות עיצוב מקצועיות לבחירה — מ-Luxury כהה ועד Soft בהיר. כל תבנית מותאמת לברנד שלך.',
+    en: 'Yes! Choose from 11 professionally designed themes — from dark Luxury to light Soft. Each one tailored to your brand.',
+  },
+  'landing.faq.q4': { he: 'האם התמונות שלי מאובטחות?', en: 'Is my content secure?' },
+  'landing.faq.a4': {
+    he: 'כל גלריה מאובטחת מאחורי טוקן פרטי. רק מי שקיבל את הקישור יכול לצפות בה. התמונות מאוחסנות על שרתים מאובטחים.',
+    en: 'Every gallery is secured behind a private token link. Only those with the link can view it. Photos are stored on secure servers.',
+  },
+  'landing.faq.q5': { he: 'אילו פורמטים של קבצים נתמכים?', en: 'What file formats are supported?' },
+  'landing.faq.a5': {
+    he: 'JPEG, PNG, TIFF, HEIC ו-WebP. כל התמונות עוברות אופטימיזציה אוטומטית לטעינה מהירה.',
+    en: 'JPEG, PNG, TIFF, HEIC, and WebP. All images are automatically optimized for fast loading.',
+  },
 };
 
 const I18nContext = createContext<I18nContextType | null>(null);
@@ -983,7 +1105,7 @@ export const I18nProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setLang((prev) => (prev === 'he' ? 'en' : 'he'));
   }, []);
 
-  const t = useCallback((key: string) => translations[key]?.[lang] || key, [lang]);
+  const t = useCallback((key: string) => translations[key]?.[lang] ?? key, [lang]);
 
   return (
     <I18nContext.Provider value={{ lang, dir, toggleLang, t }}>

@@ -56,7 +56,7 @@ export const ClientGallery = () => {
 
   const header = (
     <header className='h-14 shrink-0 flex items-center px-6 bg-white border-b border-beige'>
-      <img src='/logos/03_logo_horizontal_transparent.png' alt='Koral' className='h-8 w-auto' />
+      <img src='/logos/03_logo_horizontal_transparent.png' alt='LIGHT STUDIO' className='h-8 w-auto' />
     </header>
   );
 

@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
+import { toast } from 'sonner';
 import { AdminLayout } from '@/components/admin/AdminLayout';
 import { AdminGalleryLightbox } from '@/components/admin/AdminGalleryLightbox';
 import { StatusBadge } from '@/components/admin/StatusBadge';
@@ -11,10 +12,21 @@ import { useGalleryUpload } from '@/hooks/useGalleryUpload';
 import { useGalleryData } from '@/hooks/useGalleryData';
 import { useImageDeletion } from '@/hooks/useImageDeletion';
 import { useVideoUpload } from '@/hooks/useVideoUpload';
+import { useUpdateGallery } from '@/hooks/useQueries';
 import { useI18n } from '@/lib/i18n';
 import { getImageUrl } from '@/lib/api';
 import { ArrowLeft, CloudUpload, Video, Trash2, X, Images } from 'lucide-react';
 import { Button } from '@/components/admin/Button';
+
+/** Convert an ISO/DB timestamp to the value format expected by datetime-local inputs (YYYY-MM-DDTHH:mm). */
+function toDatetimeLocal(isoString: string | null | undefined): string {
+  if (!isoString) return '';
+  const d = new Date(isoString);
+  if (isNaN(d.getTime())) return '';
+  // Format: YYYY-MM-DDTHH:mm (no seconds, no timezone — browser treats it as local)
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
 
 type Tab = 'images' | 'videos';
 
@@ -33,9 +45,20 @@ export const AdminGalleryUpload = () => {
     setGallery,
   );
 
+  const updateGallery = useUpdateGallery();
+
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const [activeTab, setActiveTab] = useState<Tab>('images');
+  const [expiresAtInput, setExpiresAtInput] = useState<string>('');
+
+  // Seed the expiry input once when gallery data first arrives
+  useEffect(() => {
+    if (gallery) {
+      setExpiresAtInput(toDatetimeLocal(gallery.expiresAt));
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [gallery?.expiresAt]);
 
   const toggleSelect = (imgId: string) => {
     setSelectedIds((prev) => {
@@ -59,6 +82,17 @@ export const AdminGalleryUpload = () => {
       </AdminLayout>
     );
 
+  const handleSaveExpiry = async () => {
+    try {
+      const expiresAt = expiresAtInput ? new Date(expiresAtInput).toISOString() : null;
+      await updateGallery.mutateAsync({ id: id!, data: { expiresAt } });
+      setGallery((prev: typeof gallery) => prev ? { ...prev, expiresAt } : prev);
+      toast.success(t('admin.gallery.expires_at_saved'));
+    } catch {
+      toast.error(t('admin.gallery.expires_at_save_failed'));
+    }
+  };
+
   const videoCount = (gallery.videos ?? []).length;
 
   return (
@@ -79,7 +113,7 @@ export const AdminGalleryUpload = () => {
           </Link>
 
           {/* Gallery title row */}
-          <div className='flex items-start justify-between gap-4 mb-4'>
+          <div className='flex items-start justify-between gap-4 mb-3'>
             <div className='min-w-0'>
               <h1 className='text-xl font-semibold text-charcoal truncate leading-tight'>{gallery.name}</h1>
               {gallery.clientName && <p className='text-sm text-warm-gray mt-0.5 truncate'>{gallery.clientName}</p>}
@@ -87,6 +121,34 @@ export const AdminGalleryUpload = () => {
             <div className='shrink-0 pt-0.5'>
               <StatusBadge status={gallery.status} />
             </div>
+          </div>
+
+          {/* Expiry date editor */}
+          <div className='flex items-center gap-2 mb-3 flex-wrap'>
+            <label className='text-xs text-warm-gray shrink-0'>{t('admin.gallery.expires_at_label')}</label>
+            <input
+              type='datetime-local'
+              value={expiresAtInput}
+              onChange={(e) => setExpiresAtInput(e.target.value)}
+              className='px-2.5 py-1.5 rounded-lg border border-beige bg-gray-50 text-xs text-charcoal focus:outline-none focus:ring-2 focus:ring-blush/50'
+            />
+            {expiresAtInput && (
+              <button
+                type='button'
+                onClick={() => setExpiresAtInput('')}
+                className='text-xs text-warm-gray hover:text-rose-500 transition-colors px-2 py-1 rounded-lg border border-beige hover:border-rose-200 hover:bg-rose-50'
+              >
+                {t('admin.gallery.expires_at_clear')}
+              </button>
+            )}
+            <button
+              type='button'
+              onClick={handleSaveExpiry}
+              disabled={updateGallery.isPending}
+              className='text-xs bg-blush text-white px-3 py-1.5 rounded-lg hover:bg-blush/80 transition-colors disabled:opacity-60'
+            >
+              {updateGallery.isPending ? t('admin.gallery.expires_at_saving') : t('admin.gallery.expires_at_save')}
+            </button>
           </div>
 
           {/* Tab bar */}

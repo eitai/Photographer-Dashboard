@@ -143,13 +143,13 @@ async function findOneAndUpdate(filter, update, opts = {}) {
 
   const src = update.$set || update;
   for (const [k, v] of Object.entries(src)) {
-    if (colMap[k]) {
+    if (colMap[k] && v !== undefined) {
       if (colMap[k] === 'videos') {
         sets.push(`videos = $${i++}::jsonb`);
         vals.push(JSON.stringify(v));
       } else {
         sets.push(`${colMap[k]} = $${i++}`);
-        vals.push(v === undefined ? null : v);
+        vals.push(v);
       }
     }
   }
