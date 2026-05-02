@@ -26,6 +26,7 @@ import {
 import { InputField, TextareaField } from '@/components/admin/InputField';
 import { Button } from '@/components/admin/Button';
 import { useSettings, useAdminProducts, queryKeys, type AdminProduct } from '@/hooks/useQueries';
+import { Modal } from '@/components/ui/Modal';
 import { useQueryClient } from '@tanstack/react-query';
 
 // ---------------------------------------------------------------------------
@@ -349,6 +350,15 @@ export const AdminSettings = () => {
   const [ctaEnabled, setCtaEnabled] = useState(false);
   const [cta, setCta] = useState({ heading: '', subtext: '', buttonLabel: '' });
   const [savingCta, setSavingCta] = useState(false);
+  const [ctaBannerImagePreview, setCtaBannerImagePreview] = useState('');
+  const [uploadingCtaBannerImage, setUploadingCtaBannerImage] = useState(false);
+  const [removingCtaBannerImage, setRemovingCtaBannerImage] = useState(false);
+  const ctaBannerImageRef = useRef<HTMLInputElement>(null);
+
+  // Contact Section
+  const [contactSectionEnabled, setContactSectionEnabled] = useState(true);
+  const [contactSection, setContactSection] = useState({ heading: '', subheading: '' });
+  const [savingContactSection, setSavingContactSection] = useState(false);
 
   // Instagram Feed
   const [igFeedEnabled, setIgFeedEnabled] = useState(false);
@@ -408,6 +418,10 @@ export const AdminSettings = () => {
     setVideo({ url: s.videoUrl || '', heading: s.videoSectionHeading || '', subheading: s.videoSectionSubheading || '' });
     setCtaEnabled(s.ctaBannerEnabled ?? false);
     setCta({ heading: s.ctaBannerHeading || '', subtext: s.ctaBannerSubtext || '', buttonLabel: s.ctaBannerButtonLabel || '' });
+    if (s.ctaBannerImagePath) setCtaBannerImagePreview(getImageUrl(s.ctaBannerImagePath));
+    else setCtaBannerImagePreview('');
+    setContactSectionEnabled(s.contactSectionEnabled ?? true);
+    setContactSection({ heading: s.contactSectionHeading || '', subheading: s.contactSectionSubheading || '' });
     setIgFeedEnabled(s.instagramFeedEnabled ?? false);
     setIgFeedImages(s.instagramFeedImages ?? []);
     setAutoSendEmail(s.autoSendGalleryEmail ?? true);
@@ -538,10 +552,12 @@ export const AdminSettings = () => {
       form.append('image', file);
       const res = await api.post('/settings/hero-image', form, { headers: { 'Content-Type': undefined } });
       setHeroPreview(getImageUrl(res.data.heroImagePath));
+      queryClient.invalidateQueries({ queryKey: queryKeys.settings });
     } catch {
       toast.error(t('admin.settings.hero_upload_failed'));
     } finally {
       setUploadingHero(false);
+      if (heroInputRef.current) heroInputRef.current.value = '';
     }
   };
 
@@ -601,10 +617,12 @@ export const AdminSettings = () => {
       form.append('image', file);
       const res = await api.post('/settings/profile-image', form, { headers: { 'Content-Type': undefined } });
       setProfilePreview(getImageUrl(res.data.profileImagePath));
+      queryClient.invalidateQueries({ queryKey: queryKeys.settings });
     } catch {
       toast.error(t('admin.settings.profile_upload_failed'));
     } finally {
       setUploadingProfile(false);
+      if (profileInputRef.current) profileInputRef.current.value = '';
     }
   };
 
@@ -799,6 +817,55 @@ export const AdminSettings = () => {
     }
   };
 
+  const handleCtaBannerImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingCtaBannerImage(true);
+    try {
+      const form = new FormData();
+      form.append('image', file);
+      const res = await api.post('/settings/cta-banner-image', form, { headers: { 'Content-Type': undefined } });
+      setCtaBannerImagePreview(getImageUrl(res.data.ctaBannerImagePath));
+      queryClient.invalidateQueries({ queryKey: queryKeys.settings });
+    } catch {
+      toast.error(t('admin.common.error'));
+    } finally {
+      setUploadingCtaBannerImage(false);
+      if (ctaBannerImageRef.current) ctaBannerImageRef.current.value = '';
+    }
+  };
+
+  const handleCtaBannerImageRemove = async () => {
+    setRemovingCtaBannerImage(true);
+    try {
+      await api.delete('/settings/cta-banner-image');
+      setCtaBannerImagePreview('');
+      queryClient.invalidateQueries({ queryKey: queryKeys.settings });
+    } catch {
+      toast.error(t('admin.common.error'));
+    } finally {
+      setRemovingCtaBannerImage(false);
+    }
+  };
+
+  // ── Handlers: Contact Section ───────────────────────────────────────────────
+  const handleSaveContactSection = async () => {
+    setSavingContactSection(true);
+    try {
+      await api.put('/settings/contact-section', {
+        enabled: contactSectionEnabled,
+        heading: contactSection.heading,
+        subheading: contactSection.subheading,
+      });
+      toast.success(t('admin.settings.landing_saved'));
+      queryClient.invalidateQueries({ queryKey: queryKeys.settings });
+    } catch {
+      toast.error(t('admin.settings.landing_failed'));
+    } finally {
+      setSavingContactSection(false);
+    }
+  };
+
   // ── Handlers: Instagram Feed ────────────────────────────────────────────────
   const handleSaveIgFeed = async () => {
     setSavingIgFeed(true);
@@ -958,7 +1025,7 @@ export const AdminSettings = () => {
               <h2 className='font-semibold text-charcoal'>{t('admin.products.catalog_title')}</h2>
               <button
                 type='button'
-                onClick={() => setShowCatalogForm((v) => !v)}
+                onClick={() => setShowCatalogForm(true)}
                 className='flex items-center gap-1 text-xs text-blush hover:text-charcoal transition-colors'
               >
                 <Plus size={13} />
@@ -967,8 +1034,13 @@ export const AdminSettings = () => {
             </div>
             <p className='text-xs text-warm-gray mb-4'>{t('admin.products.catalog_subtitle')}</p>
 
-            {showCatalogForm && (
-              <form onSubmit={handleCatalogCreate} className='border border-beige rounded-xl p-3 space-y-3 bg-ivory mb-3'>
+            <Modal
+              isOpen={showCatalogForm}
+              onClose={() => { setShowCatalogForm(false); setCatalogForm({ name: '', type: 'album', maxPhotos: 20 }); }}
+              maxWidth='max-w-sm'
+            >
+              <h3 className='font-semibold text-charcoal mb-4'>{t('admin.products.catalog_add')}</h3>
+              <form onSubmit={handleCatalogCreate} className='space-y-4'>
                 <div>
                   <label className='block text-xs text-warm-gray mb-1'>{t('admin.products.name_label')}</label>
                   <input
@@ -978,6 +1050,7 @@ export const AdminSettings = () => {
                     placeholder={t('admin.products.name_ph')}
                     className={fieldClass}
                     required
+                    autoFocus
                   />
                 </div>
                 <div className='flex gap-4'>
@@ -1005,16 +1078,16 @@ export const AdminSettings = () => {
                     className='w-24 border border-beige rounded-lg px-3 py-2 text-sm text-charcoal focus:outline-none focus:border-blush'
                   />
                 </div>
-                <div className='flex gap-2'>
+                <div className='flex gap-2 pt-2 border-t border-beige'>
                   <button type='submit' disabled={savingCatalog} className='px-3 py-1.5 bg-blush text-white text-xs rounded-xl hover:opacity-90 disabled:opacity-60'>
                     {savingCatalog ? t('admin.common.saving') : t('admin.products.catalog_save')}
                   </button>
-                  <button type='button' onClick={() => setShowCatalogForm(false)} className='px-3 py-1.5 text-xs text-warm-gray hover:text-charcoal'>
+                  <button type='button' onClick={() => { setShowCatalogForm(false); setCatalogForm({ name: '', type: 'album', maxPhotos: 20 }); }} className='px-3 py-1.5 text-xs text-warm-gray hover:text-charcoal'>
                     {t('admin.common.cancel')}
                   </button>
                 </div>
               </form>
-            )}
+            </Modal>
 
             {catalogProducts.length === 0 ? (
               <p className='text-xs text-warm-gray'>{t('admin.products.catalog_empty')}</p>
@@ -1053,15 +1126,37 @@ export const AdminSettings = () => {
             {/* Hero image upload */}
             <div>
               <label className='block text-xs text-warm-gray mb-2'>{t('admin.settings.hero_image')}</label>
-              {heroPreview && (
-                <div className='mb-2 rounded-lg overflow-hidden h-32 bg-beige'>
-                  <img src={heroPreview} alt='Hero preview' className='w-full h-full object-cover' />
-                </div>
-              )}
               <input ref={heroInputRef} type='file' accept='image/*' className='hidden' onChange={handleHeroUpload} />
-              <Button type='button' variant='ghost' size='sm' onClick={() => heroInputRef.current?.click()} disabled={uploadingHero}>
-                {uploadingHero ? t('admin.common.uploading') : heroPreview ? t('admin.settings.hero_image_replace') : t('admin.settings.hero_image_upload')}
-              </Button>
+              <div
+                onClick={() => !uploadingHero && heroInputRef.current?.click()}
+                className='relative w-full rounded-xl overflow-hidden bg-beige border-2 border-dashed border-beige hover:border-blush/50 transition-colors group cursor-pointer'
+                style={{ aspectRatio: '16/7' }}
+              >
+                {heroPreview ? (
+                  <>
+                    <img src={heroPreview} alt='Hero preview' className='absolute inset-0 w-full h-full object-cover' />
+                    <div className={`absolute inset-0 transition-colors ${
+                      hero.heroOverlayOpacity === 'light' ? 'bg-black/10' :
+                      hero.heroOverlayOpacity === 'dark'  ? 'bg-black/60' :
+                                                            'bg-black/30'
+                    }`} />
+                    <div className='absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-2 text-white'>
+                      <Camera size={24} />
+                      <span className='text-sm font-medium'>{t('admin.settings.hero_image_replace')}</span>
+                    </div>
+                  </>
+                ) : (
+                  <div className='absolute inset-0 flex flex-col items-center justify-center gap-2 text-warm-gray'>
+                    <Camera size={28} />
+                    <span className='text-sm'>{t('admin.settings.hero_image_upload')}</span>
+                  </div>
+                )}
+                {uploadingHero && (
+                  <div className='absolute inset-0 bg-black/50 flex items-center justify-center text-white text-sm'>
+                    {t('admin.common.uploading')}
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Hero subtitle */}
@@ -1490,6 +1585,45 @@ export const AdminSettings = () => {
           >
             <div className='space-y-3'>
               <div>
+                <label className='block text-xs text-warm-gray mb-1'>{t('admin.settings.sections.banner_image')}</label>
+                <input ref={ctaBannerImageRef} type='file' accept='image/*' className='hidden' onChange={handleCtaBannerImageUpload} />
+                <div
+                  onClick={() => !uploadingCtaBannerImage && !removingCtaBannerImage && ctaBannerImageRef.current?.click()}
+                  className='relative w-full rounded-xl overflow-hidden bg-beige border-2 border-dashed border-beige hover:border-blush/50 transition-colors group cursor-pointer mb-2'
+                  style={{ aspectRatio: '16/5' }}
+                >
+                  {ctaBannerImagePreview ? (
+                    <>
+                      <img src={ctaBannerImagePreview} alt='Banner preview' className='absolute inset-0 w-full h-full object-cover' />
+                      <div className='absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-2 text-white'>
+                        <Camera size={20} />
+                        <span className='text-xs font-medium'>{t('admin.settings.hero_image_replace')}</span>
+                      </div>
+                    </>
+                  ) : (
+                    <div className='absolute inset-0 flex flex-col items-center justify-center gap-2 text-warm-gray'>
+                      <Camera size={22} />
+                      <span className='text-xs'>{uploadingCtaBannerImage ? t('admin.common.uploading') : t('admin.settings.sections.banner_image_upload')}</span>
+                    </div>
+                  )}
+                  {uploadingCtaBannerImage && (
+                    <div className='absolute inset-0 bg-black/50 flex items-center justify-center text-white text-xs'>
+                      {t('admin.common.uploading')}
+                    </div>
+                  )}
+                </div>
+                {ctaBannerImagePreview && (
+                  <button
+                    type='button'
+                    onClick={handleCtaBannerImageRemove}
+                    disabled={removingCtaBannerImage}
+                    className='text-xs text-warm-gray hover:text-red-500 transition-colors disabled:opacity-40'
+                  >
+                    {removingCtaBannerImage ? '...' : t('admin.settings.logo_remove')}
+                  </button>
+                )}
+              </div>
+              <div>
                 <label className='block text-xs text-warm-gray mb-1'>{t('admin.settings.sections.banner_heading')}</label>
                 <input className={fieldClass} value={cta.heading} onChange={(e) => setCta((c) => ({ ...c, heading: e.target.value }))} />
               </div>
@@ -1504,7 +1638,40 @@ export const AdminSettings = () => {
             </div>
           </SectionCard>
 
-          {/* 4f: Instagram Feed */}
+          {/* 4f: Contact Section */}
+          <SectionCard
+            title={t('admin.settings.contact_section')}
+            enabled={contactSectionEnabled}
+            onToggle={() => setContactSectionEnabled((v) => !v)}
+            enabledLabel={t('admin.settings.sections.enabled')}
+            onSave={handleSaveContactSection}
+            saveLabel={t('admin.settings.contact_section_save')}
+            saving={savingContactSection}
+          >
+            <div className='space-y-3'>
+              <div>
+                <label className='block text-xs text-warm-gray mb-1'>{t('admin.settings.contact_section_heading')}</label>
+                <input
+                  className={fieldClass}
+                  maxLength={120}
+                  value={contactSection.heading}
+                  onChange={(e) => setContactSection((c) => ({ ...c, heading: e.target.value }))}
+                />
+              </div>
+              <div>
+                <label className='block text-xs text-warm-gray mb-1'>{t('admin.settings.contact_section_subheading')}</label>
+                <textarea
+                  className={`${fieldClass} resize-none`}
+                  rows={3}
+                  maxLength={300}
+                  value={contactSection.subheading}
+                  onChange={(e) => setContactSection((c) => ({ ...c, subheading: e.target.value }))}
+                />
+              </div>
+            </div>
+          </SectionCard>
+
+          {/* 4g: Instagram Feed */}
           <SectionCard
             title={t('admin.settings.sections.instagram_feed')}
             enabled={igFeedEnabled}

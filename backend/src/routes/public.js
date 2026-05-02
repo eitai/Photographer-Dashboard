@@ -54,6 +54,7 @@ router.get('/settings', asyncHandler(async (req, res) => {
     ctaBannerSubtext: settings?.ctaBannerSubtext || '',
     ctaBannerButtonLabel: settings?.ctaBannerButtonLabel || '',
     ctaBannerEnabled: settings?.ctaBannerEnabled || false,
+    ctaBannerImagePath: settings?.ctaBannerImagePath || '',
     servicesEnabled: settings?.servicesEnabled || false,
     services: settings?.services || [],
     testimonialsEnabled: settings?.testimonialsEnabled || false,
@@ -63,6 +64,9 @@ router.get('/settings', asyncHandler(async (req, res) => {
     packagesDisclaimer: settings?.packagesDisclaimer || '',
     instagramFeedEnabled: settings?.instagramFeedEnabled || false,
     instagramFeedImages: settings?.instagramFeedImages || [],
+    contactSectionEnabled: settings?.contactSectionEnabled ?? true,
+    contactSectionHeading: settings?.contactSectionHeading || '',
+    contactSectionSubheading: settings?.contactSectionSubheading || '',
   });
 }));
 

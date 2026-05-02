@@ -42,6 +42,7 @@ router.get('/', protect, asyncHandler(async (req, res) => {
     ctaBannerSubtext: settings?.ctaBannerSubtext || '',
     ctaBannerButtonLabel: settings?.ctaBannerButtonLabel || '',
     ctaBannerEnabled: settings?.ctaBannerEnabled || false,
+    ctaBannerImagePath: settings?.ctaBannerImagePath || '',
     servicesEnabled: settings?.servicesEnabled || false,
     services: settings?.services || [],
     testimonialsEnabled: settings?.testimonialsEnabled || false,
@@ -53,6 +54,9 @@ router.get('/', protect, asyncHandler(async (req, res) => {
     instagramFeedImages: settings?.instagramFeedImages || [],
     autoSendGalleryEmail: settings?.autoSendGalleryEmail ?? true,
     autoSendGallerySms: settings?.autoSendGallerySms ?? false,
+    contactSectionEnabled: settings?.contactSectionEnabled ?? true,
+    contactSectionHeading: settings?.contactSectionHeading || '',
+    contactSectionSubheading: settings?.contactSectionSubheading || '',
   });
 }));
 
@@ -218,6 +222,30 @@ router.put('/cta-banner', protect, asyncHandler(async (req, res) => {
     ctaBannerHeading: settings.ctaBannerHeading,
     ctaBannerSubtext: settings.ctaBannerSubtext,
     ctaBannerButtonLabel: settings.ctaBannerButtonLabel,
+    ctaBannerImagePath: settings.ctaBannerImagePath || '',
+  });
+}));
+
+// PUT /api/settings/contact-section  — ADMIN
+router.put('/contact-section', protect, asyncHandler(async (req, res) => {
+  const { enabled, heading, subheading } = req.body;
+
+  if (heading !== undefined && String(heading).length > 120) {
+    return res.status(400).json({ message: 'heading must be 120 characters or fewer' });
+  }
+  if (subheading !== undefined && String(subheading).length > 300) {
+    return res.status(400).json({ message: 'subheading must be 300 characters or fewer' });
+  }
+
+  const settings = await SiteSettings.upsert(req.admin.id, {
+    contactSectionEnabled: enabled !== false,
+    contactSectionHeading: heading !== undefined ? String(heading) : '',
+    contactSectionSubheading: subheading !== undefined ? String(subheading) : '',
+  });
+  res.json({
+    contactSectionEnabled: settings.contactSectionEnabled,
+    contactSectionHeading: settings.contactSectionHeading,
+    contactSectionSubheading: settings.contactSectionSubheading,
   });
 }));
 
@@ -247,7 +275,7 @@ router.post('/instagram-feed-image', protect, upload.single('image'), validateIm
     return res.status(400).json({ message: 'Maximum 9 Instagram feed images allowed' });
   }
 
-  const newPath = await s3.processUpload(req.file, req.admin.id);
+  const newPath = await s3.processUploadAsWebP(req.file, req.admin.id);
   const updated = [...current, newPath];
   const settings = await SiteSettings.upsert(req.admin.id, { instagramFeedImages: updated });
   res.json({ instagramFeedImages: settings.instagramFeedImages || [] });
@@ -288,21 +316,21 @@ router.put('/notifications', protect, asyncHandler(async (req, res) => {
 // POST /api/settings/hero-image  — ADMIN
 router.post('/hero-image', protect, upload.single('image'), validateImageMagicBytes, asyncHandler(async (req, res) => {
   if (!req.file) return res.status(400).json({ message: 'No image provided' });
-  const heroImagePath = await replaceUploadedFile(req.admin.id, 'heroImagePath', await s3.processUpload(req.file, req.admin.id), { SiteSettings, fs });
+  const heroImagePath = await replaceUploadedFile(req.admin.id, 'heroImagePath', await s3.processUploadAsWebP(req.file, req.admin.id), { SiteSettings, fs });
   res.json({ heroImagePath });
 }));
 
 // POST /api/settings/profile-image  — ADMIN
 router.post('/profile-image', protect, upload.single('image'), validateImageMagicBytes, asyncHandler(async (req, res) => {
   if (!req.file) return res.status(400).json({ message: 'No image provided' });
-  const profileImagePath = await replaceUploadedFile(req.admin.id, 'profileImagePath', await s3.processUpload(req.file, req.admin.id), { SiteSettings, fs });
+  const profileImagePath = await replaceUploadedFile(req.admin.id, 'profileImagePath', await s3.processUploadAsWebP(req.file, req.admin.id), { SiteSettings, fs });
   res.json({ profileImagePath });
 }));
 
 // POST /api/settings/logo-image  — ADMIN
 router.post('/logo-image', protect, upload.single('image'), validateImageMagicBytes, asyncHandler(async (req, res) => {
   if (!req.file) return res.status(400).json({ message: 'No image provided' });
-  const logoImagePath = await replaceUploadedFile(req.admin.id, 'logoImagePath', await s3.processUpload(req.file, req.admin.id), { SiteSettings, fs });
+  const logoImagePath = await replaceUploadedFile(req.admin.id, 'logoImagePath', await s3.processUploadAsWebP(req.file, req.admin.id), { SiteSettings, fs });
   res.json({ logoImagePath });
 }));
 
@@ -314,6 +342,23 @@ router.delete('/logo-image', protect, asyncHandler(async (req, res) => {
   }
   await SiteSettings.upsert(req.admin.id, { logoImagePath: '' });
   res.json({ logoImagePath: '' });
+}));
+
+// POST /api/settings/cta-banner-image  — ADMIN
+router.post('/cta-banner-image', protect, upload.single('image'), validateImageMagicBytes, asyncHandler(async (req, res) => {
+  if (!req.file) return res.status(400).json({ message: 'No image provided' });
+  const ctaBannerImagePath = await replaceUploadedFile(req.admin.id, 'ctaBannerImagePath', await s3.processUploadAsWebP(req.file, req.admin.id), { SiteSettings, fs });
+  res.json({ ctaBannerImagePath });
+}));
+
+// DELETE /api/settings/cta-banner-image  — ADMIN
+router.delete('/cta-banner-image', protect, asyncHandler(async (req, res) => {
+  const existing = await SiteSettings.findOne({ adminId: req.admin.id });
+  if (existing?.ctaBannerImagePath) {
+    await s3.deleteUpload(existing.ctaBannerImagePath, UPLOADS_DIR);
+  }
+  await SiteSettings.upsert(req.admin.id, { ctaBannerImagePath: '' });
+  res.json({ ctaBannerImagePath: '' });
 }));
 
 module.exports = router;

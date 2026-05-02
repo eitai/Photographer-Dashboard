@@ -411,6 +411,12 @@ const translations: Record<string, Record<Lang, string>> = {
   'admin.contact.deleting': { he: 'מוחק…', en: 'Deleting…' },
   'admin.contact.load_failed': { he: 'טעינת הפניות נכשלה', en: 'Failed to load messages' },
   'admin.contact.delete_failed': { he: 'מחיקת הפנייה נכשלה', en: 'Failed to delete message' },
+  'admin.contact.col_name': { he: 'שם', en: 'Name' },
+  'admin.contact.col_email': { he: 'אימייל', en: 'Email' },
+  'admin.contact.col_phone': { he: 'טלפון', en: 'Phone' },
+  'admin.contact.col_session': { he: 'סוג צילום', en: 'Session Type' },
+  'admin.contact.col_message': { he: 'הודעה', en: 'Message' },
+  'admin.contact.col_date': { he: 'תאריך', en: 'Date' },
   'admin.nav.contact': { he: 'פניות', en: 'Contact' },
 
   // ── Admin: Gallery expiry ────────────────────────────────────────────────────
@@ -630,6 +636,8 @@ const translations: Record<string, Record<Lang, string>> = {
   'admin.settings.sections.video_url': { he: 'קישור YouTube או Vimeo', en: 'YouTube or Vimeo URL' },
   'admin.settings.sections.section_heading': { he: 'כותרת אזור', en: 'Section Heading' },
   'admin.settings.sections.section_subheading': { he: 'תת-כותרת', en: 'Section Subheading' },
+  'admin.settings.sections.banner_image': { he: 'תמונת רקע לבאנר', en: 'Banner background image' },
+  'admin.settings.sections.banner_image_upload': { he: 'העלאת תמונת רקע', en: 'Upload background image' },
   'admin.settings.sections.banner_heading': { he: 'כותרת באנר', en: 'Banner Heading' },
   'admin.settings.sections.banner_subtext': { he: 'טקסט באנר', en: 'Banner Subtext' },
   'admin.settings.sections.banner_button': { he: 'טקסט כפתור', en: 'Banner Button Label' },
@@ -645,6 +653,10 @@ const translations: Record<string, Record<Lang, string>> = {
     he: 'עד 9 תמונות. רחף מעל תמונה להסרתה.',
     en: 'Up to 9 photos. Hover a photo to remove it.',
   },
+  'admin.settings.contact_section': { he: 'סקשן צרו קשר', en: 'Contact Section' },
+  'admin.settings.contact_section_heading': { he: 'כותרת הסקשן', en: 'Section Heading' },
+  'admin.settings.contact_section_subheading': { he: 'תת-כותרת', en: 'Section Subtext' },
+  'admin.settings.contact_section_save': { he: 'שמור סקשן צרו קשר', en: 'Save Contact Section' },
 
   // ── Admin: Dashboard (addition) ──────────────────────────────────────────────
   'admin.dashboard.view_landing': { he: 'צפה בדף הנחיתה שלך', en: 'View Your Landing Page' },
@@ -691,6 +703,14 @@ const translations: Record<string, Record<Lang, string>> = {
   'admin.session.newborn': { he: 'ניו בורן', en: 'Newborn' },
   'admin.session.branding': { he: 'מיתוג', en: 'Branding' },
   'admin.session.landscape': { he: 'נוף', en: 'Landscape' },
+  'admin.session.wedding': { he: 'חתונה', en: 'Wedding' },
+  'admin.session.bar_mitzvah': { he: 'בר מצווה', en: 'Bar Mitzvah' },
+  'admin.session.bat_mitzvah': { he: 'בת מצווה', en: 'Bat Mitzvah' },
+  'admin.session.brit_milah': { he: 'ברית מילה', en: 'Brit Milah' },
+  'admin.session.engagement': { he: 'אירוסין', en: 'Engagement' },
+  'admin.session.birthday': { he: 'יום הולדת', en: 'Birthday' },
+  'admin.session.corporate': { he: 'עסקי', en: 'Corporate' },
+  'admin.session.other': { he: 'אחר', en: 'Other' },
 
   // ── Admin: Users ──────────────────────────────────────────────────────────────
   'admin.users.title': { he: 'ניהול משתמשים', en: 'User Management' },

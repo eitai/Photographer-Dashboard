@@ -48,7 +48,11 @@ function _getClient() {
       region: c.region,
       credentials: { accessKeyId: c.keyId, secretAccessKey: c.secret },
     };
-    if (c.endpoint) opts.endpoint = c.endpoint;
+    if (c.endpoint) {
+      opts.endpoint = c.endpoint;
+      // Path-style required for non-AWS S3-compatible providers (Wasabi, MinIO, etc.)
+      opts.forcePathStyle = true;
+    }
     _client = new S3Client(opts);
   }
   return _client;
@@ -197,6 +201,40 @@ async function generatePreview(localPath) {
 }
 
 /**
+ * Convert a multer temp file to WebP and store it (S3 or local disk).
+ * Used for settings images (hero, profile, logo, instagram feed) so they're
+ * always lightweight on the landing page regardless of what the photographer uploads.
+ *
+ * - Max 1600 px on longest side (never enlarged)
+ * - WebP at 82% quality, metadata stripped
+ * - Stored as admins/<adminId>/<basename>.webp  (same folder as originals)
+ *
+ * @param {object} file    Multer file object
+ * @param {string} adminId Admin UUID
+ * @returns {Promise<string>} Stored S3 key or local path
+ */
+async function processUploadAsWebP(file, adminId) {
+  const basename = path.parse(file.filename).name;
+  const webpFilename = `${basename}.webp`;
+
+  const buffer = await sharp(file.path)
+    .withMetadata(false)
+    .resize({ width: 1600, height: 1600, fit: 'inside', withoutEnlargement: true })
+    .webp({ quality: 82 })
+    .toBuffer();
+
+  try { fs.unlinkSync(file.path); } catch { /* ignore */ }
+
+  if (!isEnabled()) {
+    fs.writeFileSync(path.join(path.dirname(file.path), webpFilename), buffer);
+    return `/uploads/${webpFilename}`;
+  }
+
+  const key = originalKey(webpFilename, adminId);
+  return await uploadBuffer(buffer, key, 'image/webp');
+}
+
+/**
  * Generate a WebP preview and store it in S3 or on local disk.
  * - S3 configured  → uploads to admins/<adminId>/previews/<basename>.webp
  * - S3 not configured → writes to uploads/previews/<basename>.webp  (dev fallback)
@@ -276,7 +314,8 @@ function _logStatus() {
   const logger = require('../utils/logger');
   const c = cfg();
   if (isEnabled()) {
-    logger.info(`[S3] enabled — bucket: ${c.bucket}, region: ${c.region}`);
+    const endpoint = c.endpoint || 'aws.amazon.com';
+    logger.info(`[S3] enabled — endpoint: ${endpoint}, bucket: ${c.bucket}, region: ${c.region}`);
   } else {
     const missing = ['S3_BUCKET', 'S3_PUBLIC_URL', 'AWS_ACCESS_KEY_ID', 'AWS_SECRET_ACCESS_KEY']
       .filter(k => !process.env[k]);
@@ -285,7 +324,7 @@ function _logStatus() {
 }
 
 // Wrap high-level exports to log status on first use
-const _orig = { processUpload, processThumbnail, uploadPreview, deleteUpload };
+const _orig = { processUpload, processUploadAsWebP, processThumbnail, uploadPreview, deleteUpload };
 module.exports = {
   isEnabled,
   getPublicUrl,
@@ -296,8 +335,9 @@ module.exports = {
   generatePresignedUrl,
   generatePreview,
   listAdminStorageBytes,
-  processUpload:    (...a) => { _logStatus(); return _orig.processUpload(...a); },
-  processThumbnail: (...a) => { _logStatus(); return _orig.processThumbnail(...a); },
-  uploadPreview:    (...a) => { _logStatus(); return _orig.uploadPreview(...a); },
-  deleteUpload:     (...a) => { _logStatus(); return _orig.deleteUpload(...a); },
+  processUpload:        (...a) => { _logStatus(); return _orig.processUpload(...a); },
+  processUploadAsWebP:  (...a) => { _logStatus(); return _orig.processUploadAsWebP(...a); },
+  processThumbnail:     (...a) => { _logStatus(); return _orig.processThumbnail(...a); },
+  uploadPreview:        (...a) => { _logStatus(); return _orig.uploadPreview(...a); },
+  deleteUpload:         (...a) => { _logStatus(); return _orig.deleteUpload(...a); },
 };

@@ -32,7 +32,7 @@ router.post('/submit', asyncHandler(async (req, res) => {
   if (gallery.expiresAt && new Date(gallery.expiresAt) < new Date())
     return res.status(410).json({ message: 'This gallery has expired.' });
 
-  if (selectedImageIds.length > gallery.maxSelections) {
+  if (gallery.maxSelections > 0 && selectedImageIds.length > gallery.maxSelections) {
     return res.status(400).json({ message: `You can only select up to ${gallery.maxSelections} photos.` });
   }
 

@@ -90,15 +90,14 @@ export const GalleryGrid = ({
   };
 
   return (
-    <div className='flex flex-wrap gap-3'>
+    <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3'>
       {visibleGalleries.map((g) => (
-        <div key={g._id} className='w-[35rem]'>
-          <GalleryCard
-            g={g}
-            delivery={deliveryByOriginalId.get(g._id)}
-            {...sharedCardProps}
-          />
-        </div>
+        <GalleryCard
+          key={g._id}
+          g={g}
+          delivery={deliveryByOriginalId.get(g._id)}
+          {...sharedCardProps}
+        />
       ))}
     </div>
   );

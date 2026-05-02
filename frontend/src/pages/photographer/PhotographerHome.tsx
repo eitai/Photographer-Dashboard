@@ -9,6 +9,20 @@ import heroFallback from '@/assets/hero-family.jpg';
 import aboutFallback from '@/assets/about-koral.jpg';
 import { Phone, Camera, Heart, Users, Star, Baby, Diamond, Building2, Mountain, Play } from 'lucide-react';
 import { Helmet } from 'react-helmet-async';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { toast } from 'sonner';
+
+const homeContactSchema = z.object({
+  name: z.string().min(1, 'Name is required').max(100),
+  email: z.string().min(1, 'Email is required').email('Invalid email').max(255),
+  phone: z.string().max(20).optional(),
+  session_type: z.string().min(1, 'Please select a session type'),
+  message: z.string().max(1000).optional(),
+});
+
+type HomeContactFormValues = z.infer<typeof homeContactSchema>;
 
 // ── Social icons ─────────────────────────────────────────────────────────────
 
@@ -142,14 +156,18 @@ interface PublicSettings {
   ctaBannerHeading: string;
   ctaBannerSubtext: string;
   ctaBannerButtonLabel: string;
+  ctaBannerImagePath: string;
   instagramFeedEnabled: boolean;
   instagramFeedImages: string[];
+  contactSectionEnabled: boolean;
+  contactSectionHeading: string;
+  contactSectionSubheading: string;
 }
 
 const OVERLAY_CLASS: Record<'light' | 'medium' | 'dark', string> = {
-  light: 'bg-background/10',
-  medium: 'bg-background/30',
-  dark: 'bg-background/60',
+  light: 'bg-black/10',
+  medium: 'bg-black/30',
+  dark:  'bg-black/60',
 };
 
 // ── Component ────────────────────────────────────────────────────────────────
@@ -198,6 +216,39 @@ export const PhotographerHome = () => {
   const showCtaBanner = !!(settings?.ctaBannerEnabled && settings.ctaBannerHeading);
 
   const embedUrl = showVideo ? toEmbedUrl(settings!.videoUrl) : null;
+
+  const [contactSubmitted, setContactSubmitted] = useState(false);
+
+  const sessionTypes = [
+    t('contact.session.family'),
+    t('contact.session.maternity'),
+    t('contact.session.newborn'),
+    t('contact.session.branding'),
+    t('contact.session.landscape'),
+  ];
+
+  const {
+    register: registerContact,
+    handleSubmit: handleContactSubmit,
+    formState: { errors: contactErrors, isSubmitting: contactSubmitting },
+  } = useForm<HomeContactFormValues>({
+    resolver: zodResolver(homeContactSchema),
+  });
+
+  const onContactSubmit = async (data: HomeContactFormValues) => {
+    try {
+      await api.post(`/p/${username}/contact`, {
+        name: data.name,
+        email: data.email,
+        phone: data.phone || null,
+        sessionType: data.session_type,
+        message: data.message || null,
+      });
+      setContactSubmitted(true);
+    } catch {
+      toast.error(t('contact.error'));
+    }
+  };
 
   return (
     <main className='pt-16'>
@@ -434,15 +485,15 @@ export const PhotographerHome = () => {
         <FadeIn>
           <section
             className='relative section-spacing bg-cover bg-center overflow-hidden'
-            style={heroSrc ? { backgroundImage: `url(${heroSrc})` } : undefined}
+            style={settings?.ctaBannerImagePath ? { backgroundImage: `url(${getImageUrl(settings.ctaBannerImagePath)})` } : undefined}
           >
-            <div className='absolute inset-0 bg-background/60' />
+            <div className={`absolute inset-0 ${settings?.ctaBannerImagePath ? 'bg-black/50' : 'bg-foreground'}`} />
             <div className='relative z-10 container-narrow text-center'>
-              <h2 className='text-3xl md:text-5xl text-foreground mb-4'>
+              <h2 className='text-3xl md:text-5xl text-background mb-4'>
                 {settings!.ctaBannerHeading}
               </h2>
               {settings!.ctaBannerSubtext && (
-                <p className='text-muted-foreground text-lg mb-8 max-w-xl mx-auto'>
+                <p className='text-background/70 text-lg mb-8 max-w-xl mx-auto'>
                   {settings!.ctaBannerSubtext}
                 </p>
               )}
@@ -648,6 +699,94 @@ export const PhotographerHome = () => {
             )}
           </div>
         </section>
+      )}
+
+      {settings?.contactSectionEnabled !== false && (
+        <FadeIn>
+          <section className='relative section-spacing bg-foreground overflow-hidden'>
+            <div className='relative z-10 container-narrow'>
+              <div className='grid lg:grid-cols-2 gap-12 items-center'>
+                {/* Left column: heading + subheading */}
+                <div className='text-center lg:text-start'>
+                  <h2 className='text-4xl md:text-5xl text-background mb-4 leading-tight'>
+                    {settings?.contactSectionHeading || t('contact.title')}
+                  </h2>
+                  <p className='text-background/70 text-lg'>
+                    {settings?.contactSectionSubheading || t('contact.subtitle')}
+                  </p>
+                </div>
+
+                {/* Right column: form card */}
+                <div className='bg-card/10 backdrop-blur-sm rounded-2xl p-6 md:p-8 shadow-xl border border-white/10'>
+                  {contactSubmitted ? (
+                    <div className='text-center py-6'>
+                      <p className='text-2xl text-background'>{t('contact.success')}</p>
+                    </div>
+                  ) : (
+                    <form onSubmit={handleContactSubmit(onContactSubmit)} className='space-y-4'>
+                      <div>
+                        <label className='block text-sm text-background/70 mb-1.5'>{t('contact.name')}</label>
+                        <input
+                          type='text'
+                          {...registerContact('name')}
+                          className='w-full px-4 py-3 rounded-lg bg-background border border-border text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 transition-shadow'
+                        />
+                        {contactErrors.name && <p className='text-xs text-rose-400 mt-1'>{contactErrors.name.message}</p>}
+                      </div>
+                      <div>
+                        <label className='block text-sm text-background/70 mb-1.5'>{t('contact.phone')}</label>
+                        <input
+                          type='tel'
+                          {...registerContact('phone')}
+                          className='w-full px-4 py-3 rounded-lg bg-background border border-border text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 transition-shadow'
+                        />
+                      </div>
+                      <div>
+                        <label className='block text-sm text-background/70 mb-1.5'>{t('contact.email')}</label>
+                        <input
+                          type='email'
+                          {...registerContact('email')}
+                          className='w-full px-4 py-3 rounded-lg bg-background border border-border text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 transition-shadow'
+                        />
+                        {contactErrors.email && <p className='text-xs text-rose-400 mt-1'>{contactErrors.email.message}</p>}
+                      </div>
+                      <div>
+                        <label className='block text-sm text-background/70 mb-1.5'>{t('contact.session')}</label>
+                        <select
+                          {...registerContact('session_type')}
+                          className='w-full px-4 py-3 rounded-lg bg-background border border-border text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 transition-shadow'
+                        >
+                          <option value=''>—</option>
+                          {sessionTypes.map((type) => (
+                            <option key={type} value={type}>
+                              {type}
+                            </option>
+                          ))}
+                        </select>
+                        {contactErrors.session_type && <p className='text-xs text-rose-400 mt-1'>{contactErrors.session_type.message}</p>}
+                      </div>
+                      <div>
+                        <label className='block text-sm text-background/70 mb-1.5'>{t('contact.message')}</label>
+                        <textarea
+                          {...registerContact('message')}
+                          rows={4}
+                          className='w-full px-4 py-3 rounded-lg bg-background border border-border text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 transition-shadow resize-none'
+                        />
+                      </div>
+                      <button
+                        type='submit'
+                        disabled={contactSubmitting}
+                        className='w-full px-8 py-3 rounded-lg bg-primary text-primary-foreground font-sans text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-50'
+                      >
+                        {contactSubmitting ? t('contact.submitting') : t('contact.send')}
+                      </button>
+                    </form>
+                  )}
+                </div>
+              </div>
+            </div>
+          </section>
+        </FadeIn>
       )}
     </main>
   );

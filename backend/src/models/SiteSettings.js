@@ -56,6 +56,7 @@ async function upsert(adminId, data, { populate } = {}) {
     ctaBannerSubtext: 'cta_banner_subtext',
     ctaBannerButtonLabel: 'cta_banner_button_label',
     ctaBannerEnabled: 'cta_banner_enabled',
+    ctaBannerImagePath: 'cta_banner_image_path',
     servicesEnabled: 'services_enabled',
     testimonialsEnabled: 'testimonials_enabled',
     packagesEnabled: 'packages_enabled',
@@ -64,6 +65,9 @@ async function upsert(adminId, data, { populate } = {}) {
     instagramFeedImages: 'instagram_feed_images',
     autoSendGalleryEmail: 'auto_send_gallery_email',
     autoSendGallerySms: 'auto_send_gallery_sms',
+    contactSectionEnabled: 'contact_section_enabled',
+    contactSectionHeading: 'contact_section_heading',
+    contactSectionSubheading: 'contact_section_subheading',
   };
 
   // JSONB columns: camelCase key → snake_case DB column

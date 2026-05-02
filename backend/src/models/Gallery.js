@@ -11,6 +11,7 @@ function toRow(data) {
     isActive: 'is_active',
     expiresAt: 'expires_at',
     maxSelections: 'max_selections',
+    sessionType: 'session_type',
     isDelivery: 'is_delivery',
     deliveryOf: 'delivery_of',
     lastEmailSentAt: 'last_email_sent_at',
@@ -91,7 +92,7 @@ async function create(data, client = null) {
 
   const optionals = [
     'client_id', 'client_name', 'header_message', 'is_active',
-    'expires_at', 'status', 'max_selections', 'is_delivery',
+    'expires_at', 'status', 'max_selections', 'session_type', 'is_delivery',
     'delivery_of', 'last_email_sent_at', 'videos',
   ];
 
@@ -135,6 +136,7 @@ async function findOneAndUpdate(filter, update, opts = {}) {
     expiresAt: 'expires_at',
     status: 'status',
     maxSelections: 'max_selections',
+    sessionType: 'session_type',
     isDelivery: 'is_delivery',
     deliveryOf: 'delivery_of',
     lastEmailSentAt: 'last_email_sent_at',
@@ -179,6 +181,7 @@ async function save(gallery, client = null) {
     expiresAt: 'expires_at',
     status: 'status',
     maxSelections: 'max_selections',
+    sessionType: 'session_type',
     isDelivery: 'is_delivery',
     deliveryOf: 'delivery_of',
     lastEmailSentAt: 'last_email_sent_at',

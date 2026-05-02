@@ -111,9 +111,9 @@ export const SelectionGallery = ({ gallery, images, getImageUrl }: Props) => {
           if (!isBlocked) toggleSelect(img._id);
         }}
         className={`group relative rounded-xl overflow-hidden transition-shadow duration-200 ${
-          isSelected ? 'ring-4 shadow-lg' : ''
+          isSelected ? 'shadow-lg' : ''
         } ${isBlocked ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}
-        style={isSelected ? { boxShadow: '0 0 0 3px #E7B8B5', height: '100%' } : { height: '100%' }}
+        style={isSelected ? { boxShadow: '0 0 0 3px var(--primary)', height: '100%' } : { height: '100%' }}
       >
         <img
           src={getImageUrl(img.thumbnailPath || img.path)}
@@ -297,9 +297,9 @@ export const SelectionGallery = ({ gallery, images, getImageUrl }: Props) => {
                         if (!isBlocked) toggleSelect(img._id);
                       }}
                       className={`group relative rounded-xl overflow-hidden transition-shadow duration-200 ${
-                        isSelected ? 'ring-4 shadow-lg' : ''
+                        isSelected ? 'shadow-lg' : ''
                       } ${isBlocked ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}
-                      style={isSelected ? { boxShadow: '0 0 0 3px #E7B8B5' } : {}}
+                      style={isSelected ? { boxShadow: '0 0 0 3px var(--primary)' } : {}}
                     >
                       <img
                         src={getImageUrl(img.thumbnailPath || img.path)}

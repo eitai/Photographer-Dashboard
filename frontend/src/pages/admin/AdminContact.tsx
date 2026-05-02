@@ -43,54 +43,88 @@ export const AdminContact = () => {
   return (
     <AdminLayout title={t('admin.contact.title')}>
       {isLoading ? (
-        <div className='space-y-3'>
-          {[0, 1, 2].map((i) => (
-            <div key={i} className='bg-card rounded-xl border border-beige p-5'>
-              <div className='flex items-start justify-between gap-4'>
-                <div className='flex-1 space-y-2'>
-                  <div className='flex items-center gap-3'>
-                    <Skeleton className='h-4 w-28' />
-                    <Skeleton className='h-4 w-40' />
-                  </div>
-                  <Skeleton className='h-4 w-full' />
-                  <Skeleton className='h-4 w-3/4' />
-                  <Skeleton className='h-3 w-24 mt-2' />
-                </div>
-                <Skeleton className='h-8 w-8 rounded-lg shrink-0' />
-              </div>
-            </div>
-          ))}
+        <div className='bg-card rounded-xl border border-beige overflow-hidden'>
+          <table className='w-full text-sm'>
+            <thead>
+              <tr className='border-b border-beige bg-ivory/60'>
+                {[140, 160, 100, 90, 200, 80, 40].map((w, i) => (
+                  <th key={i} className='px-4 py-3'>
+                    <Skeleton className={`h-3 w-${w === 40 ? 6 : w > 160 ? 40 : w > 100 ? 24 : 16}`} />
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {[0, 1, 2, 3, 4].map((i) => (
+                <tr key={i} className='border-b border-beige/60 last:border-0'>
+                  <td className='px-4 py-3'><Skeleton className='h-3 w-28' /></td>
+                  <td className='px-4 py-3'><Skeleton className='h-3 w-36' /></td>
+                  <td className='px-4 py-3'><Skeleton className='h-3 w-20' /></td>
+                  <td className='px-4 py-3'><Skeleton className='h-5 w-16 rounded-full' /></td>
+                  <td className='px-4 py-3'><Skeleton className='h-3 w-full' /></td>
+                  <td className='px-4 py-3'><Skeleton className='h-3 w-20' /></td>
+                  <td className='px-4 py-3'><Skeleton className='h-6 w-6 rounded-md' /></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       ) : messages.length === 0 ? (
         <div className='bg-card rounded-xl border border-beige p-8 text-center text-sm text-warm-gray'>
           {t('admin.contact.no_messages')}
         </div>
       ) : (
-        <div className='space-y-3'>
-          {messages.map((msg) => (
-            <div key={msg._id} className='bg-card rounded-xl border border-beige p-5'>
-              <div className='flex items-start justify-between gap-4'>
-                <div className='min-w-0 flex-1'>
-                  <div className='flex items-center gap-3 mb-1 flex-wrap'>
-                    <p className='text-sm font-medium text-charcoal'>{msg.name}</p>
-                    <a href={`mailto:${msg.email}`} className='text-xs text-blush hover:underline truncate'>
+        <div className='bg-card rounded-xl border border-beige overflow-hidden'>
+          <table className='w-full text-sm'>
+            <thead>
+              <tr className='border-b border-beige bg-ivory/60 text-xs text-warm-gray uppercase tracking-wide'>
+                <th className='px-4 py-3 text-start font-medium'>{t('admin.contact.col_name')}</th>
+                <th className='px-4 py-3 text-start font-medium'>{t('admin.contact.col_email')}</th>
+                <th className='px-4 py-3 text-start font-medium'>{t('admin.contact.col_phone')}</th>
+                <th className='px-4 py-3 text-start font-medium'>{t('admin.contact.col_session')}</th>
+                <th className='px-4 py-3 text-start font-medium'>{t('admin.contact.col_message')}</th>
+                <th className='px-4 py-3 text-start font-medium'>{t('admin.contact.col_date')}</th>
+                <th className='px-4 py-3' />
+              </tr>
+            </thead>
+            <tbody>
+              {messages.map((msg) => (
+                <tr key={msg._id} className='border-b border-beige/60 last:border-0 hover:bg-ivory/40 transition-colors'>
+                  <td className='px-4 py-3 font-medium text-charcoal whitespace-nowrap'>{msg.name}</td>
+                  <td className='px-4 py-3'>
+                    <a href={`mailto:${msg.email}`} className='text-blush hover:underline'>
                       {msg.email}
                     </a>
-                    {msg.phone && <span className='text-xs text-warm-gray'>{msg.phone}</span>}
-                  </div>
-                  <p className='text-sm text-charcoal leading-relaxed line-clamp-3'>{msg.message}</p>
-                  <p className='text-xs text-warm-gray mt-2'>{new Date(msg.createdAt).toLocaleString()}</p>
-                </div>
-                <button
-                  onClick={() => deletion.setTarget(msg)}
-                  className='shrink-0 p-1.5 rounded-xl text-warm-gray hover:text-rose-500 hover:bg-rose-50 transition-colors'
-                  title={t('admin.contact.delete_btn')}
-                >
-                  <Trash2 size={14} />
-                </button>
-              </div>
-            </div>
-          ))}
+                  </td>
+                  <td className='px-4 py-3 text-warm-gray whitespace-nowrap'>{msg.phone ?? '—'}</td>
+                  <td className='px-4 py-3'>
+                    {msg.sessionType ? (
+                      <span className='bg-blush/15 text-blush px-2 py-0.5 rounded-full text-xs whitespace-nowrap'>
+                        {msg.sessionType}
+                      </span>
+                    ) : (
+                      <span className='text-warm-gray'>—</span>
+                    )}
+                  </td>
+                  <td className='px-4 py-3 text-charcoal max-w-xs'>
+                    <p className='line-clamp-2 leading-relaxed'>{msg.message}</p>
+                  </td>
+                  <td className='px-4 py-3 text-warm-gray whitespace-nowrap text-xs'>
+                    {new Date(msg.createdAt).toLocaleString()}
+                  </td>
+                  <td className='px-4 py-3'>
+                    <button
+                      onClick={() => deletion.setTarget(msg)}
+                      className='p-1.5 rounded-lg text-warm-gray hover:text-rose-500 hover:bg-rose-50 transition-colors'
+                      title={t('admin.contact.delete_btn')}
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       )}
 

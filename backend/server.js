@@ -80,12 +80,47 @@ async function start() {
 
   try {
     await pool.query(`
+      ALTER TABLE site_settings
+        ADD COLUMN IF NOT EXISTS contact_section_enabled BOOLEAN NOT NULL DEFAULT TRUE
+    `);
+    await pool.query(`
+      ALTER TABLE site_settings
+        ADD COLUMN IF NOT EXISTS contact_section_heading TEXT NOT NULL DEFAULT ''
+    `);
+    await pool.query(`
+      ALTER TABLE site_settings
+        ADD COLUMN IF NOT EXISTS contact_section_subheading TEXT NOT NULL DEFAULT ''
+    `);
+    logger.info('[migrate] contact_section columns ensured');
+  } catch (err) {
+    logger.warn('[migrate] contact_section migration skipped:', err.message);
+  }
+
+  try {
+    await pool.query(`
+      ALTER TABLE site_settings
+        ADD COLUMN IF NOT EXISTS cta_banner_image_path TEXT NOT NULL DEFAULT ''
+    `);
+    logger.info('[migrate] cta_banner_image_path column ensured');
+  } catch (err) {
+    logger.warn('[migrate] cta_banner_image_path migration skipped:', err.message);
+  }
+
+  try {
+    await pool.query(`
       CREATE INDEX IF NOT EXISTS idx_galleries_expires_at
         ON galleries (expires_at) WHERE expires_at IS NOT NULL
     `);
     logger.info('[migrate] idx_galleries_expires_at index ensured');
   } catch (err) {
     logger.warn('[migrate] expires_at index migration skipped:', err.message);
+  }
+
+  try {
+    await pool.query(`ALTER TABLE galleries ADD COLUMN IF NOT EXISTS session_type TEXT NOT NULL DEFAULT ''`);
+    logger.info('[migrate] galleries.session_type column ensured');
+  } catch (err) {
+    logger.warn('[migrate] galleries.session_type migration skipped:', err.message);
   }
 
   // ── Gallery auto-deletion scheduler ──────────────────────────────────────

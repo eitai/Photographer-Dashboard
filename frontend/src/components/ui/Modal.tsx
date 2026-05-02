@@ -26,8 +26,14 @@ export const Modal = ({ isOpen, onClose, children, maxWidth = 'max-w-sm' }: Moda
   if (!isOpen) return null;
 
   return (
-    <div className='fixed inset-0 z-50 flex items-center justify-center bg-charcoal/40 backdrop-blur-sm p-4'>
-      <div className={`bg-card rounded-2xl border border-beige shadow-xl w-full ${maxWidth} p-4 sm:p-6 max-h-[90dvh] overflow-y-auto`}>
+    <div
+      className='fixed inset-0 z-50 flex items-center justify-center bg-charcoal/40 backdrop-blur-sm p-4'
+      onClick={onClose}
+    >
+      <div
+        className={`bg-card rounded-2xl border border-beige shadow-xl w-full ${maxWidth} p-4 sm:p-6 max-h-[90dvh] overflow-y-auto`}
+        onClick={(e) => e.stopPropagation()}
+      >
         {children}
       </div>
     </div>

@@ -123,13 +123,13 @@ router.post('/', protect, asyncHandler(async (req, res) => {
   const {
     name: rawName, title,
     clientId, clientName, headerMessage,
-    isActive, expiresAt, status, maxSelections,
+    isActive, expiresAt, status, maxSelections, sessionType,
   } = req.body;
   const name = rawName || title;
 
   const gallery = await Gallery.create({
     name, clientId, clientName, headerMessage,
-    isActive, expiresAt, status, maxSelections,
+    isActive, expiresAt, status, maxSelections, sessionType,
     adminId: req.admin.id,
   });
 
@@ -151,6 +151,7 @@ router.post('/', protect, asyncHandler(async (req, res) => {
           galleryName: gallery.name,
           galleryUrl,
           headerMessage: gallery.headerMessage,
+          studioName: req.admin.studioName,
           lang,
         });
       } catch (_) {
@@ -247,6 +248,7 @@ router.post('/:id/resend-email', protect, asyncHandler(async (req, res) => {
       galleryName: gallery.name,
       galleryUrl,
       headerMessage: gallery.headerMessage,
+      studioName: req.admin.studioName,
       lang: req.admin.lang || 'he',
     });
   } catch (_) {
@@ -303,7 +305,7 @@ router.put('/:id', protect, asyncHandler(async (req, res) => {
   if (!UUID_RE.test(req.params.id))
     return res.status(400).json({ message: 'Invalid ID format' });
   // Whitelist updatable fields — never allow overwriting adminId, token, or internal flags
-  const { name, clientName, headerMessage, isActive, expiresAt, status, maxSelections } = req.body;
+  const { name, clientName, headerMessage, isActive, expiresAt, status, maxSelections, sessionType } = req.body;
 
   // Validate status transition if status is being changed
   let previousStatus = null;
@@ -323,7 +325,7 @@ router.put('/:id', protect, asyncHandler(async (req, res) => {
 
   const gallery = await Gallery.findOneAndUpdate(
     { _id: req.params.id, adminId: req.admin.id },
-    { name, clientName, headerMessage, isActive, expiresAt, status, maxSelections }
+    { name, clientName, headerMessage, isActive, expiresAt, status, maxSelections, sessionType }
   );
   if (!gallery) return res.status(404).json({ message: 'Gallery not found' });
   res.json(gallery);

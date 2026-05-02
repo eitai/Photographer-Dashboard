@@ -23,6 +23,7 @@ export interface GalleryData {
   deliveryOf?: string;
   lastEmailSentAt?: string;
   expiresAt?: string | null;
+  sessionType?: string;
   status: 'gallery_sent' | 'viewed' | 'selection_submitted' | 'in_editing' | 'delivered';
   videos?: { path: string; filename: string; originalName: string }[];
   previousSelectionIds?: string[];

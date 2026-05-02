@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { Mail, X } from 'lucide-react';
+import { X, Infinity } from 'lucide-react';
 import { useI18n } from '@/lib/i18n';
+import { useToast } from '@/hooks/use-toast';
 import { createGallery } from '@/services/galleryService';
+import { SessionTypeCombobox } from '@/components/admin/SessionTypeCombobox';
 import type { Client } from '@/types/admin';
 
 interface AddGalleryModalProps {
@@ -15,10 +17,10 @@ interface AddGalleryModalProps {
 
 interface FormState {
   clientId: string;
-  name: string;
   headerMessage: string;
   maxSelections: number;
   expiresAt: string;
+  sessionType: string;
 }
 
 export const AddGalleryModal = ({
@@ -30,16 +32,16 @@ export const AddGalleryModal = ({
 }: AddGalleryModalProps) => {
   const { t } = useI18n();
   const queryClient = useQueryClient();
+  const { toast } = useToast();
 
   const [form, setForm] = useState<FormState>({
     clientId: preselectedClient?._id ?? '',
-    name: '',
     headerMessage: '',
     maxSelections: 10,
     expiresAt: '',
+    sessionType: '',
   });
   const [saving, setSaving] = useState(false);
-  const [emailSent, setEmailSent] = useState<boolean | null>(null);
 
   if (!isOpen) return null;
 
@@ -51,15 +53,21 @@ export const AddGalleryModal = ({
     setSaving(true);
     try {
       const data = await createGallery({
-        name: form.name,
+        name: form.sessionType,
         headerMessage: form.headerMessage,
         maxSelections: form.maxSelections,
         clientId: selectedClient._id,
         clientName: selectedClient.name,
         expiresAt: form.expiresAt ? new Date(form.expiresAt).toISOString() : null,
+        sessionType: form.sessionType || undefined,
       });
-      setEmailSent(data.emailSent ?? null);
       await queryClient.invalidateQueries({ queryKey: ['galleries'] });
+      toast({
+        title: t('admin.galleries.create'),
+        description: data.emailSent
+          ? t('admin.galleries.email_sent')
+          : t('admin.galleries.no_email'),
+      });
       window.open(`/admin/galleries/${data._id}`, '_blank');
       onSuccess();
     } finally {
@@ -93,27 +101,6 @@ export const AddGalleryModal = ({
           </button>
         </div>
 
-        {/* Email feedback banner */}
-        {emailSent !== null && (
-          <div
-            className={`flex items-center gap-2 text-xs px-4 py-2.5 rounded-lg mb-4 ${
-              emailSent
-                ? 'bg-green-50 text-green-700 border border-green-200'
-                : 'bg-amber-50 text-amber-700 border border-amber-200'
-            }`}
-          >
-            <Mail size={13} />
-            {emailSent ? t('admin.galleries.email_sent') : t('admin.galleries.no_email')}
-            <button
-              type='button'
-              onClick={() => setEmailSent(null)}
-              className='ms-auto opacity-60 hover:opacity-100'
-            >
-              <X size={12} />
-            </button>
-          </div>
-        )}
-
         <form onSubmit={handleSubmit} className='space-y-4'>
           {/* Client select */}
           <div>
@@ -135,15 +122,12 @@ export const AddGalleryModal = ({
             </select>
           </div>
 
-          {/* Gallery name */}
+          {/* Session type — also used as gallery name */}
           <div>
-            <label className='block text-xs text-warm-gray mb-1'>{t('admin.galleries.name_label')}</label>
-            <input
-              required
-              type='text'
-              value={form.name}
-              onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-              className='w-full px-3 py-2 rounded-lg border border-beige bg-card text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-blush/50'
+            <label className='block text-xs text-warm-gray mb-1'>{t('admin.common.session_type')}</label>
+            <SessionTypeCombobox
+              value={form.sessionType}
+              onChange={(val) => setForm((f) => ({ ...f, sessionType: val }))}
             />
           </div>
 
@@ -161,14 +145,30 @@ export const AddGalleryModal = ({
           {/* Max selections */}
           <div>
             <label className='block text-xs text-warm-gray mb-1'>{t('admin.client.max_selections')}</label>
-            <input
-              type='number'
-              min={1}
-              max={500}
-              value={form.maxSelections}
-              onChange={(e) => setForm((f) => ({ ...f, maxSelections: Number(e.target.value) }))}
-              className='w-full px-3 py-2 rounded-lg border border-beige bg-card text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-blush/50'
-            />
+            <div className='flex items-center gap-2'>
+              <input
+                type='number'
+                min={1}
+                max={500}
+                disabled={form.maxSelections === 0}
+                value={form.maxSelections === 0 ? '' : form.maxSelections}
+                onChange={(e) => setForm((f) => ({ ...f, maxSelections: Number(e.target.value) }))}
+                placeholder='10'
+                className='flex-1 px-3 py-2 rounded-lg border border-beige bg-card text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-blush/50 disabled:opacity-40 disabled:cursor-not-allowed'
+              />
+              <button
+                type='button'
+                title='Unlimited'
+                onClick={() => setForm((f) => ({ ...f, maxSelections: f.maxSelections === 0 ? 10 : 0 }))}
+                className={`shrink-0 p-2 rounded-lg border transition-colors ${
+                  form.maxSelections === 0
+                    ? 'bg-blush text-white border-blush'
+                    : 'border-beige text-warm-gray hover:border-blush hover:text-blush'
+                }`}
+              >
+                <Infinity size={16} />
+              </button>
+            </div>
           </div>
 
           {/* Expiry date (optional) */}
@@ -197,7 +197,7 @@ export const AddGalleryModal = ({
           <div className='flex gap-2 pt-1'>
             <button
               type='submit'
-              disabled={saving || !form.clientId}
+              disabled={saving || !form.clientId || !form.sessionType}
               className='bg-blush text-primary-foreground px-4 py-2 rounded-xl text-sm font-medium hover:bg-blush/80 transition-colors disabled:opacity-60'
             >
               {saving ? t('admin.galleries.creating') : t('admin.galleries.create')}

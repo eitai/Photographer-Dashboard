@@ -24,37 +24,45 @@ const esc = (s) =>
 const copy = {
   he: {
     dir: 'rtl',
+    align: 'right',
     htmlLang: 'he',
     title: 'הגלריה שלך מוכנה',
+    eyebrow: 'גלריה אישית',
     heading: 'הגלריה שלך מוכנה',
     tagline: 'כל תמונה מספרת סיפור קטן',
     greeting: (name) => `שלום ${name},`,
-    body: (gallery) => `שמחה לבשר לך שהגלריה <span style="color:#2C1F1F;font-weight:600;">${gallery}</span> מוכנה לצפייה ובחירה.`,
-    instruction: 'לחצי על הכפתור למטה כדי לצפות בתמונות ולבחור את האהובות עליך.',
-    cta: 'לצפייה בגלריה שלי',
-    ctaArrow: '&#8592;',
-    fallback: 'אם הכפתור לא עובד, העתיקי את הקישור:',
-    noteBorder: 'border-right:3px solid #E7B8B5',
-    subject: (gallery) => `הגלריה שלך מוכנה ✨ | ${gallery}`,
+    body: (gallery) => `שמחנו להכין עבורך את גלריית <strong style="color:#2C1F1F;">${gallery}</strong>. התמונות מוכנות לצפייה ולבחירה.`,
+    noteLabel: 'הודעה אישית',
+    instruction: 'לחצי על הכפתור כדי לפתוח את הגלריה ולבחור את התמונות האהובות עליך.',
+    cta: 'לצפייה בגלריה',
+    ctaArrow: ' ←',
+    fallback: 'אם הכפתור לא נפתח, העתיקי את הקישור:',
+    noteBorder: 'border-right:3px solid #E7B8B5;padding-right:16px;',
+    poweredBy: 'נוצר באמצעות',
+    subject: (gallery, studio) => `${studio ? studio + ' · ' : ''}הגלריה שלך מוכנה ✨ | ${gallery}`,
   },
   en: {
     dir: 'ltr',
+    align: 'left',
     htmlLang: 'en',
     title: 'Your gallery is ready',
+    eyebrow: 'Personal Gallery',
     heading: 'Your gallery is ready',
     tagline: 'Every photo tells a small story',
     greeting: (name) => `Hi ${name},`,
-    body: (gallery) => `Your gallery <span style="color:#2C1F1F;font-weight:600;">${gallery}</span> is ready to view and make your selections.`,
-    instruction: 'Click the button below to browse your photos and choose your favourites.',
-    cta: 'View my gallery',
-    ctaArrow: '&#8594;',
-    fallback: 'If the button doesn\'t work, copy the link below:',
-    noteBorder: 'border-left:3px solid #E7B8B5',
-    subject: (gallery) => `Your gallery is ready ✨ | ${gallery}`,
+    body: (gallery) => `Your gallery <strong style="color:#2C1F1F;">${gallery}</strong> is ready to view and select your favourite photos.`,
+    noteLabel: 'Personal note',
+    instruction: 'Click the button below to open your gallery and choose the photos you love.',
+    cta: 'Open my gallery',
+    ctaArrow: ' →',
+    fallback: "If the button doesn't work, copy the link below:",
+    noteBorder: 'border-left:3px solid #E7B8B5;padding-left:16px;',
+    poweredBy: 'Powered by',
+    subject: (gallery, studio) => `${studio ? studio + ' · ' : ''}Your gallery is ready ✨ | ${gallery}`,
   },
 };
 
-async function sendGalleryLink({ clientName, clientEmail, galleryName, galleryUrl, headerMessage, lang = 'he' }) {
+async function sendGalleryLink({ clientName, clientEmail, galleryName, galleryUrl, headerMessage, studioName, lang = 'he' }) {
   const transporter = createTransporter();
   if (!transporter) {
     console.warn('[email] SMTP not configured — skipping gallery email');
@@ -62,6 +70,7 @@ async function sendGalleryLink({ clientName, clientEmail, galleryName, galleryUr
   }
 
   const t = copy[lang] || copy.he;
+  const studio = esc(studioName || 'LightStudio');
 
   const html = `
 <!DOCTYPE html>
@@ -70,113 +79,248 @@ async function sendGalleryLink({ clientName, clientEmail, galleryName, galleryUr
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>${t.title}</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+  <!--[if mso]><xml><o:OfficeDocumentSettings><o:PixelsPerInch>96</o:PixelsPerInch></o:OfficeDocumentSettings></xml><![endif]-->
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500&family=Inter:wght@400;500;600&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=Inter:wght@400;500;600&display=swap');
+    body { margin:0; padding:0; background-color:#FAF8F4; -webkit-text-size-adjust:100%; }
+    a { color:#C48F8C; }
+    @media only screen and (max-width:600px) {
+      .email-wrapper { padding:24px 12px !important; }
+      .email-card { border-radius:12px !important; }
+      .email-body-cell { padding:0 24px 32px !important; }
+      .cta-btn a { padding:16px 32px !important; font-size:15px !important; }
+    }
   </style>
 </head>
 <body style="margin:0;padding:0;background-color:#FAF8F4;">
-  <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#FAF8F4;min-width:100%;">
-    <tr>
-      <td align="center" style="padding:48px 16px;">
 
-        <table width="560" cellpadding="0" cellspacing="0" border="0" style="max-width:560px;width:100%;background-color:#ffffff;border-radius:20px;overflow:hidden;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+       style="background-color:#FAF8F4;min-width:100%;">
+  <tr>
+    <td class="email-wrapper" align="center" style="padding:48px 16px;">
 
-          <!-- Top accent line -->
-          <tr>
-            <td style="background-color:#E7B8B5;height:4px;font-size:0;line-height:0;">&nbsp;</td>
-          </tr>
+      <!-- Card -->
+      <table role="presentation" class="email-card" width="580" cellpadding="0" cellspacing="0" border="0"
+             style="max-width:580px;width:100%;background-color:#ffffff;border-radius:20px;
+                    box-shadow:0 4px 32px rgba(44,31,31,0.07);overflow:hidden;">
 
-          <!-- Header -->
-          <tr>
-            <td align="center" style="padding:44px 40px 36px;background-color:#ffffff;">
-              <p style="margin:0 0 6px;font-family:'Inter',Arial,sans-serif;font-size:11px;font-weight:600;letter-spacing:4px;color:#C48F8C;text-transform:uppercase;">LightStudio</p>
-              <h1 style="margin:0;font-family:'Playfair Display',Georgia,serif;font-size:30px;font-weight:400;color:#2C1F1F;line-height:1.3;">${t.heading}</h1>
-              <div style="margin:16px auto 0;width:40px;height:1px;background-color:#E7B8B5;"></div>
-            </td>
-          </tr>
+        <!-- Top accent bar -->
+        <tr>
+          <td style="background:linear-gradient(90deg,#E7B8B5 0%,#D4A0A0 100%);
+                     height:5px;font-size:0;line-height:0;">&nbsp;</td>
+        </tr>
 
-          <!-- Body -->
-          <tr>
-            <td style="padding:0 40px 40px;" dir="${t.dir}">
+        <!-- ── HEADER ── -->
+        <tr>
+          <td align="center" style="padding:44px 40px 32px;background-color:#ffffff;">
 
-              <p style="margin:0 0 12px;font-family:'Inter',Arial,sans-serif;font-size:16px;font-weight:500;color:#2C1F1F;line-height:1.6;">
-                ${t.greeting(esc(clientName))}
-              </p>
-              <p style="margin:0 0 24px;font-family:'Inter',Arial,sans-serif;font-size:15px;color:#5C4B4B;line-height:1.8;">
-                ${t.body(esc(galleryName))}
-              </p>
+            <!-- Studio wordmark -->
+            <p style="margin:0 0 20px;
+                      font-family:'Inter',Arial,sans-serif;
+                      font-size:11px;font-weight:600;
+                      letter-spacing:5px;color:#C48F8C;
+                      text-transform:uppercase;">
+              ${studio}
+            </p>
 
-              ${headerMessage ? `
-              <!-- Personal note -->
-              <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:28px;">
-                <tr>
-                  <td style="background-color:#FAF8F4;border-radius:12px;padding:20px 24px;${t.noteBorder};">
-                    <p style="margin:0;font-family:'Inter',Arial,sans-serif;font-size:14px;color:#5C4B4B;line-height:1.8;font-style:italic;">${esc(headerMessage)}</p>
-                  </td>
-                </tr>
-              </table>
-              ` : ''}
+            <!-- Decorative camera/lens mark -->
+            <div style="margin:0 auto 20px;width:52px;height:52px;
+                        background-color:#FAF8F4;border-radius:50%;
+                        border:1px solid #EAD8D6;
+                        display:table-cell;vertical-align:middle;text-align:center;
+                        font-size:22px;line-height:52px;">&#128247;</div>
 
-              <p style="margin:0 0 32px;font-family:'Inter',Arial,sans-serif;font-size:15px;color:#5C4B4B;line-height:1.8;">
-                ${t.instruction}
-              </p>
+            <!-- Eyebrow label -->
+            <p style="margin:0 0 10px;
+                      font-family:'Inter',Arial,sans-serif;
+                      font-size:12px;font-weight:500;
+                      letter-spacing:2px;color:#C48F8C;
+                      text-transform:uppercase;">
+              ${t.eyebrow}
+            </p>
 
-              <!-- CTA Button -->
-              <table cellpadding="0" cellspacing="0" border="0" style="margin:0 auto 36px;">
-                <tr>
-                  <td align="center" style="background-color:#E7B8B5;border-radius:12px;">
-                    <a href="${galleryUrl}"
-                       style="display:inline-block;padding:16px 44px;font-family:'Inter',Arial,sans-serif;font-size:15px;font-weight:600;color:#2C1F1F;text-decoration:none;letter-spacing:0.3px;white-space:nowrap;">
-                      ${t.cta} ${t.ctaArrow}
-                    </a>
-                  </td>
-                </tr>
-              </table>
+            <!-- Main heading -->
+            <h1 style="margin:0;
+                       font-family:'Playfair Display',Georgia,serif;
+                       font-size:32px;font-weight:400;
+                       color:#2C1F1F;line-height:1.25;
+                       letter-spacing:-0.3px;">
+              ${t.heading}
+            </h1>
 
-              <!-- Divider -->
-              <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:24px;">
-                <tr>
-                  <td style="border-top:1px solid #F0EAE4;font-size:0;line-height:0;">&nbsp;</td>
-                </tr>
-              </table>
+            <!-- Ornament line -->
+            <table role="presentation" cellpadding="0" cellspacing="0" border="0"
+                   style="margin:20px auto 0;">
+              <tr>
+                <td style="width:24px;height:1px;background-color:#E7B8B5;font-size:0;"></td>
+                <td style="width:8px;height:8px;background-color:#E7B8B5;border-radius:50%;
+                           font-size:0;margin:0 6px;padding:0 6px;"></td>
+                <td style="width:24px;height:1px;background-color:#E7B8B5;font-size:0;"></td>
+              </tr>
+            </table>
 
-              <p style="margin:0;font-family:'Inter',Arial,sans-serif;font-size:12px;color:#A08080;line-height:1.7;text-align:center;">
-                ${t.fallback}<br/>
-                <a href="${galleryUrl}" style="color:#C48F8C;word-break:break-all;text-decoration:underline;">${galleryUrl}</a>
-              </p>
+          </td>
+        </tr>
 
-            </td>
-          </tr>
+        <!-- ── BODY ── -->
+        <tr>
+          <td class="email-body-cell" dir="${t.dir}"
+              style="padding:0 44px 44px;">
 
-          <!-- Footer -->
-          <tr>
-            <td align="center" style="padding:24px 40px;background-color:#FAF8F4;border-top:1px solid #F0EAE4;">
-              <p style="margin:0 0 4px;font-family:'Playfair Display',Georgia,serif;font-size:14px;color:#2C1F1F;font-weight:400;">LightStudio</p>
-              <p style="margin:0;font-family:'Inter',Arial,sans-serif;font-size:11px;color:#B0A0A0;letter-spacing:1.5px;text-transform:uppercase;">${t.tagline}</p>
-            </td>
-          </tr>
+            <!-- Greeting -->
+            <p style="margin:0 0 16px;
+                      font-family:'Inter',Arial,sans-serif;
+                      font-size:17px;font-weight:500;
+                      color:#2C1F1F;line-height:1.5;
+                      text-align:${t.align};">
+              ${t.greeting(esc(clientName))}
+            </p>
 
-          <!-- Bottom accent line -->
-          <tr>
-            <td style="background-color:#E7B8B5;height:3px;font-size:0;line-height:0;">&nbsp;</td>
-          </tr>
+            <!-- Body copy -->
+            <p style="margin:0 0 28px;
+                      font-family:'Inter',Arial,sans-serif;
+                      font-size:15px;color:#5C4B4B;line-height:1.85;
+                      text-align:${t.align};">
+              ${t.body(esc(galleryName))}
+            </p>
 
-        </table>
+            ${headerMessage ? `
+            <!-- Personal note from photographer -->
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+                   style="margin-bottom:28px;">
+              <tr>
+                <td dir="${t.dir}"
+                    style="background-color:#FAF8F4;border-radius:12px;
+                           padding:18px 20px;
+                           ${t.noteBorder}">
+                  <p style="margin:0 0 6px;
+                             font-family:'Inter',Arial,sans-serif;
+                             font-size:10px;font-weight:600;
+                             letter-spacing:2px;color:#C48F8C;
+                             text-transform:uppercase;
+                             text-align:${t.align};">
+                    ${t.noteLabel}
+                  </p>
+                  <p style="margin:0;
+                             font-family:'Playfair Display',Georgia,serif;
+                             font-size:14px;font-style:italic;
+                             color:#5C4B4B;line-height:1.85;
+                             text-align:${t.align};">
+                    ${esc(headerMessage)}
+                  </p>
+                </td>
+              </tr>
+            </table>
+            ` : ''}
 
-      </td>
-    </tr>
-  </table>
+            <!-- Instruction -->
+            <p style="margin:0 0 32px;
+                      font-family:'Inter',Arial,sans-serif;
+                      font-size:15px;color:#7A6060;line-height:1.85;
+                      text-align:${t.align};">
+              ${t.instruction}
+            </p>
+
+            <!-- CTA Button — full width strip, centered content -->
+            <table role="presentation" class="cta-btn" width="100%" cellpadding="0" cellspacing="0" border="0"
+                   style="margin-bottom:36px;">
+              <tr>
+                <td align="center">
+                  <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+                    <tr>
+                      <td style="background-color:#2C1F1F;border-radius:50px;">
+                        <a href="${galleryUrl}"
+                           style="display:inline-block;
+                                  padding:17px 52px;
+                                  font-family:'Inter',Arial,sans-serif;
+                                  font-size:15px;font-weight:600;
+                                  color:#FAF8F4;text-decoration:none;
+                                  letter-spacing:0.4px;white-space:nowrap;">
+                          ${t.cta}${t.ctaArrow}
+                        </a>
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+            </table>
+
+            <!-- Divider -->
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+                   style="margin-bottom:20px;">
+              <tr>
+                <td style="border-top:1px solid #F0EAE4;font-size:0;line-height:0;">&nbsp;</td>
+              </tr>
+            </table>
+
+            <!-- Fallback URL -->
+            <p style="margin:0;
+                      font-family:'Inter',Arial,sans-serif;
+                      font-size:12px;color:#A08080;line-height:1.7;
+                      text-align:center;">
+              ${t.fallback}<br/>
+              <a href="${galleryUrl}"
+                 style="color:#C48F8C;word-break:break-all;text-decoration:none;
+                        border-bottom:1px solid #E7B8B5;">
+                ${galleryUrl}
+              </a>
+            </p>
+
+          </td>
+        </tr>
+
+        <!-- ── FOOTER ── -->
+        <tr>
+          <td align="center"
+              style="padding:28px 40px 32px;background-color:#FAF8F4;border-top:1px solid #F0EAE4;">
+
+            <!-- Studio name -->
+            <p style="margin:0 0 4px;
+                      font-family:'Playfair Display',Georgia,serif;
+                      font-size:15px;font-weight:400;
+                      color:#2C1F1F;letter-spacing:0.5px;">
+              ${studio}
+            </p>
+
+            <!-- Tagline -->
+            <p style="margin:0 0 16px;
+                      font-family:'Inter',Arial,sans-serif;
+                      font-size:11px;color:#B0A0A0;
+                      letter-spacing:2px;text-transform:uppercase;">
+              ${t.tagline}
+            </p>
+
+            <!-- Powered by -->
+            <p style="margin:0;
+                      font-family:'Inter',Arial,sans-serif;
+                      font-size:10px;color:#C8B8B8;letter-spacing:0.5px;">
+              ${t.poweredBy} Koral Light Studio
+            </p>
+
+          </td>
+        </tr>
+
+        <!-- Bottom accent bar -->
+        <tr>
+          <td style="background:linear-gradient(90deg,#E7B8B5 0%,#D4A0A0 100%);
+                     height:4px;font-size:0;line-height:0;">&nbsp;</td>
+        </tr>
+
+      </table>
+      <!-- /Card -->
+
+    </td>
+  </tr>
+</table>
+
 </body>
 </html>
   `.trim();
 
   await transporter.sendMail({
-    from: process.env.SMTP_FROM || `"LightStudio" <${process.env.SMTP_USER}>`,
+    from: process.env.SMTP_FROM || `"${studioName || 'LightStudio'}" <${process.env.SMTP_USER}>`,
     to: clientEmail,
-    subject: t.subject(galleryName),
+    subject: t.subject(galleryName, studioName),
     html,
   });
 

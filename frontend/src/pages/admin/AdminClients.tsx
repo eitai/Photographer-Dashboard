@@ -1,7 +1,7 @@
 import { useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { AdminLayout } from '@/components/admin/AdminLayout';
-import { InputField, TextareaField, SelectField } from '@/components/admin/InputField';
+import { InputField, TextareaField } from '@/components/admin/InputField';
 import { StatusBadge } from '@/components/admin/StatusBadge';
 import { useI18n } from '@/lib/i18n';
 import { useClients, useCreateClient, useDeleteClient } from '@/hooks/useQueries';
@@ -17,13 +17,11 @@ import type { Client } from '@/types/admin';
 import { useDeleteConfirmation } from '@/hooks/useDeleteConfirmation';
 import { Button } from '@/components/admin/Button';
 
-const SESSION_TYPES = ['family', 'maternity', 'newborn', 'branding', 'landscape'] as const;
 
 const clientSchema = z.object({
   name: z.string().min(1, 'Name is required'),
-  phone: z.string().optional(),
+  phone: z.preprocess((val) => (val === '' ? undefined : val), z.string().regex(/^[0-9+\-\s().]{7,20}$/, 'Invalid phone number').optional()),
   email: z.preprocess((val) => (val === '' ? undefined : val), z.string().email('Invalid email').optional()),
-  sessionType: z.enum(SESSION_TYPES),
   notes: z.string().optional(),
 });
 
@@ -57,13 +55,22 @@ export const AdminClients = () => {
     formState: { errors },
   } = useForm<ClientFormValues>({
     resolver: zodResolver(clientSchema),
-    defaultValues: { name: '', phone: '', email: '', sessionType: 'family', notes: '' },
+    defaultValues: { name: '', phone: '', email: '', notes: '' },
   });
+
+  const closeAndReset = () => {
+    form.close();
+    reset();
+  };
 
   const onSubmit = async (data: ClientFormValues) => {
     await createClient.mutateAsync(data);
-    form.close();
-    reset();
+    closeAndReset();
+  };
+
+  const displaySessionType = (st: string) => {
+    const translated = t(`admin.session.${st}`);
+    return translated.startsWith('admin.session.') ? st : translated;
   };
 
   return (
@@ -88,10 +95,10 @@ export const AdminClients = () => {
         </Button>
       </div>
 
-      {/* Create form */}
-      {form.isOpen && (
-        <form onSubmit={handleSubmit(onSubmit)} className='bg-card border border-beige rounded-xl p-6 mb-6 space-y-4'>
-          <h3 className=' text-charcoal mb-2'>{t('admin.clients.new')}</h3>
+      {/* Create client modal */}
+      <Modal isOpen={form.isOpen} onClose={closeAndReset} maxWidth='max-w-lg'>
+        <h3 className='text-lg text-charcoal mb-4'>{t('admin.clients.new')}</h3>
+        <form onSubmit={handleSubmit(onSubmit)} className='space-y-4'>
           <div className='grid grid-cols-1 sm:grid-cols-2 gap-4'>
             <div>
               <label className='block text-xs text-warm-gray mb-1'>{t('admin.common.name')}</label>
@@ -109,6 +116,7 @@ export const AdminClients = () => {
                 {...register('phone')}
                 className='py-2.5 min-h-[44px]'
               />
+              {errors.phone && <p className='text-xs text-rose-500 mt-1'>{errors.phone.message}</p>}
             </div>
             <div>
               <label className='block text-xs text-warm-gray mb-1'>{t('admin.common.email')}</label>
@@ -119,19 +127,6 @@ export const AdminClients = () => {
               />
               {errors.email && <p className='text-xs text-rose-500 mt-1'>{errors.email.message}</p>}
             </div>
-            <div>
-              <label className='block text-xs text-warm-gray mb-1'>{t('admin.common.session_type')}</label>
-              <SelectField
-                {...register('sessionType')}
-                className='py-2.5 min-h-[44px]'
-              >
-                {SESSION_TYPES.map((st) => (
-                  <option key={st} value={st}>
-                    {t(`admin.session.${st}`)}
-                  </option>
-                ))}
-              </SelectField>
-            </div>
           </div>
           <div>
             <label className='block text-xs text-warm-gray mb-1'>{t('admin.common.notes')}</label>
@@ -141,29 +136,16 @@ export const AdminClients = () => {
               className='py-2.5 min-h-[44px]'
             />
           </div>
-          <div className='flex gap-3'>
-            <Button
-              type='submit'
-              variant='primary'
-              size='lg'
-              disabled={createClient.isPending}
-            >
+          <div className='flex gap-3 pt-1'>
+            <Button type='submit' variant='primary' size='lg' className='flex-1' disabled={createClient.isPending}>
               {createClient.isPending ? t('admin.common.saving') : t('admin.clients.create')}
             </Button>
-            <Button
-              type='button'
-              variant='ghost'
-              size='lg'
-              onClick={() => {
-                form.close();
-                reset();
-              }}
-            >
+            <Button type='button' variant='ghost' size='lg' className='flex-1' onClick={closeAndReset}>
               {t('admin.common.cancel')}
             </Button>
           </div>
         </form>
-      )}
+      </Modal>
 
       {/* Table */}
       <div className='bg-card rounded-xl border border-beige overflow-x-auto'>
@@ -182,38 +164,29 @@ export const AdminClients = () => {
         ) : filtered.length === 0 ? (
           <p className='text-sm text-warm-gray p-6'>{t('admin.clients.no_clients')}</p>
         ) : (
-          <table className='w-full text-sm table-fixed'>
-            <colgroup>
-              <col className='w-1/4' />
-              <col className='w-[120px]' />
-              <col className='w-1/4' />
-              <col className='w-[140px]' />
-              <col className='w-[130px]' />
-              <col className='w-[80px]' />
-            </colgroup>
+          <table className='w-full text-sm'>
             <thead className='bg-ivory border-b border-beige'>
               <tr>
-                {[
-                  t('admin.common.name'),
-                  t('admin.clients.col_session'),
-                  t('admin.common.email'),
-                  t('admin.common.phone'),
-                  t('admin.common.status'),
-                  '',
-                ].map((h, i) => (
-                  <th key={i} className='text-xs text-warm-gray font-medium px-4 py-3'>
-                    {h}
-                  </th>
-                ))}
+                <th className='text-xs text-warm-gray font-medium px-4 py-3 text-start'>{t('admin.common.name')}</th>
+                <th className='text-xs text-warm-gray font-medium px-4 py-3 text-start hidden sm:table-cell'>{t('admin.clients.col_session')}</th>
+                <th className='text-xs text-warm-gray font-medium px-4 py-3 text-start hidden md:table-cell'>{t('admin.common.email')}</th>
+                <th className='text-xs text-warm-gray font-medium px-4 py-3 text-start hidden md:table-cell'>{t('admin.common.phone')}</th>
+                <th className='text-xs text-warm-gray font-medium px-4 py-3 text-start'>{t('admin.common.status')}</th>
+                <th className='w-[80px]' />
               </tr>
             </thead>
             <tbody className='divide-y divide-beige'>
               {filtered.map((c) => (
                 <tr key={c._id} className='hover:bg-ivory transition-colors'>
-                  <td className='px-4 py-3 text-charcoal font-medium truncate'>{c.name}</td>
-                  <td className='px-4 py-3 text-warm-gray'>{t(`admin.session.${c.sessionType}`)}</td>
-                  <td className='px-4 py-3 text-warm-gray truncate'>{c.email || '—'}</td>
-                  <td className='px-4 py-3 text-warm-gray whitespace-nowrap'>{c.phone || '—'}</td>
+                  <td className='px-4 py-3 text-charcoal font-medium'>
+                    <div className='truncate max-w-[160px] sm:max-w-none'>{c.name}</div>
+                    <div className='text-xs text-warm-gray mt-0.5 sm:hidden'>{c.email || c.phone || ''}</div>
+                  </td>
+                  <td className='px-4 py-3 text-warm-gray hidden sm:table-cell'>{displaySessionType(c.sessionType)}</td>
+                  <td className='px-4 py-3 text-warm-gray hidden md:table-cell'>
+                    <div className='truncate max-w-[180px]'>{c.email || '—'}</div>
+                  </td>
+                  <td className='px-4 py-3 text-warm-gray whitespace-nowrap hidden md:table-cell'>{c.phone || '—'}</td>
                   <td className='px-4 py-3'>
                     <StatusBadge status={c.status} />
                   </td>

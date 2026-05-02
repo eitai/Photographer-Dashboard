@@ -3,7 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import { AdminLayout } from '@/components/admin/AdminLayout';
 import { useI18n } from '@/lib/i18n';
 import { toast } from 'sonner';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, ArrowRight } from 'lucide-react';
 import { ClientInfoCard } from '@/components/admin/ClientInfoCard';
 import { GalleriesSection } from '@/components/admin/GalleriesSection';
 import { ConfirmationModals } from '@/components/admin/ConfirmationModals';
@@ -56,7 +56,9 @@ export const AdminClientDetail = () => {
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [resentId, setResentId] = useState<string | null>(null);
   const [sentSmsId, setSentSmsId] = useState<string | null>(null);
-  const [deleteImageTarget, setDeleteImageTarget] = useState<{ galleryId: string; submissionId: string; imageId: string } | null>(null);
+  const [deleteImageTarget, setDeleteImageTarget] = useState<{ galleryId: string; submissionId: string; imageId: string } | null>(
+    null,
+  );
   const [deleteSubTarget, setDeleteSubTarget] = useState<{ galleryId: string; submissionId: string } | null>(null);
   const [deleteGalleryTarget, setDeleteGalleryTarget] = useState<string | null>(null);
 
@@ -149,18 +151,18 @@ export const AdminClientDetail = () => {
     );
 
   // Derive per-mutation pending IDs
-  const creatingDeliveryFor = createDelivery.isPending ? createDelivery.variables?.galleryId ?? null : null;
-  const resendingId = resendEmail.isPending ? resendEmail.variables ?? null : null;
-  const sendingSmId = sendSms.isPending ? sendSms.variables ?? null : null;
+  const creatingDeliveryFor = createDelivery.isPending ? (createDelivery.variables?.galleryId ?? null) : null;
+  const resendingId = resendEmail.isPending ? (resendEmail.variables ?? null) : null;
+  const sendingSmId = sendSms.isPending ? (sendSms.variables ?? null) : null;
   const deletingImage = deleteSubmissionImageMutation.isPending;
   const deletingSubmission = deleteSubmissionMutation.isPending;
   const deletingGallery = deleteGalleryMutation.isPending;
-  const reactivatingId = reactivateGalleryMutation.isPending ? reactivateGalleryMutation.variables ?? null : null;
+  const reactivatingId = reactivateGalleryMutation.isPending ? (reactivateGalleryMutation.variables ?? null) : null;
 
   return (
     <AdminLayout>
       <Link to='/admin/clients' className='flex items-center gap-1 text-sm text-warm-gray hover:text-charcoal mb-6'>
-        <ArrowLeft size={14} /> {t('admin.common.back_clients')}
+        <ArrowRight size={14} /> {t('admin.common.back_clients')}
       </Link>
       <div className='space-y-6'>
         <ErrorBoundary label='Client Info'>
@@ -202,11 +204,7 @@ export const AdminClientDetail = () => {
           />
         </ErrorBoundary>
         <ErrorBoundary label='Product Orders'>
-          <ProductOrdersSection
-            clientId={id!}
-            clientName={client.name}
-            galleries={galleries}
-          />
+          <ProductOrdersSection clientId={id!} clientName={client.name} galleries={galleries} />
         </ErrorBoundary>
       </div>
       <ConfirmationModals

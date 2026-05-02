@@ -24,6 +24,7 @@ import {
   ArrowLeft,
   Check,
   X,
+  ArrowRight,
 } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -216,7 +217,7 @@ export const AdminBlogEditor = () => {
         onClick={() => navigate('/admin/blog')}
         className='flex items-center gap-1 text-sm text-warm-gray hover:text-charcoal mb-6'
       >
-        <ArrowLeft size={14} /> {t('admin.common.back_blog')}
+        <ArrowRight size={14} /> {t('admin.common.back_blog')}
       </button>
 
       <div className='grid grid-cols-1 lg:grid-cols-3 gap-6'>
@@ -256,7 +257,10 @@ export const AdminBlogEditor = () => {
                   value={pendingLinkUrl}
                   onChange={(e) => setPendingLinkUrl(e.target.value)}
                   onKeyDown={(e) => {
-                    if (e.key === 'Enter') { e.preventDefault(); commitLink(); }
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      commitLink();
+                    }
                     if (e.key === 'Escape') cancelLink();
                   }}
                   placeholder='https://'
@@ -280,7 +284,10 @@ export const AdminBlogEditor = () => {
                   value={pendingImageUrl}
                   onChange={(e) => setPendingImageUrl(e.target.value)}
                   onKeyDown={(e) => {
-                    if (e.key === 'Enter') { e.preventDefault(); commitImage(); }
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      commitImage();
+                    }
                     if (e.key === 'Escape') cancelImage();
                   }}
                   placeholder='https://'
@@ -306,20 +313,10 @@ export const AdminBlogEditor = () => {
         <div className='space-y-4'>
           {/* Actions */}
           <div className='bg-card rounded-xl border border-beige p-4 space-y-3'>
-            <Button
-              variant='ghost'
-              className='w-full'
-              onClick={handleSubmit((data) => save(data, false))}
-              disabled={saving}
-            >
+            <Button variant='ghost' className='w-full' onClick={handleSubmit((data) => save(data, false))} disabled={saving}>
               {saving ? t('admin.common.saving') : t('admin.editor.save_draft')}
             </Button>
-            <Button
-              variant='primary'
-              className='w-full'
-              onClick={handleSubmit((data) => save(data, true))}
-              disabled={saving}
-            >
+            <Button variant='primary' className='w-full' onClick={handleSubmit((data) => save(data, true))} disabled={saving}>
               {saving ? t('admin.editor.publishing') : t('admin.editor.publish')}
             </Button>
           </div>
@@ -353,11 +350,7 @@ export const AdminBlogEditor = () => {
             <p className='text-xs font-medium font-sans text-charcoal'>{t('admin.editor.seo')}</p>
             <div>
               <label className='block text-xs text-warm-gray mb-1'>{t('admin.editor.seo_title')}</label>
-              <InputField
-                {...register('seoTitle')}
-                placeholder={titleValue}
-                className='text-xs'
-              />
+              <InputField {...register('seoTitle')} placeholder={titleValue} className='text-xs' />
             </div>
             <div>
               <label className='block text-xs text-warm-gray mb-1'>{t('admin.editor.meta_desc')}</label>
