@@ -1,7 +1,7 @@
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useI18n } from '@/lib/i18n';
-import { LayoutDashboard, Users, BookOpen, Settings, LogOut, Languages, Star, Shield, Mail, Moon, Sun } from 'lucide-react';
+import { LayoutDashboard, Users, Settings, LogOut, Languages, Star, Shield, Mail, Moon, Sun } from 'lucide-react';
 import { useMyStorage } from '@/hooks/useQueries';
 import { StorageBar } from '@/components/admin/StorageBar';
 import { useAuthStore } from '@/store/authStore';
@@ -26,7 +26,6 @@ export const AdminSidebar = ({ isOpen, onClose }: AdminSidebarProps) => {
           { to: '/admin/dashboard', label: t('admin.nav.dashboard'), icon: LayoutDashboard },
           { to: '/admin/clients', label: t('admin.nav.clients'), icon: Users },
           { to: '/admin/showcase', label: t('admin.nav.showcase'), icon: Star },
-          { to: '/admin/blog', label: t('admin.nav.blog'), icon: BookOpen },
           { to: '/admin/contact', label: t('admin.nav.contact'), icon: Mail },
           { to: '/admin/settings', label: t('admin.nav.settings'), icon: Settings },
         ];
