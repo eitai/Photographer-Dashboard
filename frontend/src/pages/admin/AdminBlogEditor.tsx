@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { AdminLayout } from '@/components/admin/AdminLayout';
 import { useI18n } from '@/lib/i18n';
@@ -30,22 +30,29 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 
-const CATEGORIES = ['Family Photography', 'Maternity', 'Newborn', 'Branding', 'Landscape', 'Behind the Lens'];
+const CATEGORY_OPTIONS = [
+  { value: 'Family Photography', labelKey: 'admin.editor.categories.family' },
+  { value: 'Maternity', labelKey: 'admin.editor.categories.maternity' },
+  { value: 'Newborn', labelKey: 'admin.editor.categories.newborn' },
+  { value: 'Branding', labelKey: 'admin.editor.categories.branding' },
+  { value: 'Landscape', labelKey: 'admin.editor.categories.landscape' },
+  { value: 'Behind the Lens', labelKey: 'admin.editor.categories.behind_lens' },
+] as const;
 
-const blogSchema = z.object({
-  title: z.string().min(1, 'Title is required'),
-  category: z.string().optional(),
-  seoTitle: z.string().optional(),
-  seoDescription: z.string().max(160, 'Max 160 characters').optional(),
-});
-
-type BlogFormValues = z.infer<typeof blogSchema>;
+type BlogFormValues = { title: string; category?: string; seoTitle?: string; seoDescription?: string };
 
 export const AdminBlogEditor = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { t } = useI18n();
   const isEdit = Boolean(id);
+
+  const blogSchema = useMemo(() => z.object({
+    title: z.string().min(1, t('admin.editor.title_required')),
+    category: z.string().optional(),
+    seoTitle: z.string().optional(),
+    seoDescription: z.string().max(160, t('admin.editor.meta_max_chars')).optional(),
+  }), [t]);
 
   const [published, setPublished] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -266,10 +273,10 @@ export const AdminBlogEditor = () => {
                   placeholder='https://'
                   className='flex-1 text-xs border border-beige rounded px-2 py-1 bg-ivory focus:outline-none focus:border-blush'
                 />
-                <button type='button' onClick={commitLink} className='text-blush hover:text-charcoal' title='Apply'>
+                <button type='button' onClick={commitLink} className='text-blush hover:text-charcoal' title={t('admin.editor.apply')}>
                   <Check size={14} />
                 </button>
-                <button type='button' onClick={cancelLink} className='text-warm-gray hover:text-charcoal' title='Cancel'>
+                <button type='button' onClick={cancelLink} className='text-warm-gray hover:text-charcoal' title={t('admin.common.cancel')}>
                   <X size={14} />
                 </button>
               </div>
@@ -293,10 +300,10 @@ export const AdminBlogEditor = () => {
                   placeholder='https://'
                   className='flex-1 text-xs border border-beige rounded px-2 py-1 bg-ivory focus:outline-none focus:border-blush'
                 />
-                <button type='button' onClick={commitImage} className='text-blush hover:text-charcoal' title='Apply'>
+                <button type='button' onClick={commitImage} className='text-blush hover:text-charcoal' title={t('admin.editor.apply')}>
                   <Check size={14} />
                 </button>
-                <button type='button' onClick={cancelImage} className='text-warm-gray hover:text-charcoal' title='Cancel'>
+                <button type='button' onClick={cancelImage} className='text-warm-gray hover:text-charcoal' title={t('admin.common.cancel')}>
                   <X size={14} />
                 </button>
               </div>
@@ -326,9 +333,9 @@ export const AdminBlogEditor = () => {
             <label className='block text-xs text-warm-gray mb-2'>{t('admin.editor.category')}</label>
             <SelectField {...register('category')}>
               <option value=''>{t('admin.editor.select')}</option>
-              {CATEGORIES.map((c) => (
-                <option key={c} value={c}>
-                  {c}
+              {CATEGORY_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {t(opt.labelKey)}
                 </option>
               ))}
             </SelectField>

@@ -123,13 +123,14 @@ router.post('/', protect, asyncHandler(async (req, res) => {
   const {
     name: rawName, title,
     clientId, clientName, headerMessage,
-    isActive, expiresAt, status, maxSelections, sessionType,
+    isActive, expiresAt, status, maxSelections, sessionType, selectionEnabled,
   } = req.body;
   const name = rawName || title;
 
   const gallery = await Gallery.create({
     name, clientId, clientName, headerMessage,
     isActive, expiresAt, status, maxSelections, sessionType,
+    selectionEnabled: selectionEnabled !== false,
     adminId: req.admin.id,
   });
 
@@ -305,7 +306,7 @@ router.put('/:id', protect, asyncHandler(async (req, res) => {
   if (!UUID_RE.test(req.params.id))
     return res.status(400).json({ message: 'Invalid ID format' });
   // Whitelist updatable fields — never allow overwriting adminId, token, or internal flags
-  const { name, clientName, headerMessage, isActive, expiresAt, status, maxSelections, sessionType } = req.body;
+  const { name, clientName, headerMessage, isActive, expiresAt, status, maxSelections, sessionType, selectionEnabled } = req.body;
 
   // Validate status transition if status is being changed
   let previousStatus = null;
@@ -325,7 +326,7 @@ router.put('/:id', protect, asyncHandler(async (req, res) => {
 
   const gallery = await Gallery.findOneAndUpdate(
     { _id: req.params.id, adminId: req.admin.id },
-    { name, clientName, headerMessage, isActive, expiresAt, status, maxSelections, sessionType }
+    { name, clientName, headerMessage, isActive, expiresAt, status, maxSelections, sessionType, selectionEnabled }
   );
   if (!gallery) return res.status(404).json({ message: 'Gallery not found' });
   res.json(gallery);

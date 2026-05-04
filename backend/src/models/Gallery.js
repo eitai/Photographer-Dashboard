@@ -15,6 +15,7 @@ function toRow(data) {
     isDelivery: 'is_delivery',
     deliveryOf: 'delivery_of',
     lastEmailSentAt: 'last_email_sent_at',
+    selectionEnabled: 'selection_enabled',
   };
   const row = {};
   for (const [k, v] of Object.entries(data)) {
@@ -93,7 +94,7 @@ async function create(data, client = null) {
   const optionals = [
     'client_id', 'client_name', 'header_message', 'is_active',
     'expires_at', 'status', 'max_selections', 'session_type', 'is_delivery',
-    'delivery_of', 'last_email_sent_at', 'videos',
+    'delivery_of', 'last_email_sent_at', 'videos', 'selection_enabled',
   ];
 
   for (const col of optionals) {
@@ -141,6 +142,7 @@ async function findOneAndUpdate(filter, update, opts = {}) {
     deliveryOf: 'delivery_of',
     lastEmailSentAt: 'last_email_sent_at',
     videos: 'videos',
+    selectionEnabled: 'selection_enabled',
   };
 
   const src = update.$set || update;
@@ -186,6 +188,7 @@ async function save(gallery, client = null) {
     deliveryOf: 'delivery_of',
     lastEmailSentAt: 'last_email_sent_at',
     videos: 'videos',
+    selectionEnabled: 'selection_enabled',
   };
 
   const sets = [];

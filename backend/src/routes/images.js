@@ -32,6 +32,10 @@ router.get('/', asyncHandler(async (req, res) => {
   const page = rawPage >= 1 ? rawPage : 1;
   const filter = { galleryId: req.params.galleryId };
 
+  if (req.query.folderId && UUID_RE.test(req.query.folderId)) {
+    filter.folderId = req.query.folderId;
+  }
+
   if (!isNaN(limit)) {
     const { images, total } = await GalleryImage.findPaginated(filter, {}, (page - 1) * limit, limit);
     return res.json({ images, total, page, totalPages: Math.ceil(total / limit) });
@@ -106,6 +110,7 @@ router.post('/', protect, checkQuota, upload.array('images', 5000), validateImag
       const nameWithoutExt = path.parse(file.originalname).name;
       const matchedOriginal = selectedImageMap[nameWithoutExt];
 
+      const folderId = req.body.folderId && UUID_RE.test(req.body.folderId) ? req.body.folderId : null;
       return {
         galleryId,
         filename: file.filename,
@@ -116,6 +121,7 @@ router.post('/', protect, checkQuota, upload.array('images', 5000), validateImag
         beforePath: matchedOriginal ? matchedOriginal.path : undefined,
         sortOrder: i,
         size: file.size,
+        folderIds: folderId ? [folderId] : [],
       };
     })
   );

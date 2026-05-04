@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { AdminLayout } from '@/components/admin/AdminLayout';
 import { InputField, TextareaField } from '@/components/admin/InputField';
@@ -18,17 +18,16 @@ import { useDeleteConfirmation } from '@/hooks/useDeleteConfirmation';
 import { Button } from '@/components/admin/Button';
 
 
-const clientSchema = z.object({
-  name: z.string().min(1, 'Name is required'),
-  phone: z.preprocess((val) => (val === '' ? undefined : val), z.string().regex(/^[0-9+\-\s().]{7,20}$/, 'Invalid phone number').optional()),
-  email: z.preprocess((val) => (val === '' ? undefined : val), z.string().email('Invalid email').optional()),
-  notes: z.string().optional(),
-});
-
-type ClientFormValues = z.infer<typeof clientSchema>;
+type ClientFormValues = { name: string; phone?: string; email?: string; notes?: string };
 
 export const AdminClients = () => {
   const { t } = useI18n();
+  const clientSchema = useMemo(() => z.object({
+    name: z.string().min(1, t('admin.clients.name_required')),
+    phone: z.preprocess((val) => (val === '' ? undefined : val), z.string().regex(/^[0-9+\-\s().]{7,20}$/, t('admin.clients.invalid_phone')).optional()),
+    email: z.preprocess((val) => (val === '' ? undefined : val), z.string().email(t('admin.clients.invalid_email')).optional()),
+    notes: z.string().optional(),
+  }), [t]);
   const { data: clients = [], isLoading } = useClients();
   const createClient = useCreateClient();
   const deleteClient = useDeleteClient();
