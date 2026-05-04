@@ -123,6 +123,30 @@ async function start() {
     logger.warn('[migrate] galleries.session_type migration skipped:', err.message);
   }
 
+  try {
+    await pool.query(`ALTER TABLE gallery_images ADD COLUMN IF NOT EXISTS preview_path VARCHAR`);
+    await pool.query(`ALTER TABLE gallery_images ALTER COLUMN path DROP NOT NULL`);
+    logger.info('[migrate] gallery_images.preview_path column ensured');
+  } catch (err) {
+    logger.warn('[migrate] gallery_images.preview_path migration skipped:', err.message);
+  }
+
+  try {
+    await pool.query(`ALTER TABLE site_settings ADD COLUMN IF NOT EXISTS hero_tagline TEXT NOT NULL DEFAULT ''`);
+    await pool.query(`ALTER TABLE site_settings ADD COLUMN IF NOT EXISTS stats_enabled BOOLEAN NOT NULL DEFAULT TRUE`);
+    await pool.query(`ALTER TABLE site_settings ADD COLUMN IF NOT EXISTS stats JSONB NOT NULL DEFAULT '[]'`);
+    await pool.query(`ALTER TABLE site_settings ADD COLUMN IF NOT EXISTS promises_enabled BOOLEAN NOT NULL DEFAULT TRUE`);
+    await pool.query(`ALTER TABLE site_settings ADD COLUMN IF NOT EXISTS promises JSONB NOT NULL DEFAULT '[]'`);
+    await pool.query(`ALTER TABLE site_settings ADD COLUMN IF NOT EXISTS faq_enabled BOOLEAN NOT NULL DEFAULT TRUE`);
+    await pool.query(`ALTER TABLE site_settings ADD COLUMN IF NOT EXISTS faq_items JSONB NOT NULL DEFAULT '[]'`);
+    await pool.query(`ALTER TABLE site_settings ADD COLUMN IF NOT EXISTS final_cta_heading TEXT NOT NULL DEFAULT ''`);
+    await pool.query(`ALTER TABLE site_settings ADD COLUMN IF NOT EXISTS final_cta_subtext TEXT NOT NULL DEFAULT ''`);
+    await pool.query(`ALTER TABLE site_settings ADD COLUMN IF NOT EXISTS final_cta_button_label TEXT NOT NULL DEFAULT ''`);
+    logger.info('[migrate] site_settings stats/promises/faq columns ensured');
+  } catch (err) {
+    logger.warn('[migrate] site_settings stats/promises/faq migration skipped:', err.message);
+  }
+
   // ── Gallery auto-deletion scheduler ──────────────────────────────────────
   const CLEANUP_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
 
