@@ -15,7 +15,9 @@ interface Props {
 }
 
 export function AdminGalleryLightbox({ images, index, selectedIds, onClose, onPrev, onNext, onToggleSelect }: Props) {
-  const { t } = useI18n();
+  const { t, dir } = useI18n();
+  const PrevIcon = dir === 'rtl' ? ChevronRight : ChevronLeft;
+  const NextIcon = dir === 'rtl' ? ChevronLeft : ChevronRight;
   const img = images[index];
 
   useEffect(() => {
@@ -48,7 +50,7 @@ export function AdminGalleryLightbox({ images, index, selectedIds, onClose, onPr
           onClick={(e) => { e.stopPropagation(); onPrev(); }}
           className='absolute start-4 w-11 h-11 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors'
         >
-          <ChevronLeft size={22} />
+          <PrevIcon size={22} />
         </button>
       )}
 
@@ -64,7 +66,7 @@ export function AdminGalleryLightbox({ images, index, selectedIds, onClose, onPr
           onClick={(e) => { e.stopPropagation(); onNext(); }}
           className='absolute end-4 w-11 h-11 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors'
         >
-          <ChevronRight size={22} />
+          <NextIcon size={22} />
         </button>
       )}
 

@@ -490,14 +490,14 @@ export const SelectionGallery = ({ gallery, images, getImageUrl }: Props) => {
               onPrev={() => setLightboxIndex((i) => (i! > 0 ? i! - 1 : i!))}
               onNext={() => setLightboxIndex((i) => (i! < visibleImages.length - 1 ? i! + 1 : i!))}
               getImageUrl={getImageUrl}
-              onDownload={handleDownload}
-              isSelected={selectionEnabled ? isSelected : false}
-              isBlocked={isBlocked}
-              onToggleSelect={() => toggleSelect(img._id)}
-              isHero={heroId === img._id}
-              onToggleHero={() => setHeroId(heroId === img._id ? null : img._id)}
-              comment={imageComments[img._id] || ''}
-              onCommentChange={(val) => setImageComments((prev) => ({ ...prev, [img._id]: val }))}
+              onDownload={selectionEnabled ? handleDownload : undefined}
+              isSelected={selectionEnabled ? isSelected : undefined}
+              isBlocked={selectionEnabled ? isBlocked : undefined}
+              onToggleSelect={selectionEnabled ? () => toggleSelect(img._id) : undefined}
+              isHero={selectionEnabled ? heroId === img._id : undefined}
+              onToggleHero={selectionEnabled ? () => setHeroId(heroId === img._id ? null : img._id) : undefined}
+              comment={selectionEnabled ? imageComments[img._id] || '' : undefined}
+              onCommentChange={selectionEnabled ? (val) => setImageComments((prev) => ({ ...prev, [img._id]: val })) : undefined}
             />
           );
         })()}

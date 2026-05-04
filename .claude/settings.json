@@ -95,7 +95,8 @@
       "Bash(findstr /i \"framer-motion\" package.json)",
       "Bash(findstr /i \"framer\")",
       "Read(//c/c/Users/eitai/Desktop/codevalue/**)",
-      "Read(//c/c/Users/eitai/Desktop/codevalue/store test/.claude/**)"
+      "Read(//c/c/Users/eitai/Desktop/codevalue/store test/.claude/**)",
+      "Bash(git add *)"
     ],
     "deny": [
       "Bash(taskkill *)",
