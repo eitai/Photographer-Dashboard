@@ -39,7 +39,7 @@ export const AdminGalleryUpload = () => {
   const { gallery, setGallery, loadError, images, loadImages } = useGalleryData(id);
   const [activeFolderId, setActiveFolderId] = useState<string | null>(null);
   const { folders, create: createFolder, rename: renameFolder, remove: removeFolder } = useFolders(id);
-  const { queue, dragging, setDragging, inputRef, handleFiles, onDrop, cancelUpload: cancelImageUpload, isUploading } = useGalleryUpload(id, loadImages, activeFolderId);
+  const { queue, dragging, setDragging, inputRef, handleFiles, cancelUpload: cancelImageUpload, isUploading } = useGalleryUpload(id, loadImages);
   const { toDelete, setToDelete, bulkDeleting, deleteProgress, confirmDelete } = useImageDeletion(id, () => {
     setSelectedIds(new Set());
     loadImages();
@@ -270,7 +270,7 @@ export const AdminGalleryUpload = () => {
                     setDragging(true);
                   }}
                   onDragLeave={() => setDragging(false)}
-                  onDrop={onDrop}
+                  onDrop={(e) => { e.preventDefault(); setDragging(false); handleFiles(e.dataTransfer.files, activeFolderId); }}
                   onClick={() => inputRef.current?.click()}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter' || e.key === ' ') {
@@ -293,7 +293,7 @@ export const AdminGalleryUpload = () => {
                     multiple
                     accept='image/*'
                     className='hidden'
-                    onChange={(e) => e.target.files && handleFiles(e.target.files)}
+                    onChange={(e) => e.target.files && handleFiles(e.target.files, activeFolderId)}
                   />
                 </div>
               </div>

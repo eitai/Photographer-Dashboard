@@ -18,13 +18,13 @@ const MAX_IMAGE_SIZE = 40 * 1024 * 1024; // 40 MB per file
 const MAX_BATCH_BYTES = 50 * 1024 * 1024; // 50 MB per request (Cloudflare free plan cap is 100 MB — stay well under)
 const PARALLEL_BATCHES = 2;              // concurrent requests
 
-export function useGalleryUpload(galleryId: string | undefined, onUploadComplete: () => void, activeFolderId?: string | null) {
+export function useGalleryUpload(galleryId: string | undefined, onUploadComplete: () => void) {
   const { t } = useI18n();
   const queryClient = useQueryClient();
   const [queue, setQueue] = useState<UploadFile[]>([]);
   const [dragging, setDragging] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
-  const abortControllerRef = useRef<AbortController | null>(null);
+  const activeControllersRef = useRef<Set<AbortController>>(new Set());
   const clearTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const scheduleClear = useCallback(() => {
@@ -36,10 +36,8 @@ export function useGalleryUpload(galleryId: string | undefined, onUploadComplete
   }, []);
 
   const cancelUpload = useCallback(() => {
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort();
-      abortControllerRef.current = null;
-    }
+    activeControllersRef.current.forEach((c) => c.abort());
+    activeControllersRef.current.clear();
     // Reset input so the user can re-select the same files after cancelling
     if (inputRef.current) inputRef.current.value = '';
     setQueue((q) =>
@@ -51,7 +49,7 @@ export function useGalleryUpload(galleryId: string | undefined, onUploadComplete
   }, [scheduleClear]);
 
   const handleFiles = useCallback(
-    async (files: FileList | File[]) => {
+    async (files: FileList | File[], folderId?: string | null) => {
       const arr: File[] = [];
       for (const f of Array.from(files)) {
         if (!f.type.startsWith('image/')) {
@@ -85,9 +83,9 @@ export function useGalleryUpload(galleryId: string | undefined, onUploadComplete
       }));
       setQueue((q) => [...q, ...newItems]);
 
-      // Create a single AbortController for this entire upload session
+      // Each upload session gets its own AbortController so parallel sessions don't interfere
       const controller = new AbortController();
-      abortControllerRef.current = controller;
+      activeControllersRef.current.add(controller);
 
       // Split into size-capped batches so no single request exceeds MAX_BATCH_BYTES
       const batches: UploadFile[][] = [];
@@ -108,24 +106,34 @@ export function useGalleryUpload(galleryId: string | undefined, onUploadComplete
         const batchIds = batch.map((b) => b.id);
         const formData = new FormData();
         batch.forEach((b) => formData.append('images', b.file));
-        if (activeFolderId) formData.append('folderId', activeFolderId);
+        if (folderId) formData.append('folderId', folderId);
+
+        // Easing timer: fast at first, slows toward 90% — reflects upload + server processing time
+        let pct = 0;
+        const timer = setInterval(() => {
+          pct = Math.min(pct + Math.max(0.5, (90 - pct) * 0.04), 90);
+          setQueue((q) =>
+            q.map((item) =>
+              batchIds.includes(item.id) && !item.done && !item.error && !item.cancelled
+                ? { ...item, progress: Math.round(pct) }
+                : item,
+            ),
+          );
+        }, 150);
+
         try {
           await api.post(`/galleries/${galleryId}/images`, formData, {
             headers: { 'Content-Type': undefined },
             signal: controller.signal,
-            onUploadProgress: (ev) => {
-              const pct = Math.round((ev.progress ?? 0) * 100);
-              setQueue((q) =>
-                q.map((item) => (batchIds.includes(item.id) ? { ...item, progress: pct } : item)),
-              );
-            },
           });
+          clearInterval(timer);
           setQueue((q) =>
             q.map((item) => (batchIds.includes(item.id) ? { ...item, progress: 100, done: true } : item)),
           );
           queryClient.invalidateQueries({ queryKey: queryKeys.storageMe });
           onUploadComplete();
         } catch (err: any) {
+          clearInterval(timer);
           if (err?.code === 'ERR_CANCELED' || controller.signal.aborted) {
             // Cancelled — queue state already handled by cancelUpload()
             return;
@@ -152,22 +160,16 @@ export function useGalleryUpload(galleryId: string | undefined, onUploadComplete
       }
 
       const wasCancelled = controller.signal.aborted;
-      abortControllerRef.current = null;
-      // If cancelled, cancelUpload() already scheduled the clear — don't schedule again
-      if (!wasCancelled) {
+      activeControllersRef.current.delete(controller);
+      // Only clear the queue once all parallel sessions are done
+      if (!wasCancelled && activeControllersRef.current.size === 0) {
         scheduleClear();
       }
     },
-    [galleryId, activeFolderId, onUploadComplete, queryClient, scheduleClear, t],
+    [galleryId, onUploadComplete, queryClient, scheduleClear, t],
   );
-
-  const onDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    setDragging(false);
-    handleFiles(e.dataTransfer.files);
-  };
 
   const isUploading = queue.some((item) => !item.done && !item.error && !item.cancelled);
 
-  return { queue, dragging, setDragging, inputRef, handleFiles, onDrop, cancelUpload, isUploading };
+  return { queue, dragging, setDragging, inputRef, handleFiles, cancelUpload, isUploading };
 }
