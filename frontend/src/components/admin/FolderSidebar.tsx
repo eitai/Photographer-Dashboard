@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { FolderOpen, Folder, Plus, Pencil, Trash2, Check, X } from 'lucide-react';
+import { FolderOpen, Folder, Plus, Pencil, Trash2, Check, X, Loader2 } from 'lucide-react';
 import { useI18n } from '@/lib/i18n';
 import type { GalleryFolder } from '@/types/gallery';
 
@@ -7,7 +7,7 @@ interface FolderSidebarProps {
   folders: GalleryFolder[];
   activeFolderId: string | null;
   onSelectFolder: (id: string | null) => void;
-  onCreateFolder: (name: string) => void;
+  onCreateFolder: (name: string) => Promise<unknown>;
   onRenameFolder: (id: string, name: string) => void;
   onDeleteFolder: (id: string) => void;
   imageCounts: Record<string, number>;
@@ -27,6 +27,7 @@ export function FolderSidebar({
   const { t } = useI18n();
   const [newName, setNewName] = useState('');
   const [showNew, setShowNew] = useState(false);
+  const [isCreating, setIsCreating] = useState(false);
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState('');
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
@@ -41,12 +42,17 @@ export function FolderSidebar({
     if (renamingId) renameInputRef.current?.focus();
   }, [renamingId]);
 
-  const handleCreate = () => {
+  const handleCreate = async () => {
     const name = newName.trim();
-    if (!name) return;
-    onCreateFolder(name);
-    setNewName('');
-    setShowNew(false);
+    if (!name || isCreating) return;
+    setIsCreating(true);
+    try {
+      await onCreateFolder(name);
+      setNewName('');
+      setShowNew(false);
+    } finally {
+      setIsCreating(false);
+    }
   };
 
   const startRename = (folder: GalleryFolder) => {
@@ -160,15 +166,16 @@ export function FolderSidebar({
             onChange={(e) => setNewName(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === 'Enter') handleCreate();
-              if (e.key === 'Escape') { setShowNew(false); setNewName(''); }
+              if (e.key === 'Escape' && !isCreating) { setShowNew(false); setNewName(''); }
             }}
+            disabled={isCreating}
             placeholder={t('admin.gallery.folder_name_placeholder')}
-            className='flex-1 px-2 py-1 text-sm rounded-lg border border-blush/50 bg-card focus:outline-none focus:ring-2 focus:ring-blush/40'
+            className='flex-1 px-2 py-1 text-sm rounded-lg border border-blush/50 bg-card focus:outline-none focus:ring-2 focus:ring-blush/40 disabled:opacity-60'
           />
-          <button onClick={handleCreate} className='p-1 text-blush hover:bg-blush/10 rounded-lg'>
-            <Check size={13} />
+          <button onClick={handleCreate} disabled={isCreating} className='p-1 text-blush hover:bg-blush/10 rounded-lg disabled:opacity-60'>
+            {isCreating ? <Loader2 size={13} className='animate-spin' /> : <Check size={13} />}
           </button>
-          <button onClick={() => { setShowNew(false); setNewName(''); }} className='p-1 text-warm-gray hover:bg-beige rounded-lg'>
+          <button onClick={() => { setShowNew(false); setNewName(''); }} disabled={isCreating} className='p-1 text-warm-gray hover:bg-beige rounded-lg disabled:opacity-40'>
             <X size={13} />
           </button>
         </div>

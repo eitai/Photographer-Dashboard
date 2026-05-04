@@ -282,7 +282,7 @@ export const AdminGalleryUpload = () => {
                 folders={folders}
                 activeFolderId={activeFolderId}
                 onSelectFolder={(id) => { setActiveFolderId(id); setSelectedIds(new Set()); }}
-                onCreateFolder={(name) => createFolder.mutate(name)}
+                onCreateFolder={(name) => createFolder.mutateAsync(name)}
                 onRenameFolder={(folderId, name) => renameFolder.mutate({ folderId, name })}
                 onDeleteFolder={(folderId) => {
                   removeFolder.mutate(folderId);
