@@ -112,11 +112,12 @@ const translations: Record<string, Record<Lang, string>> = {
   'gallery.select_of': { he: 'מתוך', en: 'of' },
   // Delivery gallery (download-only)
   'gallery.delivery_title': { he: 'התמונות שלכם מוכנות', en: 'Your Edited Photos' },
-  'gallery.download_all': { he: 'הורדת הכל (ZIP)', en: 'Download All (ZIP)' },
+  'gallery.download_all': { he: 'הורד הכל (ZIP)', en: 'Download All (ZIP)' },
+  'gallery.download_selected': { he: 'הורד נבחרות (ZIP)', en: 'Download Selected (ZIP)' },
   'gallery.download_photo': { he: 'הורדה', en: 'Download' },
   'gallery.preparing_zip': { he: 'מכין ZIP…', en: 'Preparing ZIP…' },
   'gallery.video_section': { he: 'וידאו', en: 'Video' },
-  'gallery.download_video': { he: 'הורדת וידאו', en: 'Download Video' },
+  'gallery.download_video': { he: 'הורד וידאו', en: 'Download Video' },
 
   // Contact
   'contact.required_fields': { he: 'נא למלא את השדות החובה', en: 'Please fill in required fields' },
@@ -356,7 +357,7 @@ const translations: Record<string, Record<Lang, string>> = {
   'admin.selections.images_selected': { he: 'תמונות נבחרו', en: 'images selected' },
   'admin.selections.submitted': { he: 'נשלח', en: 'Submitted' },
   'admin.selections.preparing': { he: 'מכין…', en: 'Preparing…' },
-  'admin.selections.download': { he: 'הורדת ZIP', en: 'Download ZIP' },
+  'admin.selections.download': { he: 'הורד ZIP', en: 'Download ZIP' },
   'admin.selections.delete_submission': { he: 'מחק בחירה', en: 'Delete selection' },
   'admin.selections.delete_sub_confirm': { he: 'מחיקת כל הבחירות', en: 'Delete all selected photos' },
   'admin.selections.delete_sub_body': {
@@ -473,7 +474,10 @@ const translations: Record<string, Record<Lang, string>> = {
   'admin.gallery.folder_all': { he: 'הכל', en: 'All' },
   'admin.gallery.folder_rename': { he: 'שנה שם', en: 'Rename' },
   'admin.gallery.folder_delete': { he: 'מחק תיקייה', en: 'Delete folder' },
-  'admin.gallery.folder_delete_confirm': { he: 'מחיקת התיקייה לא תמחק את התמונות שבה.', en: 'Deleting the folder will not delete its images.' },
+  'admin.gallery.folder_delete_confirm': {
+    he: 'מחיקת התיקייה לא תמחק את התמונות שבה.',
+    en: 'Deleting the folder will not delete its images.',
+  },
   'admin.gallery.folder_uploading_to': { he: 'מעלה לתיקייה:', en: 'Uploading to:' },
   'gallery.folder_all': { he: 'הכל', en: 'All' },
   'gallery.folder_images_count': { he: 'תמונות', en: 'images' },

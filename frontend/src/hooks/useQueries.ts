@@ -293,8 +293,12 @@ export function useUpdateGallery() {
   return useMutation({
     mutationFn: ({ id, data }: { id: string; data: Record<string, unknown> }) =>
       galleryService.updateGallery(id, data as Partial<GalleryData>),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.galleries });
+    onSuccess: (updatedGallery, { id }) => {
+      // Write server response directly — no refetch race condition
+      queryClient.setQueryData(queryKeys.gallery(id), updatedGallery);
+      // Invalidate the flat list and client-scoped lists, but NOT the single gallery
+      queryClient.invalidateQueries({ queryKey: queryKeys.galleries, exact: true });
+      queryClient.invalidateQueries({ queryKey: ['galleries', 'client'] });
     },
   });
 }

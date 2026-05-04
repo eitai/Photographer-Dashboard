@@ -17,7 +17,7 @@ import { useUpdateGallery } from '@/hooks/useQueries';
 import { useFolders } from '@/hooks/useFolders';
 import { useI18n } from '@/lib/i18n';
 import { getImageUrl } from '@/lib/api';
-import { ArrowLeft, CloudUpload, Video, Trash2, X, Images, Eye } from 'lucide-react';
+import { ArrowLeft, CloudUpload, Video, Trash2, X, Images, Eye, Infinity as InfinityIcon } from 'lucide-react';
 import { Button } from '@/components/admin/Button';
 
 /** Convert an ISO/DB timestamp to the value format expected by datetime-local inputs (YYYY-MM-DDTHH:mm). */
@@ -94,7 +94,6 @@ export const AdminGalleryUpload = () => {
     try {
       const expiresAt = expiresAtInput ? new Date(expiresAtInput).toISOString() : null;
       await updateGallery.mutateAsync({ id: id!, data: { expiresAt } });
-      setGallery((prev: typeof gallery) => prev ? { ...prev, expiresAt } : prev);
       toast.success(t('admin.gallery.expires_at_saved'));
     } catch {
       toast.error(t('admin.gallery.expires_at_save_failed'));
@@ -111,7 +110,7 @@ export const AdminGalleryUpload = () => {
         <div className='shrink-0 px-4 md:px-8 pt-4 pb-0 bg-background border-b border-beige'>
           {/* Back button */}
           <Link
-            to={gallery.clientId ? `/admin/clients/${gallery.clientId._id || gallery.clientId}` : '/admin/galleries'}
+            to={gallery.clientId ? `/admin/clients/${typeof gallery.clientId === 'object' ? gallery.clientId._id : gallery.clientId}` : '/admin/galleries'}
             className='inline-flex items-center gap-1.5 text-xs text-warm-gray hover:text-charcoal mb-3 transition-colors group'
           >
             <span className='flex items-center justify-center w-5 h-5 rounded-full bg-beige group-hover:bg-blush/30 transition-colors'>
@@ -140,7 +139,6 @@ export const AdminGalleryUpload = () => {
                 const next = gallery.selectionEnabled === false ? true : false;
                 try {
                   await updateGallery.mutateAsync({ id: id!, data: { selectionEnabled: next } });
-                  setGallery((prev: typeof gallery) => prev ? { ...prev, selectionEnabled: next } : prev);
                   toast.success(t('admin.gallery.selection_saved'));
                 } catch {
                   toast.error(t('admin.gallery.selection_save_failed'));
@@ -154,6 +152,51 @@ export const AdminGalleryUpload = () => {
             >
               {gallery.selectionEnabled !== false ? <Images size={12} className='text-blush' /> : <Eye size={12} />}
               {gallery.selectionEnabled !== false ? t('admin.gallery.selection_enabled_on') : t('admin.gallery.selection_enabled_off')}
+            </button>
+          </div>
+
+          {/* Max selections */}
+          <div className='flex items-center gap-2 mb-3 flex-wrap'>
+            <label className='text-xs text-warm-gray shrink-0'>{t('admin.client.max_selections')}</label>
+            <input
+              type='number'
+              min={1}
+              max={500}
+              disabled={!gallery.selectionEnabled || (gallery.maxSelections ?? 10) === 0}
+              value={(gallery.maxSelections ?? 10) === 0 ? '' : (gallery.maxSelections ?? 10)}
+              onChange={(e) => setGallery((prev: typeof gallery) => prev ? { ...prev, maxSelections: Number(e.target.value) } : prev)}
+              onBlur={async (e) => {
+                const val = Number(e.target.value);
+                if (!val || val < 1) return;
+                try {
+                  await updateGallery.mutateAsync({ id: id!, data: { maxSelections: val } });
+                  toast.success(t('admin.gallery.selection_saved'));
+                } catch {
+                  toast.error(t('admin.gallery.selection_save_failed'));
+                }
+              }}
+              placeholder='10'
+              className='w-20 px-2.5 py-1.5 rounded-lg border border-beige bg-muted/30 text-xs text-charcoal focus:outline-none focus:ring-2 focus:ring-blush/50 disabled:opacity-40 disabled:cursor-not-allowed'
+            />
+            <button
+              type='button'
+              title={t('admin.users.unlimited_label')}
+              disabled={!gallery.selectionEnabled}
+              onClick={async () => {
+                const next = (gallery.maxSelections ?? 10) === 0 ? 10 : 0;
+                try {
+                  await updateGallery.mutateAsync({ id: id!, data: { maxSelections: next } });
+                } catch {
+                  toast.error(t('admin.gallery.selection_save_failed'));
+                }
+              }}
+              className={`shrink-0 p-1.5 rounded-lg border transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
+                (gallery.maxSelections ?? 10) === 0
+                  ? 'bg-blush text-white border-blush'
+                  : 'border-beige text-warm-gray hover:border-blush hover:text-blush'
+              }`}
+            >
+              <InfinityIcon size={14} />
             </button>
           </div>
 

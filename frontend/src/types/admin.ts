@@ -52,8 +52,18 @@ export interface GalleryDetail {
   _id: string;
   name: string;
   clientName: string;
-  clientId: string | { _id: string };
+  clientId: string | { _id: string; name?: string; email?: string; phone?: string };
+  adminId?: string;
+  token?: string;
   status: string;
+  isActive?: boolean;
+  isDelivery?: boolean;
+  deliveryOf?: string;
+  maxSelections?: number;
+  headerMessage?: string;
+  expiresAt?: string | null;
+  sessionType?: string;
+  selectionEnabled?: boolean;
   videos?: GalleryVideo[];
 }
 

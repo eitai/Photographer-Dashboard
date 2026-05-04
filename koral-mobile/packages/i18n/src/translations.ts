@@ -105,7 +105,7 @@ export const translations: Record<string, Record<SupportedLocale, string>> = {
   'gallery.select_of': { he: 'מתוך', en: 'of' },
   // Delivery gallery (download-only)
   'gallery.delivery_title': { he: 'התמונות שלכם מוכנות', en: 'Your Edited Photos' },
-  'gallery.download_all': { he: 'הורדת הכל (ZIP)', en: 'Download All (ZIP)' },
+  'gallery.download_all': { he: 'הורד הכל (ZIP)', en: 'Download All (ZIP)' },
   'gallery.download_photo': { he: 'הורדה', en: 'Download' },
   'gallery.preparing_zip': { he: 'מכין ZIP…', en: 'Preparing ZIP…' },
 
@@ -246,7 +246,7 @@ export const translations: Record<string, Record<SupportedLocale, string>> = {
   'admin.selections.images_selected': { he: 'תמונות נבחרו', en: 'images selected' },
   'admin.selections.submitted': { he: 'נשלח', en: 'Submitted' },
   'admin.selections.preparing': { he: 'מכין…', en: 'Preparing…' },
-  'admin.selections.download': { he: 'הורדת ZIP', en: 'Download ZIP' },
+  'admin.selections.download': { he: 'הורד ZIP', en: 'Download ZIP' },
   'admin.selections.delete_submission': { he: 'מחק בחירה', en: 'Delete selection' },
   'admin.selections.delete_sub_confirm': { he: 'מחיקת כל הבחירות', en: 'Delete all selected photos' },
   'admin.selections.delete_sub_body': {

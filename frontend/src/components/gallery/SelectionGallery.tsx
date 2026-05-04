@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Check, Send, Maximize2, Star, MessageCircle, Video, Download, Folder, FolderOpen } from 'lucide-react';
+import { downloadZip } from '@/lib/downloadZip';
 
 import Masonry from 'react-masonry-css';
 import { FadeIn } from '@/components/FadeIn';
@@ -23,7 +24,6 @@ export const SelectionGallery = ({ gallery, images, getImageUrl }: Props) => {
   const selectionEnabled = gallery.selectionEnabled !== false;
 
   const [selectedIds, setSelectedIds] = useState<Set<string>>(() => {
-    if (!selectionEnabled) return new Set();
     // If admin reactivated, seed from the previous submission (authoritative source)
     if (gallery.previousSelectionIds?.length) {
       return new Set(gallery.previousSelectionIds);
@@ -42,6 +42,10 @@ export const SelectionGallery = ({ gallery, images, getImageUrl }: Props) => {
   const [imageComments, setImageComments] = useState<Record<string, string>>({});
   const [activeCommentId, setActiveCommentId] = useState<string | null>(null);
   const [activeFolderId, setActiveFolderId] = useState<string | null>(null);
+  const [isDownloading, setIsDownloading] = useState(false);
+  const [downloadProgress, setDownloadProgress] = useState<{ done: number; total: number } | null>(null);
+  const [isDownloadingAll, setIsDownloadingAll] = useState(false);
+  const [downloadAllProgress, setDownloadAllProgress] = useState<{ done: number; total: number } | null>(null);
   const [sessionId] = useState(() => {
     const stored = sessionStorage.getItem('gallery_session');
     if (stored) return stored;
@@ -53,7 +57,7 @@ export const SelectionGallery = ({ gallery, images, getImageUrl }: Props) => {
   const { folders } = useFolders(gallery._id);
   const hasFolders = folders.length > 0;
 
-  const hasLimit = gallery.maxSelections > 0;
+  const hasLimit = selectionEnabled && gallery.maxSelections > 0;
   const atMax = hasLimit && selectedIds.size >= gallery.maxSelections;
 
   const visibleImages = activeFolderId
@@ -84,11 +88,10 @@ export const SelectionGallery = ({ gallery, images, getImageUrl }: Props) => {
   const stickyTop = selectedIds.size > 0 ? 109 : 56; // 56px header + 53px selection bar
 
   const toggleSelect = (imageId: string) => {
-    if (!selectionEnabled) return;
     setSelectedIds((prev) => {
-      if (!prev.has(imageId) && hasLimit && prev.size >= gallery.maxSelections) return prev;
+      if (!prev.has(imageId) && atMax) return prev;
       const next = new Set(prev);
-      next.has(imageId) ? next.delete(imageId) : next.add(imageId);
+      if (next.has(imageId)) next.delete(imageId); else next.add(imageId);
       sessionStorage.setItem(`selections_${gallery._id}`, JSON.stringify([...next]));
       return next;
     });
@@ -117,6 +120,41 @@ export const SelectionGallery = ({ gallery, images, getImageUrl }: Props) => {
     document.body.removeChild(link);
   };
 
+  const handleDownloadAll = async () => {
+    if (!images.length || isDownloadingAll) return;
+    setIsDownloadingAll(true);
+    setDownloadAllProgress({ done: 0, total: images.length });
+    try {
+      await downloadZip(
+        images.map((img) => ({ _id: img._id, path: img.path, filename: img.filename, originalName: img.originalName })),
+        gallery.name || 'photos',
+        gallery.name || 'photos',
+        (done, total) => setDownloadAllProgress({ done, total }),
+      );
+    } finally {
+      setIsDownloadingAll(false);
+      setDownloadAllProgress(null);
+    }
+  };
+
+  const handleDownloadSelected = async () => {
+    const selectedImages = images.filter((img) => selectedIds.has(img._id));
+    if (!selectedImages.length || isDownloading) return;
+    setIsDownloading(true);
+    setDownloadProgress({ done: 0, total: selectedImages.length });
+    try {
+      await downloadZip(
+        selectedImages.map((img) => ({ _id: img._id, path: img.path, filename: img.filename, originalName: img.originalName })),
+        gallery.name || 'photos',
+        gallery.name || 'photos',
+        (done, total) => setDownloadProgress({ done, total }),
+      );
+    } finally {
+      setIsDownloading(false);
+      setDownloadProgress(null);
+    }
+  };
+
   const renderImageCard = (img: GalleryImage, i: number) => {
     const isSelected = selectedIds.has(img._id);
     const isBlocked = selectionEnabled && !isSelected && atMax;
@@ -128,7 +166,7 @@ export const SelectionGallery = ({ gallery, images, getImageUrl }: Props) => {
         }}
         className={`group relative rounded-xl overflow-hidden transition-shadow duration-200 ${
           isSelected ? 'shadow-lg' : ''
-        } ${isBlocked ? 'cursor-not-allowed opacity-50' : selectionEnabled ? 'cursor-pointer' : 'cursor-default'}`}
+        } ${isBlocked ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}
         style={isSelected ? { boxShadow: '0 0 0 3px var(--primary)', height: '100%' } : { height: '100%' }}
       >
         <img
@@ -150,7 +188,7 @@ export const SelectionGallery = ({ gallery, images, getImageUrl }: Props) => {
           <Maximize2 size={14} />
         </button>
 
-        {selectionEnabled && !isSelected && !isBlocked && (
+        {!isSelected && !isBlocked && (
           <button
             onClick={(e) => { e.stopPropagation(); toggleSelect(img._id); }}
             className='absolute top-2 end-2 w-8 h-8 rounded-full bg-black/40 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200'
@@ -236,7 +274,7 @@ export const SelectionGallery = ({ gallery, images, getImageUrl }: Props) => {
             <div className='text-center mb-12 max-w-[50%] mx-auto'>
               <p className='text-2xl md:text-3xl mb-2' style={{ color: 'var(--foreground)' }}>{gallery.headerMessage}</p>
               {gallery.clientName && <p className='font-sans' style={{ color: 'var(--muted-foreground)' }}>{gallery.clientName}</p>}
-              {selectionEnabled && (
+              {selectedIds.size > 0 && (
                 <p className='text-sm font-sans mt-2' style={{ color: 'var(--muted-foreground)' }}>
                   {hasLimit
                     ? `${selectedIds.size} ${t('gallery.select_of')} ${gallery.maxSelections} ${t('gallery.images_selected')}`
@@ -272,21 +310,47 @@ export const SelectionGallery = ({ gallery, images, getImageUrl }: Props) => {
             </FadeIn>
           )}
 
-          {selectionEnabled && selectedIds.size > 0 && (
+          {selectedIds.size > 0 && (
             <div className='sticky top-14 z-40 backdrop-blur-sm py-3 mb-8 -mx-6 px-6' style={{ backgroundColor: 'color-mix(in srgb, var(--background) 90%, transparent)', borderBottom: '1px solid var(--border)' }}>
               <div className='flex items-center justify-between max-w-[1100px] mx-auto'>
                 <span className='text-sm font-sans font-medium' style={{ color: atMax ? 'var(--primary)' : 'var(--muted-foreground)' }}>
                   {hasLimit ? `${selectedIds.size} / ${gallery.maxSelections}` : selectedIds.size}
                   {atMax && <span className='ms-2 text-xs'>— {t('gallery.max_reached')}</span>}
                 </span>
-                <button
-                  onClick={handleSubmit}
-                  className='flex items-center gap-2 px-6 py-2 rounded-xl text-sm font-sans font-medium transition-colors'
-                  style={{ backgroundColor: 'var(--primary)', color: 'var(--primary-foreground)' }}
-                >
-                  <Send size={14} />
-                  {t('gallery.send_selection')}
-                </button>
+                <div className='flex items-center gap-2'>
+                  <button
+                    onClick={handleDownloadAll}
+                    disabled={isDownloadingAll}
+                    className='flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-sans font-medium transition-colors disabled:opacity-60'
+                    style={{ border: '1px solid var(--border)', color: 'var(--foreground)', backgroundColor: 'var(--background)' }}
+                  >
+                    <Download size={14} />
+                    {isDownloadingAll && downloadAllProgress
+                      ? `${downloadAllProgress.done} / ${downloadAllProgress.total}`
+                      : t('gallery.download_all')}
+                  </button>
+                  <button
+                    onClick={handleDownloadSelected}
+                    disabled={isDownloading}
+                    className='flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-sans font-medium transition-colors disabled:opacity-60'
+                    style={{ border: '1px solid var(--border)', color: 'var(--foreground)', backgroundColor: 'var(--background)' }}
+                  >
+                    <Download size={14} />
+                    {isDownloading && downloadProgress
+                      ? `${downloadProgress.done} / ${downloadProgress.total}`
+                      : t('gallery.download_selected')}
+                  </button>
+                  {selectionEnabled && (
+                    <button
+                      onClick={handleSubmit}
+                      className='flex items-center gap-2 px-6 py-2 rounded-xl text-sm font-sans font-medium transition-colors'
+                      style={{ backgroundColor: 'var(--primary)', color: 'var(--primary-foreground)' }}
+                    >
+                      <Send size={14} />
+                      {t('gallery.send_selection')}
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
           )}
@@ -385,7 +449,7 @@ export const SelectionGallery = ({ gallery, images, getImageUrl }: Props) => {
                           }}
                           className={`group relative rounded-xl overflow-hidden transition-shadow duration-200 ${
                             isSelected ? 'shadow-lg' : ''
-                          } ${isBlocked ? 'cursor-not-allowed opacity-50' : selectionEnabled ? 'cursor-pointer' : 'cursor-default'}`}
+                          } ${isBlocked ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}
                           style={isSelected ? { boxShadow: '0 0 0 3px var(--primary)' } : {}}
                         >
                           <img
@@ -404,7 +468,7 @@ export const SelectionGallery = ({ gallery, images, getImageUrl }: Props) => {
                           >
                             <Maximize2 size={14} />
                           </button>
-                          {selectionEnabled && !isSelected && !isBlocked && (
+                          {!isSelected && !isBlocked && (
                             <button
                               onClick={(e) => { e.stopPropagation(); toggleSelect(img._id); }}
                               className='absolute top-2 end-2 w-8 h-8 rounded-full bg-black/40 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200'
@@ -481,7 +545,7 @@ export const SelectionGallery = ({ gallery, images, getImageUrl }: Props) => {
           const img = visibleImages[lightboxIndex];
           if (!img) return null;
           const isSelected = selectedIds.has(img._id);
-          const isBlocked = selectionEnabled && !isSelected && atMax;
+          const isBlocked = !isSelected && atMax;
           return (
             <Lightbox
               images={visibleImages}
@@ -490,10 +554,10 @@ export const SelectionGallery = ({ gallery, images, getImageUrl }: Props) => {
               onPrev={() => setLightboxIndex((i) => (i! > 0 ? i! - 1 : i!))}
               onNext={() => setLightboxIndex((i) => (i! < visibleImages.length - 1 ? i! + 1 : i!))}
               getImageUrl={getImageUrl}
-              onDownload={selectionEnabled ? handleDownload : undefined}
-              isSelected={selectionEnabled ? isSelected : undefined}
-              isBlocked={selectionEnabled ? isBlocked : undefined}
-              onToggleSelect={selectionEnabled ? () => toggleSelect(img._id) : undefined}
+              onDownload={handleDownload}
+              isSelected={isSelected}
+              isBlocked={isBlocked}
+              onToggleSelect={() => toggleSelect(img._id)}
               isHero={selectionEnabled ? heroId === img._id : undefined}
               onToggleHero={selectionEnabled ? () => setHeroId(heroId === img._id ? null : img._id) : undefined}
               comment={selectionEnabled ? imageComments[img._id] || '' : undefined}
