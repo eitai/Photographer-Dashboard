@@ -43,7 +43,8 @@ export const SelectionGallery = ({ gallery, images, getImageUrl }: Props) => {
     return id;
   });
 
-  const atMax = selectedIds.size >= gallery.maxSelections;
+  const hasLimit = gallery.maxSelections > 0;
+  const atMax = hasLimit && selectedIds.size >= gallery.maxSelections;
 
   const VIRTUALIZATION_THRESHOLD = 100;
 
@@ -70,7 +71,7 @@ export const SelectionGallery = ({ gallery, images, getImageUrl }: Props) => {
 
   const toggleSelect = (imageId: string) => {
     setSelectedIds((prev) => {
-      if (!prev.has(imageId) && prev.size >= gallery.maxSelections) return prev;
+      if (!prev.has(imageId) && hasLimit && prev.size >= gallery.maxSelections) return prev;
       const next = new Set(prev);
       next.has(imageId) ? next.delete(imageId) : next.add(imageId);
       sessionStorage.setItem(`selections_${gallery._id}`, JSON.stringify([...next]));
@@ -223,7 +224,9 @@ export const SelectionGallery = ({ gallery, images, getImageUrl }: Props) => {
               <p className='text-2xl md:text-3xl mb-2' style={{ color: 'var(--foreground)' }}>{gallery.headerMessage}</p>
               {gallery.clientName && <p className='font-sans' style={{ color: 'var(--muted-foreground)' }}>{gallery.clientName}</p>}
               <p className='text-sm font-sans mt-2' style={{ color: 'var(--muted-foreground)' }}>
-                {selectedIds.size} {t('gallery.select_of')} {gallery.maxSelections} {t('gallery.images_selected')}
+                {hasLimit
+                  ? `${selectedIds.size} ${t('gallery.select_of')} ${gallery.maxSelections} ${t('gallery.images_selected')}`
+                  : `${selectedIds.size} ${t('gallery.images_selected')}`}
               </p>
             </div>
           </FadeIn>
@@ -258,7 +261,7 @@ export const SelectionGallery = ({ gallery, images, getImageUrl }: Props) => {
             <div className='sticky top-14 z-40 backdrop-blur-sm py-3 mb-8 -mx-6 px-6' style={{ backgroundColor: 'color-mix(in srgb, var(--background) 90%, transparent)', borderBottom: '1px solid var(--border)' }}>
               <div className='flex items-center justify-between max-w-[1100px] mx-auto'>
                 <span className='text-sm font-sans font-medium' style={{ color: atMax ? 'var(--primary)' : 'var(--muted-foreground)' }}>
-                  {selectedIds.size} / {gallery.maxSelections}
+                  {hasLimit ? `${selectedIds.size} / ${gallery.maxSelections}` : selectedIds.size}
                   {atMax && <span className='ms-2 text-xs'>— {t('gallery.max_reached')}</span>}
                 </span>
                 <button
