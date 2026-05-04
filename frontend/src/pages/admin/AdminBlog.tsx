@@ -92,7 +92,7 @@ export const AdminBlog = () => {
                       <button
                         onClick={() => togglePublish.mutate(post)}
                         disabled={togglePublish.isPending}
-                        title={post.published ? 'Unpublish' : 'Publish'}
+                        title={post.published ? t('admin.blog.unpublish') : t('admin.blog.publish')}
                         className="text-warm-gray hover:text-charcoal disabled:opacity-40"
                       >
                         {post.published ? <EyeOff size={14} /> : <Eye size={14} />}

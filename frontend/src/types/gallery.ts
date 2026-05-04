@@ -7,6 +7,14 @@ export interface GalleryImage {
   thumbnailPath?: string;
   beforePath?: string;
   sortOrder: number;
+  folderIds?: string[];
+}
+
+export interface GalleryFolder {
+  _id: string;
+  galleryId: string;
+  name: string;
+  sortOrder: number;
 }
 
 export interface GalleryData {
@@ -27,6 +35,7 @@ export interface GalleryData {
   status: 'gallery_sent' | 'viewed' | 'selection_submitted' | 'in_editing' | 'delivered';
   videos?: { path: string; filename: string; originalName: string }[];
   previousSelectionIds?: string[];
+  selectionEnabled?: boolean;
 }
 
 /** Minimal gallery shape used in admin list/card views */

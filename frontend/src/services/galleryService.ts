@@ -1,5 +1,5 @@
 import api from '@/lib/api';
-import type { GalleryData, GallerySubmission } from '@/types/gallery';
+import type { GalleryData, GalleryFolder, GallerySubmission } from '@/types/gallery';
 
 export const listGalleries = (): Promise<GalleryData[]> => api.get('/galleries').then((r) => r.data);
 
@@ -12,8 +12,20 @@ export const fetchGalleries = (clientId: string): Promise<GalleryData[]> =>
 export const fetchSubmissions = (galleryId: string): Promise<GallerySubmission[]> =>
   api.get(`/galleries/${galleryId}/submissions`).then((r) => r.data);
 
-export const createGallery = (data: { name: string; headerMessage: string; maxSelections: number; clientId: string; clientName: string; expiresAt?: string | null; sessionType?: string }) =>
+export const createGallery = (data: { name: string; headerMessage: string; maxSelections: number; clientId: string; clientName: string; expiresAt?: string | null; sessionType?: string; selectionEnabled?: boolean }) =>
   api.post('/galleries', data).then((r) => r.data);
+
+export const listFolders = (galleryId: string): Promise<GalleryFolder[]> =>
+  api.get(`/galleries/${galleryId}/folders`).then((r) => r.data);
+
+export const createFolder = (galleryId: string, name: string): Promise<GalleryFolder> =>
+  api.post(`/galleries/${galleryId}/folders`, { name }).then((r) => r.data);
+
+export const renameFolder = (galleryId: string, folderId: string, name: string): Promise<GalleryFolder> =>
+  api.patch(`/galleries/${galleryId}/folders/${folderId}`, { name }).then((r) => r.data);
+
+export const deleteFolder = (galleryId: string, folderId: string): Promise<void> =>
+  api.delete(`/galleries/${galleryId}/folders/${folderId}`).then((r) => r.data);
 
 export const createDelivery = (galleryId: string, data: { headerMessage: string; name?: string }) =>
   api.post(`/galleries/${galleryId}/delivery`, data).then((r) => r.data);

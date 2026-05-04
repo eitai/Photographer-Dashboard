@@ -147,6 +147,39 @@ async function start() {
     logger.warn('[migrate] site_settings stats/promises/faq migration skipped:', err.message);
   }
 
+  // ── Gallery folders + selection_enabled ───────────────────────────────────
+  try {
+    await pool.query(`ALTER TABLE galleries ADD COLUMN IF NOT EXISTS selection_enabled BOOLEAN NOT NULL DEFAULT TRUE`);
+    logger.info('[migrate] galleries.selection_enabled column ensured');
+  } catch (err) {
+    logger.warn('[migrate] galleries.selection_enabled migration skipped:', err.message);
+  }
+
+  try {
+    await pool.query(`ALTER TABLE gallery_images ADD COLUMN IF NOT EXISTS folder_ids UUID[] NOT NULL DEFAULT '{}'`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_gallery_images_folder_ids ON gallery_images USING GIN(folder_ids)`);
+    logger.info('[migrate] gallery_images.folder_ids column ensured');
+  } catch (err) {
+    logger.warn('[migrate] gallery_images.folder_ids migration skipped:', err.message);
+  }
+
+  try {
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS gallery_folders (
+        id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        gallery_id  UUID NOT NULL REFERENCES galleries(id) ON DELETE CASCADE,
+        name        TEXT NOT NULL,
+        sort_order  INTEGER NOT NULL DEFAULT 0,
+        created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      )
+    `);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_gallery_folders_gallery_id ON gallery_folders(gallery_id, sort_order)`);
+    logger.info('[migrate] gallery_folders table ensured');
+  } catch (err) {
+    logger.warn('[migrate] gallery_folders migration skipped:', err.message);
+  }
+
   // ── Gallery auto-deletion scheduler ──────────────────────────────────────
   const CLEANUP_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
 

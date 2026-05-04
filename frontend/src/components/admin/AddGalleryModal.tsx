@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { X, Infinity } from 'lucide-react';
+import { X, Infinity, Images, Eye } from 'lucide-react';
 import { useI18n } from '@/lib/i18n';
 import { useToast } from '@/hooks/use-toast';
 import { createGallery } from '@/services/galleryService';
@@ -21,6 +21,7 @@ interface FormState {
   maxSelections: number;
   expiresAt: string;
   sessionType: string;
+  selectionEnabled: boolean;
 }
 
 export const AddGalleryModal = ({
@@ -40,6 +41,7 @@ export const AddGalleryModal = ({
     maxSelections: 10,
     expiresAt: '',
     sessionType: '',
+    selectionEnabled: true,
   });
   const [saving, setSaving] = useState(false);
 
@@ -60,6 +62,7 @@ export const AddGalleryModal = ({
         clientName: selectedClient.name,
         expiresAt: form.expiresAt ? new Date(form.expiresAt).toISOString() : null,
         sessionType: form.sessionType || undefined,
+        selectionEnabled: form.selectionEnabled,
       });
       await queryClient.invalidateQueries({ queryKey: ['galleries'] });
       toast({
@@ -102,25 +105,27 @@ export const AddGalleryModal = ({
         </div>
 
         <form onSubmit={handleSubmit} className='space-y-4'>
-          {/* Client select */}
-          <div>
-            <label className='block text-xs text-warm-gray mb-1'>{t('admin.galleries.client_label')}</label>
-            <select
-              required
-              value={form.clientId}
-              onChange={(e) => setForm((f) => ({ ...f, clientId: e.target.value }))}
-              className='w-full px-3 py-2 rounded-lg border border-beige bg-card text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-blush/50'
-            >
-              <option value='' disabled>
-                {t('admin.galleries.select_client')}
-              </option>
-              {clients.map((c) => (
-                <option key={c._id} value={c._id}>
-                  {c.name}
+          {/* Client select — hidden when a client is already preselected */}
+          {!preselectedClient && (
+            <div>
+              <label className='block text-xs text-warm-gray mb-1'>{t('admin.galleries.client_label')}</label>
+              <select
+                required
+                value={form.clientId}
+                onChange={(e) => setForm((f) => ({ ...f, clientId: e.target.value }))}
+                className='w-full px-3 py-2 rounded-lg border border-beige bg-card text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-blush/50'
+              >
+                <option value='' disabled>
+                  {t('admin.galleries.select_client')}
                 </option>
-              ))}
-            </select>
-          </div>
+                {clients.map((c) => (
+                  <option key={c._id} value={c._id}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
 
           {/* Session type — also used as gallery name */}
           <div>
@@ -169,6 +174,23 @@ export const AddGalleryModal = ({
                 <Infinity size={16} />
               </button>
             </div>
+          </div>
+
+          {/* Selection enabled toggle */}
+          <div>
+            <label className='block text-xs text-warm-gray mb-1'>{t('admin.gallery.selection_enabled')}</label>
+            <button
+              type='button'
+              onClick={() => setForm((f) => ({ ...f, selectionEnabled: !f.selectionEnabled }))}
+              className={`flex items-center gap-2 w-full px-3 py-2 rounded-lg border text-sm transition-colors ${
+                form.selectionEnabled
+                  ? 'border-blush bg-blush/10 text-charcoal'
+                  : 'border-beige bg-muted/20 text-warm-gray'
+              }`}
+            >
+              {form.selectionEnabled ? <Images size={14} className='text-blush' /> : <Eye size={14} />}
+              {form.selectionEnabled ? t('admin.gallery.selection_enabled_on') : t('admin.gallery.selection_enabled_off')}
+            </button>
           </div>
 
           {/* Expiry date (optional) */}

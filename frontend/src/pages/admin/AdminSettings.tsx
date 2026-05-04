@@ -725,7 +725,7 @@ export const AdminSettings = () => {
     if (editingServiceId) {
       setServices((prev) => prev.map((s) => s.id === editingServiceId ? { ...serviceForm, id: editingServiceId } : s));
     } else {
-      if (services.length >= 8) { toast.error('Maximum 8 services'); return; }
+      if (services.length >= 8) { toast.error(t('admin.settings.max_services')); return; }
       setServices((prev) => [...prev, { ...serviceForm, id: newId() }]);
     }
     resetServiceForm();
@@ -772,7 +772,7 @@ export const AdminSettings = () => {
     if (editingTestimonialId) {
       setTestimonials((prev) => prev.map((t) => t.id === editingTestimonialId ? { ...testimonialForm, id: editingTestimonialId } : t));
     } else {
-      if (testimonials.length >= 12) { toast.error('Maximum 12 testimonials'); return; }
+      if (testimonials.length >= 12) { toast.error(t('admin.settings.max_testimonials')); return; }
       setTestimonials((prev) => [...prev, { ...testimonialForm, id: newId() }]);
     }
     resetTestimonialForm();
@@ -828,7 +828,7 @@ export const AdminSettings = () => {
     if (editingPackageId) {
       setPackages((prev) => prev.map((p) => p.id === editingPackageId ? item : p));
     } else {
-      if (packages.length >= 4) { toast.error('Maximum 4 packages'); return; }
+      if (packages.length >= 4) { toast.error(t('admin.settings.max_packages')); return; }
       setPackages((prev) => [...prev, item]);
     }
     resetPackageForm();
@@ -985,7 +985,7 @@ export const AdminSettings = () => {
     if (editingStatId) {
       setStats((prev) => prev.map((s) => s.id === editingStatId ? { ...statForm, id: editingStatId } : s));
     } else {
-      if (stats.length >= 4) { toast.error('Maximum 4 stats'); return; }
+      if (stats.length >= 4) { toast.error(t('admin.settings.max_stats')); return; }
       setStats((prev) => [...prev, { ...statForm, id: newId() }]);
     }
     resetStatForm();
@@ -1009,7 +1009,7 @@ export const AdminSettings = () => {
     if (editingPromiseId) {
       setPromises((prev) => prev.map((p) => p.id === editingPromiseId ? { ...promiseForm, id: editingPromiseId } : p));
     } else {
-      if (promises.length >= 4) { toast.error('Maximum 4 promises'); return; }
+      if (promises.length >= 4) { toast.error(t('admin.settings.max_promises')); return; }
       setPromises((prev) => [...prev, { ...promiseForm, id: newId() }]);
     }
     resetPromiseForm();
@@ -1033,7 +1033,7 @@ export const AdminSettings = () => {
     if (editingFaqId) {
       setFaqItems((prev) => prev.map((f) => f.id === editingFaqId ? { ...faqForm, id: editingFaqId } : f));
     } else {
-      if (faqItems.length >= 10) { toast.error('Maximum 10 FAQ items'); return; }
+      if (faqItems.length >= 10) { toast.error(t('admin.settings.max_faq')); return; }
       setFaqItems((prev) => [...prev, { ...faqForm, id: newId() }]);
     }
     resetFaqForm();
@@ -1310,7 +1310,7 @@ export const AdminSettings = () => {
 
             {/* Hero tagline */}
             <div>
-              <label className='block text-xs text-warm-gray mb-1'>Tagline above title</label>
+              <label className='block text-xs text-warm-gray mb-1'>{t('admin.settings.hero_tagline_label')}</label>
               <InputField
                 type='text'
                 value={heroTagline}
@@ -1380,17 +1380,17 @@ export const AdminSettings = () => {
 
           {/* Final CTA Section */}
           <div className='bg-card rounded-xl border border-beige p-6 space-y-4'>
-            <h2 className='font-semibold text-charcoal'>Final CTA Section</h2>
+            <h2 className='font-semibold text-charcoal'>{t('admin.settings.final_cta_section')}</h2>
             <div>
-              <label className='block text-xs text-warm-gray mb-1'>Heading</label>
+              <label className='block text-xs text-warm-gray mb-1'>{t('admin.settings.final_cta_heading')}</label>
               <InputField type='text' value={finalCta.heading} onChange={(e) => setFinalCta({ ...finalCta, heading: e.target.value })} placeholder='מוכנים לצלם? / Ready to Shoot?' />
             </div>
             <div>
-              <label className='block text-xs text-warm-gray mb-1'>Subtext</label>
+              <label className='block text-xs text-warm-gray mb-1'>{t('admin.settings.final_cta_subtext')}</label>
               <InputField type='text' value={finalCta.subtext} onChange={(e) => setFinalCta({ ...finalCta, subtext: e.target.value })} placeholder='צרו קשר היום...' />
             </div>
             <div>
-              <label className='block text-xs text-warm-gray mb-1'>Button label</label>
+              <label className='block text-xs text-warm-gray mb-1'>{t('admin.settings.final_cta_button_label')}</label>
               <InputField type='text' value={finalCta.buttonLabel} onChange={(e) => setFinalCta({ ...finalCta, buttonLabel: e.target.value })} placeholder='שלח הודעה / Send a Message' />
             </div>
             <Button type='button' variant='primary' onClick={handleSaveFinalCta} disabled={savingFinalCta}>
@@ -1537,7 +1537,7 @@ export const AdminSettings = () => {
                 </div>
                 <div className='flex gap-2 pt-1'>
                   <button type='button' onClick={handleServiceSubmit} className='flex items-center gap-1 px-3 py-1.5 bg-blush text-white text-xs rounded-lg hover:opacity-90'>
-                    <Check size={13} /> {t('admin.common.save') || 'Save'}
+                    <Check size={13} /> {t('admin.common.save')}
                   </button>
                   <button type='button' onClick={resetServiceForm} className='flex items-center gap-1 px-3 py-1.5 text-xs text-warm-gray hover:text-charcoal'>
                     <X size={13} /> {t('admin.common.cancel')}
@@ -1618,7 +1618,7 @@ export const AdminSettings = () => {
                 </div>
                 <div className='flex gap-2 pt-1'>
                   <button type='button' onClick={handleTestimonialSubmit} className='flex items-center gap-1 px-3 py-1.5 bg-blush text-white text-xs rounded-lg hover:opacity-90'>
-                    <Check size={13} /> {t('admin.common.save') || 'Save'}
+                    <Check size={13} /> {t('admin.common.save')}
                   </button>
                   <button type='button' onClick={resetTestimonialForm} className='flex items-center gap-1 px-3 py-1.5 text-xs text-warm-gray hover:text-charcoal'>
                     <X size={13} /> {t('admin.common.cancel')}
@@ -1699,7 +1699,7 @@ export const AdminSettings = () => {
                 </label>
                 <div className='flex gap-2 pt-1'>
                   <button type='button' onClick={handlePackageSubmit} className='flex items-center gap-1 px-3 py-1.5 bg-blush text-white text-xs rounded-lg hover:opacity-90'>
-                    <Check size={13} /> {t('admin.common.save') || 'Save'}
+                    <Check size={13} /> {t('admin.common.save')}
                   </button>
                   <button type='button' onClick={resetPackageForm} className='flex items-center gap-1 px-3 py-1.5 text-xs text-warm-gray hover:text-charcoal'>
                     <X size={13} /> {t('admin.common.cancel')}
@@ -1872,7 +1872,7 @@ export const AdminSettings = () => {
                         type='button'
                         onClick={() => handleIgImageDelete(idx)}
                         className='absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white'
-                        aria-label='Remove'
+                        aria-label={t('admin.settings.sections.remove')}
                       >
                         <X size={18} />
                       </button>
@@ -1893,12 +1893,12 @@ export const AdminSettings = () => {
 
           {/* 4h: Stats */}
           <SectionCard
-            title='Stats Strip'
+            title={t('admin.settings.sections.stats')}
             enabled={statsEnabled}
             onToggle={() => setStatsEnabled((v) => !v)}
             enabledLabel={t('admin.settings.sections.enabled')}
             onSave={handleSaveStats}
-            saveLabel={t('admin.settings.landing_saved') ? 'Save Stats' : 'Save Stats'}
+            saveLabel={t('admin.settings.sections.save_stats')}
             saving={savingStats}
           >
             <ul className='space-y-2'>
@@ -1926,7 +1926,7 @@ export const AdminSettings = () => {
               <div className='border border-beige rounded-xl p-4 bg-ivory space-y-3'>
                 <div className='grid grid-cols-2 gap-3'>
                   <div>
-                    <label className='block text-xs text-warm-gray mb-1'>Value</label>
+                    <label className='block text-xs text-warm-gray mb-1'>{t('admin.settings.sections.stat_value')}</label>
                     <input
                       type='number'
                       className={fieldClass}
@@ -1935,7 +1935,7 @@ export const AdminSettings = () => {
                     />
                   </div>
                   <div>
-                    <label className='block text-xs text-warm-gray mb-1'>Suffix</label>
+                    <label className='block text-xs text-warm-gray mb-1'>{t('admin.settings.sections.stat_suffix')}</label>
                     <input
                       className={fieldClass}
                       value={statForm.suffix}
@@ -1946,7 +1946,7 @@ export const AdminSettings = () => {
                   </div>
                 </div>
                 <div>
-                  <label className='block text-xs text-warm-gray mb-1'>Label</label>
+                  <label className='block text-xs text-warm-gray mb-1'>{t('admin.settings.sections.stat_label')}</label>
                   <input
                     className={fieldClass}
                     value={statForm.label}
@@ -1956,7 +1956,7 @@ export const AdminSettings = () => {
                 </div>
                 <div className='flex gap-2 pt-1'>
                   <button type='button' onClick={handleStatSubmit} className='flex items-center gap-1 px-3 py-1.5 bg-blush text-white text-xs rounded-lg hover:opacity-90'>
-                    <Check size={13} /> Save
+                    <Check size={13} /> {t('admin.common.save')}
                   </button>
                   <button type='button' onClick={resetStatForm} className='flex items-center gap-1 px-3 py-1.5 text-xs text-warm-gray hover:text-charcoal'>
                     <X size={13} /> {t('admin.common.cancel')}
@@ -1969,19 +1969,19 @@ export const AdminSettings = () => {
                 onClick={() => { setEditingStatId(null); setShowStatForm(true); }}
                 className='flex items-center gap-1 text-xs text-blush hover:text-charcoal transition-colors'
               >
-                <Plus size={13} /> Add stat
+                <Plus size={13} /> {t('admin.settings.sections.add_stat')}
               </button>
             )}
           </SectionCard>
 
           {/* 4i: Promises */}
           <SectionCard
-            title='Why Choose Us (Promises)'
+            title={t('admin.settings.sections.promises')}
             enabled={promisesEnabled}
             onToggle={() => setPromisesEnabled((v) => !v)}
             enabledLabel={t('admin.settings.sections.enabled')}
             onSave={handleSavePromises}
-            saveLabel='Save Promises'
+            saveLabel={t('admin.settings.sections.save_promises')}
             saving={savingPromises}
           >
             <ul className='space-y-2'>
@@ -2020,7 +2020,7 @@ export const AdminSettings = () => {
                 </div>
                 <div className='flex gap-2 pt-1'>
                   <button type='button' onClick={handlePromiseSubmit} className='flex items-center gap-1 px-3 py-1.5 bg-blush text-white text-xs rounded-lg hover:opacity-90'>
-                    <Check size={13} /> Save
+                    <Check size={13} /> {t('admin.common.save')}
                   </button>
                   <button type='button' onClick={resetPromiseForm} className='flex items-center gap-1 px-3 py-1.5 text-xs text-warm-gray hover:text-charcoal'>
                     <X size={13} /> {t('admin.common.cancel')}
@@ -2033,19 +2033,19 @@ export const AdminSettings = () => {
                 onClick={() => { setEditingPromiseId(null); setShowPromiseForm(true); }}
                 className='flex items-center gap-1 text-xs text-blush hover:text-charcoal transition-colors'
               >
-                <Plus size={13} /> Add promise
+                <Plus size={13} /> {t('admin.settings.sections.add_promise')}
               </button>
             )}
           </SectionCard>
 
           {/* 4j: FAQ */}
           <SectionCard
-            title='FAQ'
+            title={t('admin.settings.sections.faq')}
             enabled={faqEnabled}
             onToggle={() => setFaqEnabled((v) => !v)}
             enabledLabel={t('admin.settings.sections.enabled')}
             onSave={handleSaveFaq}
-            saveLabel='Save FAQ'
+            saveLabel={t('admin.settings.sections.save_faq')}
             saving={savingFaq}
           >
             <ul className='space-y-2'>
@@ -2070,16 +2070,16 @@ export const AdminSettings = () => {
             {showFaqForm ? (
               <div className='border border-beige rounded-xl p-4 bg-ivory space-y-3'>
                 <div>
-                  <label className='block text-xs text-warm-gray mb-1'>Question</label>
+                  <label className='block text-xs text-warm-gray mb-1'>{t('admin.settings.sections.faq_question')}</label>
                   <input className={fieldClass} value={faqForm.q} onChange={(e) => setFaqForm((f) => ({ ...f, q: e.target.value }))} placeholder='How long does it take...' />
                 </div>
                 <div>
-                  <label className='block text-xs text-warm-gray mb-1'>Answer</label>
+                  <label className='block text-xs text-warm-gray mb-1'>{t('admin.settings.sections.faq_answer')}</label>
                   <textarea className={`${fieldClass} resize-none`} rows={4} value={faqForm.a} onChange={(e) => setFaqForm((f) => ({ ...f, a: e.target.value }))} />
                 </div>
                 <div className='flex gap-2 pt-1'>
                   <button type='button' onClick={handleFaqSubmit} className='flex items-center gap-1 px-3 py-1.5 bg-blush text-white text-xs rounded-lg hover:opacity-90'>
-                    <Check size={13} /> Save
+                    <Check size={13} /> {t('admin.common.save')}
                   </button>
                   <button type='button' onClick={resetFaqForm} className='flex items-center gap-1 px-3 py-1.5 text-xs text-warm-gray hover:text-charcoal'>
                     <X size={13} /> {t('admin.common.cancel')}
@@ -2092,7 +2092,7 @@ export const AdminSettings = () => {
                 onClick={() => { setEditingFaqId(null); setShowFaqForm(true); }}
                 className='flex items-center gap-1 text-xs text-blush hover:text-charcoal transition-colors'
               >
-                <Plus size={13} /> Add FAQ item
+                <Plus size={13} /> {t('admin.settings.sections.add_faq')}
               </button>
             )}
           </SectionCard>

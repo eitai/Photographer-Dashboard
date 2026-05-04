@@ -18,7 +18,7 @@ const MAX_IMAGE_SIZE = 40 * 1024 * 1024; // 40 MB per file
 const MAX_BATCH_BYTES = 50 * 1024 * 1024; // 50 MB per request (Cloudflare free plan cap is 100 MB — stay well under)
 const PARALLEL_BATCHES = 2;              // concurrent requests
 
-export function useGalleryUpload(galleryId: string | undefined, onUploadComplete: () => void) {
+export function useGalleryUpload(galleryId: string | undefined, onUploadComplete: () => void, activeFolderId?: string | null) {
   const { t } = useI18n();
   const queryClient = useQueryClient();
   const [queue, setQueue] = useState<UploadFile[]>([]);
@@ -108,6 +108,7 @@ export function useGalleryUpload(galleryId: string | undefined, onUploadComplete
         const batchIds = batch.map((b) => b.id);
         const formData = new FormData();
         batch.forEach((b) => formData.append('images', b.file));
+        if (activeFolderId) formData.append('folderId', activeFolderId);
         try {
           await api.post(`/galleries/${galleryId}/images`, formData, {
             headers: { 'Content-Type': undefined },
@@ -157,7 +158,7 @@ export function useGalleryUpload(galleryId: string | undefined, onUploadComplete
         scheduleClear();
       }
     },
-    [galleryId, onUploadComplete, queryClient, scheduleClear, t],
+    [galleryId, activeFolderId, onUploadComplete, queryClient, scheduleClear, t],
   );
 
   const onDrop = (e: React.DragEvent) => {
