@@ -52,10 +52,16 @@ export const Lightbox = ({
   comment, onCommentChange,
   isFeatured, onToggleFeatured,
 }: LightboxProps) => {
-  const { t } = useI18n();
+  const { t, dir } = useI18n();
+  const isRtl = dir === "rtl";
   const img = images[index];
   const touchStartX = useRef<number | null>(null);
   const [showComment, setShowComment] = useState(false);
+
+  const handleLeft  = isRtl ? onNext : onPrev;
+  const handleRight = isRtl ? onPrev : onNext;
+  const showLeft    = isRtl ? index < images.length - 1 : index > 0;
+  const showRight   = isRtl ? index > 0 : index < images.length - 1;
 
   useEffect(() => {
     setShowComment(false);
@@ -63,13 +69,13 @@ export const Lightbox = ({
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      if (e.key === "ArrowRight") onNext();
-      if (e.key === "ArrowLeft") onPrev();
+      if (e.key === "ArrowRight") handleRight();
+      if (e.key === "ArrowLeft")  handleLeft();
       if (e.key === "Escape") onClose();
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [onNext, onPrev, onClose]);
+  }, [handleLeft, handleRight, onClose]);
 
   const filename = img.filename || img.path.split("/").pop() || "photo";
 
@@ -83,8 +89,8 @@ export const Lightbox = ({
       onTouchEnd={(e) => {
         if (touchStartX.current === null) return;
         const diff = touchStartX.current - e.changedTouches[0].clientX;
-        if (diff > 50 && index < images.length - 1) onNext();
-        else if (diff < -50 && index > 0) onPrev();
+        if (diff > 50)  isRtl ? handleLeft()  : handleRight();
+        else if (diff < -50) isRtl ? handleRight() : handleLeft();
         touchStartX.current = null;
       }}
     >
@@ -112,20 +118,20 @@ export const Lightbox = ({
         {index + 1} / {images.length}
       </p>
 
-      {/* Prev */}
-      {index > 0 && (
+      {/* Left button */}
+      {showLeft && (
         <button
-          onClick={(e) => { e.stopPropagation(); onPrev(); }}
+          onClick={(e) => { e.stopPropagation(); handleLeft(); }}
           className="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors z-10"
         >
           <ChevronLeft size={22} />
         </button>
       )}
 
-      {/* Next */}
-      {index < images.length - 1 && (
+      {/* Right button */}
+      {showRight && (
         <button
-          onClick={(e) => { e.stopPropagation(); onNext(); }}
+          onClick={(e) => { e.stopPropagation(); handleRight(); }}
           className="absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors z-10"
         >
           <ChevronRight size={22} />

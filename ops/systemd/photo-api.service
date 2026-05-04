@@ -1,0 +1,76 @@
+# photo-api.service
+#
+# Photographer-Dashboard API server, run as the `photo` system user with
+# systemd hardening directives applied.
+#
+# Secrets: the LoadCredential= lines below mount each file from
+# /etc/photo/secrets/ into a per-service tmpfs at $CREDENTIALS_DIRECTORY.
+# Inside the unit, the file is readable by the service user (photo); on disk
+# it stays mode 0400 root:root. The Node app reads files from
+# $CREDENTIALS_DIRECTORY at boot via backend/src/utils/loadSystemdCredentials.js
+# and projects them into process.env.<UPPER_NAME>, e.g.
+#   $CREDENTIALS_DIRECTORY/aws_secret_access_key
+#     -> process.env.AWS_SECRET_ACCESS_KEY
+# Add `require('./src/utils/loadSystemdCredentials').loadSystemdCredentials();`
+# at the top of backend/server.js before any code reads those env vars.
+#
+# Non-secret config lives in /etc/photo/env (see ops/README.md section 3.1).
+#
+# To install:
+#   sudo cp ops/systemd/photo-api.service /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now photo-api
+
+[Unit]
+Description=Photographer Dashboard API
+After=network-online.target postgresql.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=photo
+Group=photo
+WorkingDirectory=/opt/photo/backend
+
+# Non-secret env (S3 endpoint, bucket, ports, NODE_ENV, etc.)
+EnvironmentFile=/etc/photo/env
+
+# Secrets — each appears at $CREDENTIALS_DIRECTORY/<name>, readable by `photo`.
+LoadCredential=aws_access_key_id:/etc/photo/secrets/aws_access_key_id
+LoadCredential=aws_secret_access_key:/etc/photo/secrets/aws_secret_access_key
+LoadCredential=jwt_secret:/etc/photo/secrets/jwt_secret
+LoadCredential=database_password:/etc/photo/secrets/database_password
+
+ExecStart=/usr/bin/node server.js
+
+Restart=on-failure
+RestartSec=5
+KillSignal=SIGTERM
+TimeoutStopSec=120
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=photo-api
+
+# ----- Hardening -----
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ReadWritePaths=/var/lib/photo /var/log/photo
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+RestrictNamespaces=true
+LockPersonality=true
+# MemoryDenyWriteExecute disabled by default — Node V8 JIT and native addons (sharp, libvips, libjxl bindings)
+# often fail when enabled. After staging burn-in confirms no startup errors, set to true for hardening.
+MemoryDenyWriteExecute=false
+RestrictRealtime=true
+SystemCallArchitectures=native
+SystemCallFilter=@system-service
+SystemCallFilter=~@privileged @resources
+
+[Install]
+WantedBy=multi-user.target

@@ -42,6 +42,10 @@ const AdminSettings = lazy(() => import('./pages/admin/AdminSettings').then((m) 
 const AdminShowcase = lazy(() => import('./pages/admin/AdminShowcase').then((m) => ({ default: m.AdminShowcase })));
 const AdminUsers = lazy(() => import('./pages/admin/AdminUsers').then((m) => ({ default: m.AdminUsers })));
 const AdminContact = lazy(() => import('./pages/admin/AdminContact').then((m) => ({ default: m.AdminContact })));
+// Dev-only test harness for the multipart S3 uploader. Gated by `?s3test=1`
+// query param inside the page itself AND by `import.meta.env.DEV` at the
+// route level, so it cannot ship to production builds.
+const S3UploadTest = lazy(() => import('./pages/admin/_S3UploadTest').then((m) => ({ default: m.S3UploadTest })));
 
 export const queryClient = new QueryClient();
 
@@ -201,6 +205,17 @@ export const App = () => (
                     </ProtectedRoute>
                   }
                 />
+                {/* Dev-only S3 uploader test harness. Reach via /admin/_s3test?s3test=1 */}
+                {import.meta.env.DEV && (
+                  <Route
+                    path='/admin/_s3test'
+                    element={
+                      <ProtectedRoute>
+                        <S3UploadTest />
+                      </ProtectedRoute>
+                    }
+                  />
+                )}
 
                 {/* Per-photographer public pages — must be last to avoid shadowing other routes */}
                 <Route path='/:id' element={<PhotographerLayout />}>

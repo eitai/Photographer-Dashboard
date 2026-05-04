@@ -1,0 +1,8 @@
+# Defense in depth. Real secrets live in /etc/photo/secrets/ on the prod box,
+# never in this directory. If anyone ever creates a secrets/ folder here by
+# accident, git will refuse to track it.
+secrets/
+*.local.env
+*.secret
+*.pem
+*.key

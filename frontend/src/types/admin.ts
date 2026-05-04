@@ -61,6 +61,9 @@ export interface GalleryImage {
   _id: string;
   path: string;
   thumbnailPath?: string;
+  previewPath?: string;
   originalName: string;
   beforePath?: string;
+  sortOrder?: number;
+  folderIds?: string[];
 }

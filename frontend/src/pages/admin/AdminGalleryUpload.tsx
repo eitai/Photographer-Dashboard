@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { toast } from 'sonner';
 import { AdminLayout } from '@/components/admin/AdminLayout';
@@ -71,7 +71,7 @@ export const AdminGalleryUpload = () => {
   const toggleSelect = (imgId: string) => {
     setSelectedIds((prev) => {
       const next = new Set(prev);
-      next.has(imgId) ? next.delete(imgId) : next.add(imgId);
+      if (next.has(imgId)) next.delete(imgId); else next.add(imgId);
       return next;
     });
   };
