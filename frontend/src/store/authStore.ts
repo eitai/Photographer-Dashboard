@@ -18,10 +18,12 @@ interface AuthState {
   admin: AdminUser | null;
   loading: boolean;
   theme: string;
+  darkMode: boolean;
   login: (email: string, password: string) => Promise<AdminUser>;
   logout: () => Promise<void>;
   setAdmin: (admin: AdminUser) => void;
   setTheme: (theme: string) => void;
+  setDarkMode: (v: boolean) => void;
 }
 
 // Restore the cached admin profile from localStorage for an optimistic,
@@ -55,11 +57,13 @@ if (_stored) {
   }
 }
 const _initialTheme = localStorage.getItem('koral_admin_theme') || 'bw';
+const _initialDarkMode = localStorage.getItem('koral_admin_dark') === 'true';
 
 export const useAuthStore = create<AuthState>((set) => ({
   admin: _initialAdmin,
   loading: false,
   theme: _initialTheme,
+  darkMode: _initialDarkMode,
 
   login: async (email, password) => {
     const payload = email.includes('@') ? { email, password } : { username: email, password };
@@ -95,5 +99,10 @@ export const useAuthStore = create<AuthState>((set) => ({
   setTheme: (theme: string) => {
     localStorage.setItem('koral_admin_theme', theme);
     set({ theme });
+  },
+
+  setDarkMode: (v: boolean) => {
+    localStorage.setItem('koral_admin_dark', String(v));
+    set({ darkMode: v });
   },
 }));

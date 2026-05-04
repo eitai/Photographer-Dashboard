@@ -10,7 +10,7 @@ const STATUS_COLOR: Record<string, string> = {
 
 export const StatusBadge = ({ status }: { status: string }) => {
   const { t } = useI18n();
-  const color = STATUS_COLOR[status] ?? 'bg-gray-100 text-gray-700';
+  const color = STATUS_COLOR[status] ?? 'bg-muted text-muted-foreground';
   const label = t(`admin.status.${status}`) !== `admin.status.${status}`
     ? t(`admin.status.${status}`)
     : status;

@@ -9,7 +9,8 @@ import type { AdminRecord, AdminSettings } from '@/types/admin';
 import { InputField, TextareaField, SelectField } from '@/components/admin/InputField';
 import { Button } from '@/components/admin/Button';
 import { Modal } from '@/components/ui/Modal';
-import { useAdmins, useCreateAdmin, useDeleteAdmin, useAdminStorage, useSetAdminQuota } from '@/hooks/useQueries';
+import { useAdmins, useCreateAdmin, useDeleteAdmin, useAdminStorage, useSetAdminQuota, queryKeys } from '@/hooks/useQueries';
+import { useQueryClient } from '@tanstack/react-query';
 import { StorageBar } from '@/components/admin/StorageBar';
 import { QuotaSlider } from '@/components/admin/QuotaSlider';
 
@@ -38,6 +39,7 @@ const labelClass = 'block text-xs text-warm-gray mb-1';
 export const AdminUsers = () => {
   const { admin: me } = useAuth();
   const { t } = useI18n();
+  const queryClient = useQueryClient();
   const { data: admins = [], isError: adminsError } = useAdmins();
   const createAdminMutation = useCreateAdmin();
   const deleteAdminMutation = useDeleteAdmin();
@@ -98,17 +100,17 @@ export const AdminUsers = () => {
   };
 
   const openEdit = async (a: AdminRecord) => {
-    if (editingId === a._id) {
+    if (editingId === a.id) {
       setEditingId(null);
       return;
     }
-    setEditingId(a._id);
+    setEditingId(a.id);
     setEditMsg({ text: '', error: false });
     setProfileForm({ name: a.name, email: a.email, studioName: a.studioName || '', username: a.username || '', role: a.role, newPassword: '' });
     setQuotaInputGB(a.storageQuotaBytes ? parseFloat((a.storageQuotaBytes / 1024 ** 3).toFixed(1)) : 10);
     setSettings(null);
     try {
-      const r = await api.get(`/admins/${a._id}/settings`);
+      const r = await api.get(`/admins/${a.id}/settings`);
       const s: AdminSettings = r.data;
       setSettings(s);
       setLandingForm({
@@ -138,7 +140,7 @@ export const AdminUsers = () => {
       };
       if (profileForm.newPassword) payload.password = profileForm.newPassword;
       const r = await api.patch(`/admins/${editingId}`, payload);
-      setAdmins((prev) => prev.map((a) => (a._id === editingId ? { ...a, ...r.data } : a)));
+      queryClient.invalidateQueries({ queryKey: queryKeys.admins });
       setProfileForm((f) => ({ ...f, newPassword: '' }));
       setEditMsg({ text: t('admin.users.profile_saved'), error: false });
       setTimeout(() => setEditMsg({ text: '', error: false }), 3000);
@@ -198,7 +200,7 @@ export const AdminUsers = () => {
 
   const creating = createAdminMutation.isPending;
   const deletingId = deleteAdminMutation.isPending ? deleteAdminMutation.variables ?? null : null;
-  const editingAdmin = (admins as AdminRecord[]).find((a) => a._id === editingId);
+  const editingAdmin = (admins as AdminRecord[]).find((a) => a.id === editingId);
   const visibleAdmins = search.trim()
     ? admins.filter((a) => a.name.toLowerCase().includes(search.toLowerCase()) || a.email.toLowerCase().includes(search.toLowerCase()))
     : admins;
@@ -224,7 +226,7 @@ export const AdminUsers = () => {
           <h2 className=' text-charcoal'>{t('admin.users.existing')}</h2>
           <div className='space-y-2'>
             {visibleAdmins.map((a) => (
-              <div key={a._id} className='space-y-0'>
+              <div key={a.id} className='space-y-0'>
                 <div className='flex items-center justify-between px-4 py-3 rounded-lg border border-beige bg-ivory'>
                   <div className='flex items-center gap-3'>
                     <div
@@ -237,7 +239,7 @@ export const AdminUsers = () => {
                     <div>
                       <p className='text-sm font-medium text-charcoal flex items-center gap-2'>
                         {a.name}
-                        {a._id === me?.id && (
+                        {a.id === me?.id && (
                           <span className='text-[10px] bg-blush/20 text-charcoal px-1.5 py-0.5 rounded-full'>
                             {t('admin.users.you')}
                           </span>
@@ -256,7 +258,7 @@ export const AdminUsers = () => {
                       {a.role === 'superadmin' ? t('admin.users.superadmin_label') : t('admin.users.admin_label')}
                     </span>
                     <a
-                      href={`/${a._id}`}
+                      href={`/${a.id}`}
                       target='_blank'
                       rel='noopener noreferrer'
                       className='w-7 h-7 rounded-full flex items-center justify-center text-warm-gray hover:text-blush hover:bg-blush/10 transition-colors'
@@ -267,16 +269,16 @@ export const AdminUsers = () => {
                     <button
                       onClick={() => openEdit(a)}
                       className={`w-7 h-7 rounded-full flex items-center justify-center transition-colors ${
-                        editingId === a._id ? 'bg-blush text-primary-foreground' : 'text-warm-gray hover:text-charcoal hover:bg-beige'
+                        editingId === a.id ? 'bg-blush text-primary-foreground' : 'text-warm-gray hover:text-charcoal hover:bg-beige'
                       }`}
                       title={t('admin.users.edit')}
                     >
                       <Pencil size={14} />
                     </button>
-                    {a._id !== me?.id && (
+                    {a.id !== me?.id && (
                       <button
-                        onClick={() => setDeleteConfirmId(a._id)}
-                        disabled={deletingId === a._id}
+                        onClick={() => setDeleteConfirmId(a.id)}
+                        disabled={deletingId === a.id}
                         className='w-7 h-7 rounded-full flex items-center justify-center text-warm-gray hover:text-red-500 hover:bg-red-50 transition-colors disabled:opacity-40'
                         title={t('admin.clients.delete_btn')}
                       >
@@ -287,7 +289,7 @@ export const AdminUsers = () => {
                 </div>
 
                 {/* Edit panel — inline below the row */}
-                {editingId === a._id && editingAdmin && (
+                {editingId === a.id && editingAdmin && (
                   <div className='border border-beige bg-ivory rounded-xl p-6 space-y-6 mt-1'>
                     {/* Panel header */}
                     <div className='flex items-center justify-between'>

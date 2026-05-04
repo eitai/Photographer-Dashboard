@@ -29,7 +29,7 @@ function useExpiryBadge(expiresAt: string | null | undefined, t: (key: string) =
   if (diffDays <= 7) {
     return { label: t('admin.gallery.badge_expires_in_days').replace('{n}', String(diffDays)), className: 'bg-amber-50 text-amber-600 border-amber-200' };
   }
-  return { label: t('admin.gallery.badge_expires_in_days').replace('{n}', String(diffDays)), className: 'bg-gray-100 text-warm-gray border-gray-200' };
+  return { label: t('admin.gallery.badge_expires_in_days').replace('{n}', String(diffDays)), className: 'bg-muted text-muted-foreground border-border' };
 }
 
 const Tip = ({ label, children }: { label: string; children: React.ReactNode }) => (
@@ -113,18 +113,18 @@ export const GalleryCard = ({
 
   return (
     <div
-      className={`rounded-xl bg-white shadow-sm flex flex-col overflow-hidden border transition-colors hover:bg-gray-50 ${
+      className={`rounded-xl bg-card shadow-sm flex flex-col overflow-hidden border transition-colors hover:bg-muted/20 ${
         g.isDelivery
           ? 'border-blush/40'
           : g.status === 'delivered'
-          ? 'border-gray-100'
+          ? 'border-border'
           : submission
           ? 'border-amber-300'
-          : 'border-gray-100'
+          : 'border-border'
       }`}
     >
       {/* Clickable header — navigates into the gallery */}
-      <Link to={`/admin/galleries/${g._id}`} className='flex items-start gap-3 p-4 hover:bg-gray-100 transition-colors'>
+      <Link to={`/admin/galleries/${g._id}`} className='flex items-start gap-3 p-4 hover:bg-muted/40 transition-colors'>
         <div className='flex-1 min-w-0'>
           <p className='text-sm font-semibold text-charcoal truncate'>{g.name}</p>
           <div className='mt-1'>
@@ -150,12 +150,12 @@ export const GalleryCard = ({
                 key={img._id}
                 src={getImageUrl(img.thumbnailPath || img.path)}
                 alt=''
-                className='w-16 h-16 rounded-lg object-cover border border-gray-100 shrink-0'
+                className='w-16 h-16 rounded-lg object-cover border border-border shrink-0'
               />
             ))
           ) : (
-            <div className='w-16 h-16 rounded-lg bg-gray-100 border border-gray-200 flex items-center justify-center shrink-0'>
-              <Images size={14} className='text-gray-300' />
+            <div className='w-16 h-16 rounded-lg bg-muted border border-border flex items-center justify-center shrink-0'>
+              <Images size={14} className='text-muted-foreground/40' />
             </div>
           )}
         </div>
@@ -203,7 +203,7 @@ export const GalleryCard = ({
         <Tip label={t('admin.client.delete_gallery')}>
           <button
             onClick={() => setDeleteGalleryTarget(g._id)}
-            className='p-2 rounded-lg border border-gray-100 bg-gray-50 text-warm-gray hover:text-rose-500 hover:bg-rose-50 transition-colors'
+            className='p-2 rounded-lg border border-border bg-muted/30 text-warm-gray hover:text-rose-500 hover:bg-rose-50 transition-colors'
           >
             <Trash2 size={13} />
           </button>
@@ -211,7 +211,7 @@ export const GalleryCard = ({
         <Tip label={copiedId === g._id ? t('admin.client.copied') : t('admin.client.copy_link')}>
           <button
             onClick={() => copyLink(g.token, g._id)}
-            className='p-2 rounded-lg border border-gray-100 bg-gray-50 text-warm-gray hover:text-charcoal hover:bg-gray-100 transition-colors'
+            className='p-2 rounded-lg border border-border bg-muted/30 text-warm-gray hover:text-charcoal hover:bg-muted transition-colors'
           >
             {copiedId === g._id ? <Check size={13} className='text-green-500' /> : <Copy size={13} />}
           </button>
@@ -221,7 +221,7 @@ export const GalleryCard = ({
             <button
               onClick={() => resendEmail(g._id)}
               disabled={resendingId === g._id}
-              className='p-2 rounded-lg border border-gray-100 bg-gray-50 text-warm-gray hover:text-blush hover:bg-blush/10 transition-colors disabled:opacity-50'
+              className='p-2 rounded-lg border border-border bg-muted/30 text-warm-gray hover:text-blush hover:bg-blush/10 transition-colors disabled:opacity-50'
             >
               {resentId === g._id ? <Check size={13} className='text-green-500' /> : <Mail size={13} />}
             </button>
@@ -232,7 +232,7 @@ export const GalleryCard = ({
             <button
               onClick={() => sendSms(g._id)}
               disabled={sendingSmId === g._id}
-              className='p-2 rounded-lg border border-gray-100 bg-gray-50 text-warm-gray hover:text-blue-500 hover:bg-blue-50 transition-colors disabled:opacity-50'
+              className='p-2 rounded-lg border border-border bg-muted/30 text-warm-gray hover:text-blue-500 hover:bg-blue-50 transition-colors disabled:opacity-50'
             >
               {sentSmsId === g._id ? <Check size={13} className='text-green-500' /> : <MessageSquare size={13} />}
             </button>
@@ -244,7 +244,7 @@ export const GalleryCard = ({
               href={whatsAppLink(g.token)}
               target='_blank'
               rel='noopener noreferrer'
-              className='p-2 rounded-lg border border-gray-100 bg-gray-50 text-warm-gray hover:text-[#25D366] hover:bg-green-50 transition-colors'
+              className='p-2 rounded-lg border border-border bg-muted/30 text-warm-gray hover:text-[#25D366] hover:bg-green-50 transition-colors'
             >
               <WhatsAppIcon size={13} />
             </a>
@@ -254,7 +254,7 @@ export const GalleryCard = ({
           <Link
             to={`/gallery/${g.token}`}
             target='_blank'
-            className='p-2 rounded-lg border border-gray-100 bg-gray-50 text-warm-gray hover:text-charcoal hover:bg-gray-100 transition-colors'
+            className='p-2 rounded-lg border border-border bg-muted/30 text-warm-gray hover:text-charcoal hover:bg-muted transition-colors'
           >
             <ExternalLink size={13} />
           </Link>
@@ -262,7 +262,7 @@ export const GalleryCard = ({
 
         <Link
           to={`/admin/galleries/${g._id}`}
-          className='flex-1 flex items-center justify-center gap-1.5 text-xs bg-gray-50 text-charcoal px-3 py-2 rounded-lg border border-gray-100 hover:bg-gray-100 transition-colors font-medium'
+          className='flex-1 flex items-center justify-center gap-1.5 text-xs bg-muted/30 text-charcoal px-3 py-2 rounded-lg border border-border hover:bg-muted transition-colors font-medium'
         >
           <Settings size={12} />
           {t('admin.galleries.manage')}
@@ -286,13 +286,13 @@ export const GalleryCard = ({
         (g.status === 'selection_submitted' || g.status === 'in_editing' || g.status === 'delivered') &&
         !hasDelivery &&
         (showDeliveryFormFor === g._id ? (
-          <div className='px-4 pb-4 pt-0 space-y-2 border-t border-gray-100'>
+          <div className='px-4 pb-4 pt-0 space-y-2 border-t border-border'>
             <div className='pt-3'>
               <input
                 value={deliveryHeaderMessage}
                 onChange={(e) => setDeliveryHeaderMessage(e.target.value)}
                 placeholder={t('admin.client.delivery_header_ph')}
-                className='w-full px-3 py-2 rounded-lg border border-gray-100 bg-gray-50 text-xs text-charcoal focus:outline-none focus:ring-2 focus:ring-blush/50'
+                className='w-full px-3 py-2 rounded-lg border border-border bg-muted/30 text-xs text-charcoal focus:outline-none focus:ring-2 focus:ring-blush/50'
               />
             </div>
             <div className='flex gap-2'>
@@ -305,7 +305,7 @@ export const GalleryCard = ({
               </button>
               <button
                 onClick={() => setShowDeliveryFormFor(null)}
-                className='px-3 py-1.5 rounded-lg text-xs text-warm-gray border border-gray-100 hover:bg-gray-50 transition-colors'
+                className='px-3 py-1.5 rounded-lg text-xs text-warm-gray border border-border hover:bg-muted/30 transition-colors'
               >
                 {t('admin.common.cancel')}
               </button>
@@ -314,7 +314,7 @@ export const GalleryCard = ({
         ) : (
           <button
             onClick={() => setShowDeliveryFormFor(g._id)}
-            className='mx-4 mb-4 flex items-center justify-center gap-1.5 w-[calc(100%-2rem)] text-xs text-warm-gray border border-dashed border-gray-200 rounded-lg py-2 hover:border-blush hover:text-blush transition-colors'
+            className='mx-4 mb-4 flex items-center justify-center gap-1.5 w-[calc(100%-2rem)] text-xs text-warm-gray border border-dashed border-border rounded-lg py-2 hover:border-blush hover:text-blush transition-colors'
           >
             + {t('admin.client.create_delivery')}
           </button>
@@ -332,7 +332,7 @@ export const GalleryCard = ({
             <Tip label={t('admin.client.delete_gallery')}>
               <button
                 onClick={() => setDeleteGalleryTarget(delivery._id)}
-                className='p-1.5 rounded-lg border border-blush/20 bg-white text-warm-gray hover:text-rose-500 hover:bg-rose-50 transition-colors'
+                className='p-1.5 rounded-lg border border-blush/20 bg-card text-warm-gray hover:text-rose-500 hover:bg-rose-50 transition-colors'
               >
                 <Trash2 size={11} />
               </button>
@@ -341,14 +341,14 @@ export const GalleryCard = ({
               <Link
                 to={`/gallery/${delivery.token}`}
                 target='_blank'
-                className='p-1.5 rounded-lg border border-blush/20 bg-white text-warm-gray hover:text-charcoal hover:bg-gray-50 transition-colors'
+                className='p-1.5 rounded-lg border border-blush/20 bg-card text-warm-gray hover:text-charcoal hover:bg-muted/30 transition-colors'
               >
                 <ExternalLink size={11} />
               </Link>
             </Tip>
             <Link
               to={`/admin/galleries/${delivery._id}`}
-              className='flex items-center gap-1 text-xs bg-white border border-blush/20 text-charcoal px-2.5 py-1 rounded-lg hover:bg-gray-50 transition-colors font-medium'
+              className='flex items-center gap-1 text-xs bg-card border border-blush/20 text-charcoal px-2.5 py-1 rounded-lg hover:bg-muted/30 transition-colors font-medium'
             >
               <Settings size={11} />
               {t('admin.galleries.manage')}

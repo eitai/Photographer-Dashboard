@@ -29,7 +29,7 @@ export const ClientRow = ({ client, galleries, onAddGallery }: ClientRowProps) =
       : `${clientGalleries.length} ${t('admin.dashboard.gallery_plural')}`;
 
   return (
-    <div className='border-b border-gray-100 last:border-b-0'>
+    <div className='border-b border-border last:border-b-0'>
       <div
         role='button'
         tabIndex={0}
@@ -37,7 +37,7 @@ export const ClientRow = ({ client, galleries, onAddGallery }: ClientRowProps) =
         onKeyDown={(e) => {
           if (e.key === 'Enter' || e.key === ' ') setOpen((v) => !v);
         }}
-        className='w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition-colors cursor-pointer select-none'
+        className='w-full flex items-center gap-3 px-4 py-3 hover:bg-muted/30 transition-colors cursor-pointer select-none'
       >
         <span className='w-9 h-9 rounded-full bg-blush/20 text-blush text-xs font-sans font-semibold flex items-center justify-center shrink-0'>
           {initials}
@@ -57,7 +57,7 @@ export const ClientRow = ({ client, galleries, onAddGallery }: ClientRowProps) =
         className={`grid transition-all duration-300 ease-in-out ${open ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'}`}
       >
         <div className='overflow-hidden'>
-        <div className='bg-gray-50 border-t border-gray-100 px-4 py-3'>
+        <div className='bg-muted/30 border-t border-border px-4 py-3'>
           <div className='flex items-center justify-between mb-2'>
             <p className='text-xs font-sans font-semibold text-warm-gray uppercase tracking-wide'>{t('admin.nav.galleries')}</p>
             <button

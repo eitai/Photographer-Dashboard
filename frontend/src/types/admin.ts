@@ -10,7 +10,7 @@ export interface Client {
 }
 
 export interface AdminRecord {
-  _id: string;
+  id: string;
   name: string;
   email: string;
   role: 'admin' | 'superadmin';

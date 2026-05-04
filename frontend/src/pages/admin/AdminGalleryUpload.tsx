@@ -100,7 +100,7 @@ export const AdminGalleryUpload = () => {
       {/* Fills the layout content area — no outer scroll */}
       <div className='flex flex-col h-full -mx-4 md:-mx-8 -my-6 overflow-hidden'>
         {/* ── Header ── */}
-        <div className='shrink-0 px-4 md:px-8 pt-4 pb-0 bg-white border-b border-beige'>
+        <div className='shrink-0 px-4 md:px-8 pt-4 pb-0 bg-background border-b border-beige'>
           {/* Back button */}
           <Link
             to={gallery.clientId ? `/admin/clients/${gallery.clientId._id || gallery.clientId}` : '/admin/galleries'}
@@ -130,7 +130,7 @@ export const AdminGalleryUpload = () => {
               type='datetime-local'
               value={expiresAtInput}
               onChange={(e) => setExpiresAtInput(e.target.value)}
-              className='px-2.5 py-1.5 rounded-lg border border-beige bg-gray-50 text-xs text-charcoal focus:outline-none focus:ring-2 focus:ring-blush/50'
+              className='px-2.5 py-1.5 rounded-lg border border-beige bg-muted/30 text-xs text-charcoal focus:outline-none focus:ring-2 focus:ring-blush/50'
             />
             {expiresAtInput && (
               <button
@@ -157,8 +157,8 @@ export const AdminGalleryUpload = () => {
               onClick={() => setActiveTab('images')}
               className={`flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-t-xl transition-colors border-b-2 ${
                 activeTab === 'images'
-                  ? 'border-blush text-charcoal bg-white'
-                  : 'border-transparent text-warm-gray hover:text-charcoal hover:bg-white/60'
+                  ? 'border-blush text-charcoal bg-card'
+                  : 'border-transparent text-warm-gray hover:text-charcoal hover:bg-card/60'
               }`}
             >
               <Images size={14} />
@@ -177,8 +177,8 @@ export const AdminGalleryUpload = () => {
               onClick={() => setActiveTab('videos')}
               className={`flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-t-xl transition-colors border-b-2 ${
                 activeTab === 'videos'
-                  ? 'border-blush text-charcoal bg-white'
-                  : 'border-transparent text-warm-gray hover:text-charcoal hover:bg-white/60'
+                  ? 'border-blush text-charcoal bg-card'
+                  : 'border-transparent text-warm-gray hover:text-charcoal hover:bg-card/60'
               }`}
             >
               <Video size={14} />
@@ -198,7 +198,7 @@ export const AdminGalleryUpload = () => {
 
         {/* ── IMAGES TAB ── */}
         {activeTab === 'images' && (
-          <div className='flex flex-col flex-1 overflow-hidden bg-white'>
+          <div className='flex flex-col flex-1 overflow-hidden bg-background'>
             {/* Drop zone — compact, fixed */}
             <div className='shrink-0 px-4 md:px-8 pt-4'>
               <div
@@ -219,7 +219,7 @@ export const AdminGalleryUpload = () => {
                   }
                 }}
                 className={`flex items-center gap-3 border-2 border-dashed rounded-xl px-5 py-3 cursor-pointer transition-colors ${
-                  dragging ? 'border-blush bg-blush/10' : 'border-beige hover:border-blush/50 bg-gray-50'
+                  dragging ? 'border-blush bg-blush/10' : 'border-beige hover:border-blush/50 bg-muted/30'
                 }`}
               >
                 <CloudUpload size={20} className='text-warm-gray shrink-0' />
@@ -274,7 +274,7 @@ export const AdminGalleryUpload = () => {
 
         {/* ── VIDEOS TAB ── */}
         {activeTab === 'videos' && (
-          <div className='flex flex-col flex-1 overflow-hidden bg-white'>
+          <div className='flex flex-col flex-1 overflow-hidden bg-background'>
             {/* Drop zone — compact, fixed */}
             <div className='shrink-0 px-4 md:px-8 pt-4'>
               <input
@@ -299,7 +299,7 @@ export const AdminGalleryUpload = () => {
                     videoInputRef.current?.click();
                   }
                 }}
-                className='flex items-center gap-3 border-2 border-dashed border-beige hover:border-blush/50 rounded-xl px-5 py-3 cursor-pointer transition-colors bg-gray-50'
+                className='flex items-center gap-3 border-2 border-dashed border-beige hover:border-blush/50 rounded-xl px-5 py-3 cursor-pointer transition-colors bg-muted/30'
               >
                 <Video size={20} className='text-warm-gray shrink-0' />
                 <div>
@@ -313,7 +313,7 @@ export const AdminGalleryUpload = () => {
             {videoQueue.length > 0 && (
               <div className='shrink-0 px-4 md:px-8 pt-3 space-y-2'>
                 {videoQueue.map((item) => (
-                  <div key={item.id} className='flex items-center gap-3 text-xs bg-gray-50 border border-beige rounded-xl px-3 py-2'>
+                  <div key={item.id} className='flex items-center gap-3 text-xs bg-muted/30 border border-beige rounded-xl px-3 py-2'>
                     <span className='text-warm-gray truncate flex-1'>{item.name}</span>
                     <div className='w-28 h-1.5 bg-beige rounded-full overflow-hidden shrink-0'>
                       <div
@@ -361,7 +361,7 @@ export const AdminGalleryUpload = () => {
               {videoCount > 0 ? (
                 <div className='space-y-2'>
                   {(gallery.videos ?? []).map((v) => (
-                    <div key={v.filename} className='flex items-center gap-3 px-3 py-2 bg-gray-50 border border-beige rounded-xl'>
+                    <div key={v.filename} className='flex items-center gap-3 px-3 py-2 bg-muted/30 border border-beige rounded-xl'>
                       <video
                         src={getImageUrl(v.path)}
                         preload='metadata'

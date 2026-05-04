@@ -67,6 +67,16 @@ router.get('/settings', asyncHandler(async (req, res) => {
     contactSectionEnabled: settings?.contactSectionEnabled ?? true,
     contactSectionHeading: settings?.contactSectionHeading || '',
     contactSectionSubheading: settings?.contactSectionSubheading || '',
+    heroTagline: settings?.heroTagline || '',
+    statsEnabled: settings?.statsEnabled ?? true,
+    stats: settings?.stats || [],
+    promisesEnabled: settings?.promisesEnabled ?? true,
+    promises: settings?.promises || [],
+    faqEnabled: settings?.faqEnabled ?? true,
+    faqItems: settings?.faqItems || [],
+    finalCtaHeading: settings?.finalCtaHeading || '',
+    finalCtaSubtext: settings?.finalCtaSubtext || '',
+    finalCtaButtonLabel: settings?.finalCtaButtonLabel || '',
   });
 }));
 

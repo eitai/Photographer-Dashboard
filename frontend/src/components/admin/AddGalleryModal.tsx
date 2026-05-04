@@ -85,7 +85,7 @@ export const AddGalleryModal = ({
       onClick={handleBackdropClick}
     >
       <div
-        className='bg-white rounded-2xl shadow-xl p-6 w-full max-w-md mx-4'
+        className='bg-card rounded-2xl shadow-xl p-6 w-full max-w-md mx-4'
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}

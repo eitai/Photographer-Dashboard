@@ -1,9 +1,10 @@
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useI18n } from '@/lib/i18n';
-import { LayoutDashboard, Users, BookOpen, Settings, LogOut, Languages, Star, Shield, Mail } from 'lucide-react';
+import { LayoutDashboard, Users, BookOpen, Settings, LogOut, Languages, Star, Shield, Mail, Moon, Sun } from 'lucide-react';
 import { useMyStorage } from '@/hooks/useQueries';
 import { StorageBar } from '@/components/admin/StorageBar';
+import { useAuthStore } from '@/store/authStore';
 
 interface AdminSidebarProps {
   isOpen?: boolean;
@@ -15,6 +16,8 @@ export const AdminSidebar = ({ isOpen, onClose }: AdminSidebarProps) => {
   const { t, lang, dir, toggleLang } = useI18n();
   const navigate = useNavigate();
   const { data: storage } = useMyStorage();
+  const darkMode = useAuthStore((s) => s.darkMode);
+  const setDarkMode = useAuthStore((s) => s.setDarkMode);
 
   const NAV_ITEMS =
     admin?.role === 'superadmin'
@@ -36,15 +39,15 @@ export const AdminSidebar = ({ isOpen, onClose }: AdminSidebarProps) => {
   return (
     <aside
       className={`
-      fixed inset-y-0 z-30 w-60 bg-white flex flex-col
+      fixed inset-y-0 z-30 w-60 bg-sidebar-background flex flex-col
       transition-transform duration-200
-      ${dir === 'rtl' ? 'right-0 border-l border-gray-200' : 'left-0 border-r border-gray-200'}
+      ${dir === 'rtl' ? 'right-0 border-l border-border' : 'left-0 border-r border-border'}
       ${isOpen ? 'translate-x-0' : dir === 'rtl' ? 'translate-x-full' : '-translate-x-full'}
       md:static md:translate-x-0
     `}
     >
       {/* Logo */}
-      <div className='h-16 px-6 border-b border-gray-100 flex items-center'>
+      <div className='h-16 px-6 border-b border-border flex items-center'>
         <img src='/logos/03_logo_horizontal_transparent.png' alt='LIGHT STUDIO' className='h-full w-full object-contain py-2 transition-transform duration-200 hover:scale-110' />
       </div>
 
@@ -91,6 +94,14 @@ export const AdminSidebar = ({ isOpen, onClose }: AdminSidebarProps) => {
         >
           <Languages size={17} />
           {lang === 'he' ? 'English' : 'עברית'}
+        </button>
+        {/* Dark mode toggle */}
+        <button
+          onClick={() => setDarkMode(!darkMode)}
+          className='flex items-center gap-3 w-full px-3 py-2 rounded-xl text-sm font-sans text-warm-gray hover:bg-ivory hover:text-charcoal transition-colors duration-150 mb-1'
+        >
+          {darkMode ? <Sun size={17} /> : <Moon size={17} />}
+          {darkMode ? (lang === 'he' ? 'מצב בהיר' : 'Light mode') : (lang === 'he' ? 'מצב כהה' : 'Dark mode')}
         </button>
         <button
           onClick={handleLogout}

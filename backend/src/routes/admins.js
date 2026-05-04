@@ -27,6 +27,9 @@ router.post('/', asyncHandler(async (req, res) => {
   if (!name || !email || !password)
     return res.status(400).json({ message: 'Name, email and password are required' });
 
+  if (role !== undefined && !['admin', 'superadmin'].includes(role))
+    return res.status(400).json({ message: 'role must be admin or superadmin' });
+
   const pwErr = validatePassword(password);
   if (pwErr) return res.status(400).json({ message: pwErr });
 
@@ -36,6 +39,12 @@ router.post('/', asyncHandler(async (req, res) => {
   if (username) {
     const usernameTaken = await Admin.findOne({ username: username.toLowerCase() });
     if (usernameTaken) return res.status(400).json({ message: 'Username already taken' });
+  }
+
+  if (quotaGB !== undefined && quotaGB !== null && quotaGB !== 0) {
+    const gb = parseFloat(quotaGB);
+    if (!isFinite(gb) || gb < 0.1 || gb > 10000)
+      return res.status(400).json({ message: 'quotaGB must be between 0.1 and 10000, or null for unlimited' });
   }
 
   const admin = await Admin.create({

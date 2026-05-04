@@ -57,6 +57,16 @@ router.get('/', protect, asyncHandler(async (req, res) => {
     contactSectionEnabled: settings?.contactSectionEnabled ?? true,
     contactSectionHeading: settings?.contactSectionHeading || '',
     contactSectionSubheading: settings?.contactSectionSubheading || '',
+    heroTagline: settings?.heroTagline || '',
+    statsEnabled: settings?.statsEnabled ?? true,
+    stats: settings?.stats || [],
+    promisesEnabled: settings?.promisesEnabled ?? true,
+    promises: settings?.promises || [],
+    faqEnabled: settings?.faqEnabled ?? true,
+    faqItems: settings?.faqItems || [],
+    finalCtaHeading: settings?.finalCtaHeading || '',
+    finalCtaSubtext: settings?.finalCtaSubtext || '',
+    finalCtaButtonLabel: settings?.finalCtaButtonLabel || '',
   });
 }));
 
@@ -87,6 +97,7 @@ router.put('/landing', protect, asyncHandler(async (req, res) => {
   const {
     bio, phone, instagramHandle, facebookUrl, heroSubtitle, contactEmail, theme,
     heroOverlayOpacity, heroCtaPrimaryLabel, heroCtaSecondaryLabel, aboutSectionTitle, tiktokUrl,
+    heroTagline, finalCtaHeading, finalCtaSubtext, finalCtaButtonLabel,
   } = req.body;
   const data = {};
   if (bio !== undefined) data.bio = String(bio).slice(0, 800);
@@ -101,6 +112,10 @@ router.put('/landing', protect, asyncHandler(async (req, res) => {
   if (heroCtaSecondaryLabel !== undefined) data.heroCtaSecondaryLabel = heroCtaSecondaryLabel;
   if (aboutSectionTitle !== undefined) data.aboutSectionTitle = aboutSectionTitle;
   if (tiktokUrl !== undefined) data.tiktokUrl = tiktokUrl;
+  if (heroTagline !== undefined) data.heroTagline = String(heroTagline).slice(0, 200);
+  if (finalCtaHeading !== undefined) data.finalCtaHeading = String(finalCtaHeading).slice(0, 120);
+  if (finalCtaSubtext !== undefined) data.finalCtaSubtext = String(finalCtaSubtext).slice(0, 300);
+  if (finalCtaButtonLabel !== undefined) data.finalCtaButtonLabel = String(finalCtaButtonLabel).slice(0, 60);
 
   const settings = await SiteSettings.upsert(req.admin.id, data);
   res.json({
@@ -116,6 +131,10 @@ router.put('/landing', protect, asyncHandler(async (req, res) => {
     heroCtaSecondaryLabel: settings.heroCtaSecondaryLabel,
     aboutSectionTitle: settings.aboutSectionTitle,
     tiktokUrl: settings.tiktokUrl,
+    heroTagline: settings.heroTagline || '',
+    finalCtaHeading: settings.finalCtaHeading || '',
+    finalCtaSubtext: settings.finalCtaSubtext || '',
+    finalCtaButtonLabel: settings.finalCtaButtonLabel || '',
   });
 }));
 
@@ -157,6 +176,45 @@ router.put('/testimonials', protect, asyncHandler(async (req, res) => {
     testimonialsEnabled: settings.testimonialsEnabled,
     testimonials: settings.testimonials,
   });
+}));
+
+// PUT /api/settings/stats  — ADMIN
+router.put('/stats', protect, asyncHandler(async (req, res) => {
+  const { enabled, items } = req.body;
+  if (!Array.isArray(items)) return res.status(400).json({ message: 'items must be an array' });
+  if (items.length > 4) return res.status(400).json({ message: 'Maximum 4 stat items allowed' });
+
+  const settings = await SiteSettings.upsert(req.admin.id, {
+    statsEnabled: !!enabled,
+    stats: items,
+  });
+  res.json({ statsEnabled: settings.statsEnabled, stats: settings.stats });
+}));
+
+// PUT /api/settings/promises  — ADMIN
+router.put('/promises', protect, asyncHandler(async (req, res) => {
+  const { enabled, items } = req.body;
+  if (!Array.isArray(items)) return res.status(400).json({ message: 'items must be an array' });
+  if (items.length > 4) return res.status(400).json({ message: 'Maximum 4 promise items allowed' });
+
+  const settings = await SiteSettings.upsert(req.admin.id, {
+    promisesEnabled: !!enabled,
+    promises: items,
+  });
+  res.json({ promisesEnabled: settings.promisesEnabled, promises: settings.promises });
+}));
+
+// PUT /api/settings/faq  — ADMIN
+router.put('/faq', protect, asyncHandler(async (req, res) => {
+  const { enabled, items } = req.body;
+  if (!Array.isArray(items)) return res.status(400).json({ message: 'items must be an array' });
+  if (items.length > 10) return res.status(400).json({ message: 'Maximum 10 FAQ items allowed' });
+
+  const settings = await SiteSettings.upsert(req.admin.id, {
+    faqEnabled: !!enabled,
+    faqItems: items,
+  });
+  res.json({ faqEnabled: settings.faqEnabled, faqItems: settings.faqItems });
 }));
 
 // PUT /api/settings/packages  — ADMIN

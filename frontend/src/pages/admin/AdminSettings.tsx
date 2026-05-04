@@ -22,6 +22,10 @@ import {
   Pencil,
   Check,
   X,
+  Aperture,
+  Clock,
+  Smile,
+  Award,
 } from 'lucide-react';
 import { InputField, TextareaField } from '@/components/admin/InputField';
 import { Button } from '@/components/admin/Button';
@@ -34,6 +38,26 @@ import { useQueryClient } from '@tanstack/react-query';
 // ---------------------------------------------------------------------------
 
 type HeroOverlayOpacity = 'light' | 'medium' | 'dark';
+
+interface StatItem {
+  id: string;
+  value: number;
+  suffix: string;
+  label: string;
+}
+
+interface PromiseItem {
+  id: string;
+  icon: string;
+  title: string;
+  description: string;
+}
+
+interface FaqItem {
+  id: string;
+  q: string;
+  a: string;
+}
 
 interface ServiceItem {
   id: string;
@@ -82,6 +106,10 @@ const SERVICE_ICONS = [
   { name: 'mountain', Icon: Mountain },
   { name: 'users', Icon: Users },
   { name: 'star', Icon: Star },
+  { name: 'aperture', Icon: Aperture },
+  { name: 'clock', Icon: Clock },
+  { name: 'smile', Icon: Smile },
+  { name: 'award', Icon: Award },
 ];
 
 const SESSION_TYPE_OPTIONS = ['family', 'maternity', 'newborn', 'branding', 'landscape', 'other'] as const;
@@ -367,6 +395,35 @@ export const AdminSettings = () => {
   const [uploadingIgImage, setUploadingIgImage] = useState(false);
   const igFeedInputRef = useRef<HTMLInputElement>(null);
 
+  // Stats
+  const [statsEnabled, setStatsEnabled] = useState(true);
+  const [stats, setStats] = useState<StatItem[]>([]);
+  const [savingStats, setSavingStats] = useState(false);
+  const [showStatForm, setShowStatForm] = useState(false);
+  const [editingStatId, setEditingStatId] = useState<string | null>(null);
+  const [statForm, setStatForm] = useState({ value: 0, suffix: '+', label: '' });
+
+  // Promises
+  const [promisesEnabled, setPromisesEnabled] = useState(true);
+  const [promises, setPromises] = useState<PromiseItem[]>([]);
+  const [savingPromises, setSavingPromises] = useState(false);
+  const [showPromiseForm, setShowPromiseForm] = useState(false);
+  const [editingPromiseId, setEditingPromiseId] = useState<string | null>(null);
+  const [promiseForm, setPromiseForm] = useState({ icon: 'camera', title: '', description: '' });
+
+  // FAQ
+  const [faqEnabled, setFaqEnabled] = useState(true);
+  const [faqItems, setFaqItems] = useState<FaqItem[]>([]);
+  const [savingFaq, setSavingFaq] = useState(false);
+  const [showFaqForm, setShowFaqForm] = useState(false);
+  const [editingFaqId, setEditingFaqId] = useState<string | null>(null);
+  const [faqForm, setFaqForm] = useState({ q: '', a: '' });
+
+  // Hero tagline and Final CTA
+  const [heroTagline, setHeroTagline] = useState('');
+  const [finalCta, setFinalCta] = useState({ heading: '', subtext: '', buttonLabel: '' });
+  const [savingFinalCta, setSavingFinalCta] = useState(false);
+
   // ── Security tab state ──────────────────────────────────────────────────────
   const [disconnectingSSO, setDisconnectingSSO] = useState(false);
 
@@ -426,6 +483,14 @@ export const AdminSettings = () => {
     setIgFeedImages(s.instagramFeedImages ?? []);
     setAutoSendEmail(s.autoSendGalleryEmail ?? true);
     setAutoSendSms(s.autoSendGallerySms ?? false);
+    setHeroTagline(s.heroTagline || '');
+    setFinalCta({ heading: s.finalCtaHeading || '', subtext: s.finalCtaSubtext || '', buttonLabel: s.finalCtaButtonLabel || '' });
+    setStatsEnabled(s.statsEnabled ?? true);
+    setStats(s.stats ?? []);
+    setPromisesEnabled(s.promisesEnabled ?? true);
+    setPromises(s.promises ?? []);
+    setFaqEnabled(s.faqEnabled ?? true);
+    setFaqItems(s.faqItems ?? []);
   }, [settingsData]);
 
   // ── SSO linked toast on redirect ─────────────────────────────────────────
@@ -565,6 +630,7 @@ export const AdminSettings = () => {
     setSavingHero(true);
     try {
       await api.put('/settings/landing', {
+        heroTagline: heroTagline,
         heroSubtitle: hero.heroSubtitle,
         heroOverlayOpacity: hero.heroOverlayOpacity,
         heroCtaPrimaryLabel: hero.heroCtaPrimaryLabel,
@@ -912,6 +978,89 @@ export const AdminSettings = () => {
     }
   };
 
+  // ── Handlers: Stats ────────────────────────────────────────────────────────
+  const resetStatForm = () => { setStatForm({ value: 0, suffix: '+', label: '' }); setEditingStatId(null); setShowStatForm(false); };
+  const handleStatSubmit = () => {
+    if (!statForm.label.trim()) return;
+    if (editingStatId) {
+      setStats((prev) => prev.map((s) => s.id === editingStatId ? { ...statForm, id: editingStatId } : s));
+    } else {
+      if (stats.length >= 4) { toast.error('Maximum 4 stats'); return; }
+      setStats((prev) => [...prev, { ...statForm, id: newId() }]);
+    }
+    resetStatForm();
+  };
+  const handleStatEdit = (item: StatItem) => { setStatForm({ value: item.value, suffix: item.suffix, label: item.label }); setEditingStatId(item.id); setShowStatForm(true); };
+  const handleStatDelete = (id: string) => setStats((prev) => prev.filter((s) => s.id !== id));
+  const handleSaveStats = async () => {
+    setSavingStats(true);
+    try {
+      await api.put('/settings/stats', { enabled: statsEnabled, items: stats });
+      toast.success(t('admin.settings.landing_saved'));
+      queryClient.invalidateQueries({ queryKey: queryKeys.settings });
+    } catch { toast.error(t('admin.settings.landing_failed')); }
+    finally { setSavingStats(false); }
+  };
+
+  // ── Handlers: Promises ──────────────────────────────────────────────────────
+  const resetPromiseForm = () => { setPromiseForm({ icon: 'camera', title: '', description: '' }); setEditingPromiseId(null); setShowPromiseForm(false); };
+  const handlePromiseSubmit = () => {
+    if (!promiseForm.title.trim()) return;
+    if (editingPromiseId) {
+      setPromises((prev) => prev.map((p) => p.id === editingPromiseId ? { ...promiseForm, id: editingPromiseId } : p));
+    } else {
+      if (promises.length >= 4) { toast.error('Maximum 4 promises'); return; }
+      setPromises((prev) => [...prev, { ...promiseForm, id: newId() }]);
+    }
+    resetPromiseForm();
+  };
+  const handlePromiseEdit = (item: PromiseItem) => { setPromiseForm({ icon: item.icon, title: item.title, description: item.description }); setEditingPromiseId(item.id); setShowPromiseForm(true); };
+  const handlePromiseDelete = (id: string) => setPromises((prev) => prev.filter((p) => p.id !== id));
+  const handleSavePromises = async () => {
+    setSavingPromises(true);
+    try {
+      await api.put('/settings/promises', { enabled: promisesEnabled, items: promises });
+      toast.success(t('admin.settings.landing_saved'));
+      queryClient.invalidateQueries({ queryKey: queryKeys.settings });
+    } catch { toast.error(t('admin.settings.landing_failed')); }
+    finally { setSavingPromises(false); }
+  };
+
+  // ── Handlers: FAQ ───────────────────────────────────────────────────────────
+  const resetFaqForm = () => { setFaqForm({ q: '', a: '' }); setEditingFaqId(null); setShowFaqForm(false); };
+  const handleFaqSubmit = () => {
+    if (!faqForm.q.trim() || !faqForm.a.trim()) return;
+    if (editingFaqId) {
+      setFaqItems((prev) => prev.map((f) => f.id === editingFaqId ? { ...faqForm, id: editingFaqId } : f));
+    } else {
+      if (faqItems.length >= 10) { toast.error('Maximum 10 FAQ items'); return; }
+      setFaqItems((prev) => [...prev, { ...faqForm, id: newId() }]);
+    }
+    resetFaqForm();
+  };
+  const handleFaqEdit = (item: FaqItem) => { setFaqForm({ q: item.q, a: item.a }); setEditingFaqId(item.id); setShowFaqForm(true); };
+  const handleFaqDelete = (id: string) => setFaqItems((prev) => prev.filter((f) => f.id !== id));
+  const handleSaveFaq = async () => {
+    setSavingFaq(true);
+    try {
+      await api.put('/settings/faq', { enabled: faqEnabled, items: faqItems });
+      toast.success(t('admin.settings.landing_saved'));
+      queryClient.invalidateQueries({ queryKey: queryKeys.settings });
+    } catch { toast.error(t('admin.settings.landing_failed')); }
+    finally { setSavingFaq(false); }
+  };
+
+  // ── Handlers: Final CTA ─────────────────────────────────────────────────────
+  const handleSaveFinalCta = async () => {
+    setSavingFinalCta(true);
+    try {
+      await api.put('/settings/landing', { finalCtaHeading: finalCta.heading, finalCtaSubtext: finalCta.subtext, finalCtaButtonLabel: finalCta.buttonLabel });
+      toast.success(t('admin.settings.landing_saved'));
+      queryClient.invalidateQueries({ queryKey: queryKeys.settings });
+    } catch { toast.error(t('admin.settings.landing_failed')); }
+    finally { setSavingFinalCta(false); }
+  };
+
   // ── Tab bar ─────────────────────────────────────────────────────────────────
   const tabs: { id: SettingsTab; label: string }[] = [
     { id: 'identity', label: t('admin.settings.tab.identity') },
@@ -1159,6 +1308,17 @@ export const AdminSettings = () => {
               </div>
             </div>
 
+            {/* Hero tagline */}
+            <div>
+              <label className='block text-xs text-warm-gray mb-1'>Tagline above title</label>
+              <InputField
+                type='text'
+                value={heroTagline}
+                onChange={(e) => setHeroTagline(e.target.value)}
+                placeholder='צלם מקצועי · אירועים ומשפחות'
+              />
+            </div>
+
             {/* Hero subtitle */}
             <div>
               <label className='block text-xs text-warm-gray mb-1'>{t('admin.settings.hero_subtitle')}</label>
@@ -1215,6 +1375,26 @@ export const AdminSettings = () => {
 
             <Button type='button' variant='primary' onClick={handleSaveHero} disabled={savingHero}>
               {savingHero ? t('admin.common.saving') : t('admin.settings.save_hero')}
+            </Button>
+          </div>
+
+          {/* Final CTA Section */}
+          <div className='bg-card rounded-xl border border-beige p-6 space-y-4'>
+            <h2 className='font-semibold text-charcoal'>Final CTA Section</h2>
+            <div>
+              <label className='block text-xs text-warm-gray mb-1'>Heading</label>
+              <InputField type='text' value={finalCta.heading} onChange={(e) => setFinalCta({ ...finalCta, heading: e.target.value })} placeholder='מוכנים לצלם? / Ready to Shoot?' />
+            </div>
+            <div>
+              <label className='block text-xs text-warm-gray mb-1'>Subtext</label>
+              <InputField type='text' value={finalCta.subtext} onChange={(e) => setFinalCta({ ...finalCta, subtext: e.target.value })} placeholder='צרו קשר היום...' />
+            </div>
+            <div>
+              <label className='block text-xs text-warm-gray mb-1'>Button label</label>
+              <InputField type='text' value={finalCta.buttonLabel} onChange={(e) => setFinalCta({ ...finalCta, buttonLabel: e.target.value })} placeholder='שלח הודעה / Send a Message' />
+            </div>
+            <Button type='button' variant='primary' onClick={handleSaveFinalCta} disabled={savingFinalCta}>
+              {savingFinalCta ? t('admin.common.saving') : t('admin.settings.save_hero')}
             </Button>
           </div>
         </div>
@@ -1709,6 +1889,212 @@ export const AdminSettings = () => {
                 </>
               )}
             </div>
+          </SectionCard>
+
+          {/* 4h: Stats */}
+          <SectionCard
+            title='Stats Strip'
+            enabled={statsEnabled}
+            onToggle={() => setStatsEnabled((v) => !v)}
+            enabledLabel={t('admin.settings.sections.enabled')}
+            onSave={handleSaveStats}
+            saveLabel={t('admin.settings.landing_saved') ? 'Save Stats' : 'Save Stats'}
+            saving={savingStats}
+          >
+            <ul className='space-y-2'>
+              {stats.map((item) => (
+                <li key={item.id} className='flex items-center gap-2 border border-beige rounded-lg px-3 py-2'>
+                  <div className='flex-1 min-w-0'>
+                    <p className='text-sm font-medium text-charcoal'>
+                      {item.value}{item.suffix}
+                    </p>
+                    <p className='text-xs text-warm-gray truncate'>{item.label}</p>
+                  </div>
+                  <div className='flex items-center gap-1 shrink-0'>
+                    <button type='button' onClick={() => handleStatEdit(item)} className='p-1 text-warm-gray hover:text-blush'>
+                      <Pencil size={14} />
+                    </button>
+                    <button type='button' onClick={() => handleStatDelete(item.id)} className='p-1 text-warm-gray hover:text-red-500'>
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+
+            {showStatForm ? (
+              <div className='border border-beige rounded-xl p-4 bg-ivory space-y-3'>
+                <div className='grid grid-cols-2 gap-3'>
+                  <div>
+                    <label className='block text-xs text-warm-gray mb-1'>Value</label>
+                    <input
+                      type='number'
+                      className={fieldClass}
+                      value={statForm.value}
+                      onChange={(e) => setStatForm((f) => ({ ...f, value: Number(e.target.value) }))}
+                    />
+                  </div>
+                  <div>
+                    <label className='block text-xs text-warm-gray mb-1'>Suffix</label>
+                    <input
+                      className={fieldClass}
+                      value={statForm.suffix}
+                      maxLength={5}
+                      onChange={(e) => setStatForm((f) => ({ ...f, suffix: e.target.value }))}
+                      placeholder='+ or %'
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className='block text-xs text-warm-gray mb-1'>Label</label>
+                  <input
+                    className={fieldClass}
+                    value={statForm.label}
+                    onChange={(e) => setStatForm((f) => ({ ...f, label: e.target.value }))}
+                    placeholder='Happy Families / משפחות מרוצות'
+                  />
+                </div>
+                <div className='flex gap-2 pt-1'>
+                  <button type='button' onClick={handleStatSubmit} className='flex items-center gap-1 px-3 py-1.5 bg-blush text-white text-xs rounded-lg hover:opacity-90'>
+                    <Check size={13} /> Save
+                  </button>
+                  <button type='button' onClick={resetStatForm} className='flex items-center gap-1 px-3 py-1.5 text-xs text-warm-gray hover:text-charcoal'>
+                    <X size={13} /> {t('admin.common.cancel')}
+                  </button>
+                </div>
+              </div>
+            ) : stats.length < 4 && (
+              <button
+                type='button'
+                onClick={() => { setEditingStatId(null); setShowStatForm(true); }}
+                className='flex items-center gap-1 text-xs text-blush hover:text-charcoal transition-colors'
+              >
+                <Plus size={13} /> Add stat
+              </button>
+            )}
+          </SectionCard>
+
+          {/* 4i: Promises */}
+          <SectionCard
+            title='Why Choose Us (Promises)'
+            enabled={promisesEnabled}
+            onToggle={() => setPromisesEnabled((v) => !v)}
+            enabledLabel={t('admin.settings.sections.enabled')}
+            onSave={handleSavePromises}
+            saveLabel='Save Promises'
+            saving={savingPromises}
+          >
+            <ul className='space-y-2'>
+              {promises.map((item) => {
+                const IconComp = SERVICE_ICONS.find((ic) => ic.name === item.icon)?.Icon ?? Camera;
+                return (
+                  <li key={item.id} className='flex items-start gap-2 border border-beige rounded-lg px-3 py-2'>
+                    <IconComp size={16} className='mt-0.5 text-blush shrink-0' />
+                    <div className='flex-1 min-w-0'>
+                      <p className='text-sm font-medium text-charcoal truncate'>{item.title}</p>
+                      <p className='text-xs text-warm-gray truncate'>{item.description}</p>
+                    </div>
+                    <div className='flex items-center gap-1 shrink-0'>
+                      <button type='button' onClick={() => handlePromiseEdit(item)} className='p-1 text-warm-gray hover:text-blush'>
+                        <Pencil size={14} />
+                      </button>
+                      <button type='button' onClick={() => handlePromiseDelete(item.id)} className='p-1 text-warm-gray hover:text-red-500'>
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+
+            {showPromiseForm ? (
+              <div className='border border-beige rounded-xl p-4 bg-ivory space-y-3'>
+                <ServiceIconPicker value={promiseForm.icon} onChange={(v) => setPromiseForm((f) => ({ ...f, icon: v }))} />
+                <div>
+                  <label className='block text-xs text-warm-gray mb-1'>{t('admin.settings.sections.title')}</label>
+                  <input className={fieldClass} value={promiseForm.title} onChange={(e) => setPromiseForm((f) => ({ ...f, title: e.target.value }))} placeholder='Uncompromising Quality' />
+                </div>
+                <div>
+                  <label className='block text-xs text-warm-gray mb-1'>{t('admin.settings.sections.description')}</label>
+                  <textarea className={`${fieldClass} resize-none`} rows={3} value={promiseForm.description} onChange={(e) => setPromiseForm((f) => ({ ...f, description: e.target.value }))} />
+                </div>
+                <div className='flex gap-2 pt-1'>
+                  <button type='button' onClick={handlePromiseSubmit} className='flex items-center gap-1 px-3 py-1.5 bg-blush text-white text-xs rounded-lg hover:opacity-90'>
+                    <Check size={13} /> Save
+                  </button>
+                  <button type='button' onClick={resetPromiseForm} className='flex items-center gap-1 px-3 py-1.5 text-xs text-warm-gray hover:text-charcoal'>
+                    <X size={13} /> {t('admin.common.cancel')}
+                  </button>
+                </div>
+              </div>
+            ) : promises.length < 4 && (
+              <button
+                type='button'
+                onClick={() => { setEditingPromiseId(null); setShowPromiseForm(true); }}
+                className='flex items-center gap-1 text-xs text-blush hover:text-charcoal transition-colors'
+              >
+                <Plus size={13} /> Add promise
+              </button>
+            )}
+          </SectionCard>
+
+          {/* 4j: FAQ */}
+          <SectionCard
+            title='FAQ'
+            enabled={faqEnabled}
+            onToggle={() => setFaqEnabled((v) => !v)}
+            enabledLabel={t('admin.settings.sections.enabled')}
+            onSave={handleSaveFaq}
+            saveLabel='Save FAQ'
+            saving={savingFaq}
+          >
+            <ul className='space-y-2'>
+              {faqItems.map((item) => (
+                <li key={item.id} className='flex items-start gap-2 border border-beige rounded-lg px-3 py-2'>
+                  <div className='flex-1 min-w-0'>
+                    <p className='text-sm text-charcoal line-clamp-1'>{item.q}</p>
+                    <p className='text-xs text-warm-gray line-clamp-1 mt-0.5'>{item.a}</p>
+                  </div>
+                  <div className='flex items-center gap-1 shrink-0'>
+                    <button type='button' onClick={() => handleFaqEdit(item)} className='p-1 text-warm-gray hover:text-blush'>
+                      <Pencil size={14} />
+                    </button>
+                    <button type='button' onClick={() => handleFaqDelete(item.id)} className='p-1 text-warm-gray hover:text-red-500'>
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+
+            {showFaqForm ? (
+              <div className='border border-beige rounded-xl p-4 bg-ivory space-y-3'>
+                <div>
+                  <label className='block text-xs text-warm-gray mb-1'>Question</label>
+                  <input className={fieldClass} value={faqForm.q} onChange={(e) => setFaqForm((f) => ({ ...f, q: e.target.value }))} placeholder='How long does it take...' />
+                </div>
+                <div>
+                  <label className='block text-xs text-warm-gray mb-1'>Answer</label>
+                  <textarea className={`${fieldClass} resize-none`} rows={4} value={faqForm.a} onChange={(e) => setFaqForm((f) => ({ ...f, a: e.target.value }))} />
+                </div>
+                <div className='flex gap-2 pt-1'>
+                  <button type='button' onClick={handleFaqSubmit} className='flex items-center gap-1 px-3 py-1.5 bg-blush text-white text-xs rounded-lg hover:opacity-90'>
+                    <Check size={13} /> Save
+                  </button>
+                  <button type='button' onClick={resetFaqForm} className='flex items-center gap-1 px-3 py-1.5 text-xs text-warm-gray hover:text-charcoal'>
+                    <X size={13} /> {t('admin.common.cancel')}
+                  </button>
+                </div>
+              </div>
+            ) : faqItems.length < 10 && (
+              <button
+                type='button'
+                onClick={() => { setEditingFaqId(null); setShowFaqForm(true); }}
+                className='flex items-center gap-1 text-xs text-blush hover:text-charcoal transition-colors'
+              >
+                <Plus size={13} /> Add FAQ item
+              </button>
+            )}
           </SectionCard>
         </div>
       )}

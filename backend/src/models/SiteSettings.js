@@ -68,6 +68,13 @@ async function upsert(adminId, data, { populate } = {}) {
     contactSectionEnabled: 'contact_section_enabled',
     contactSectionHeading: 'contact_section_heading',
     contactSectionSubheading: 'contact_section_subheading',
+    heroTagline: 'hero_tagline',
+    statsEnabled: 'stats_enabled',
+    promisesEnabled: 'promises_enabled',
+    faqEnabled: 'faq_enabled',
+    finalCtaHeading: 'final_cta_heading',
+    finalCtaSubtext: 'final_cta_subtext',
+    finalCtaButtonLabel: 'final_cta_button_label',
   };
 
   // JSONB columns: camelCase key → snake_case DB column
@@ -75,6 +82,9 @@ async function upsert(adminId, data, { populate } = {}) {
     services: 'services',
     testimonials: 'testimonials',
     packages: 'packages',
+    stats: 'stats',
+    promises: 'promises',
+    faqItems: 'faq_items',
   };
 
   const sets = [];

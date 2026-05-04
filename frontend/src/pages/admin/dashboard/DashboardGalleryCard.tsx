@@ -52,7 +52,7 @@ export const GalleryCard = ({ gallery, client }: { gallery: RichGallery; client:
   })();
 
   return (
-    <div className='flex items-center gap-3 py-2 px-3 bg-white rounded-lg border border-gray-100'>
+    <div className='flex items-center gap-3 py-2 px-3 bg-card rounded-lg border border-border'>
       <GalleryMosaic name={gallery.name} />
       <div className='flex-1 min-w-0'>
         <Link

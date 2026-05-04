@@ -77,7 +77,7 @@ export const AdminDashboard = () => {
   return (
     <AdminLayout title={t('admin.nav.dashboard')} actions={topBarActions}>
       {/* Full-height shell — no outer scroll */}
-      <div className='flex flex-col h-full -mx-4 md:-mx-8 -my-6 overflow-hidden bg-gray-50'>
+      <div className='flex flex-col h-full -mx-4 md:-mx-8 -my-6 overflow-hidden bg-muted/30'>
         {/* ── Fixed top section: landing link + stat cards ── */}
         <div className='shrink-0 px-4 md:px-8 pt-6 pb-4 space-y-4'>
           {admin?.id && (
@@ -102,7 +102,7 @@ export const AdminDashboard = () => {
           {isLoading ? (
             <div className='grid grid-cols-1 sm:grid-cols-3 gap-4'>
               {[0, 1, 2].map((i) => (
-                <div key={i} className='bg-white rounded-xl shadow-sm p-5 space-y-3'>
+                <div key={i} className='bg-card rounded-xl shadow-sm p-5 space-y-3'>
                   <Skeleton className='h-8 w-16' />
                   <Skeleton className='h-4 w-24' />
                   <Skeleton className='h-3 w-32' />
@@ -142,7 +142,7 @@ export const AdminDashboard = () => {
         {/* ── Scrollable main area ── */}
         <div className='flex-1 overflow-hidden flex flex-col lg:flex-row'>
           {/* Left — client list */}
-          <div className='flex-1 min-w-0 flex flex-col bg-white rounded-2xl shadow m-4'>
+          <div className='flex-1 min-w-0 flex flex-col bg-card rounded-2xl shadow m-4'>
             {/* Filter bar — fixed */}
             <div className='shrink-0 px-4 md:px-6 pt-4 pb-3'>
               <div className='flex items-center justify-between mb-3'>
@@ -171,7 +171,7 @@ export const AdminDashboard = () => {
               {isLoading ? (
                 <div className='flex flex-col gap-3'>
                   {[0, 1, 2, 3].map((i) => (
-                    <div key={i} className='bg-white rounded-xl shadow-sm p-4 flex items-center gap-3'>
+                    <div key={i} className='bg-card rounded-xl shadow-sm p-4 flex items-center gap-3'>
                       <Skeleton className='h-9 w-9 rounded-full shrink-0' />
                       <div className='flex-1 space-y-2'>
                         <Skeleton className='h-4 w-40' />
@@ -207,7 +207,7 @@ export const AdminDashboard = () => {
 
       {showNewClient && (
         <div className='fixed inset-0 z-50 flex items-center justify-center bg-black/40' onClick={() => setShowNewClient(false)}>
-          <div className='bg-white rounded-2xl shadow-xl p-6 w-full max-w-sm mx-4' onClick={(e) => e.stopPropagation()}>
+          <div className='bg-card rounded-2xl shadow-xl p-6 w-full max-w-sm mx-4' onClick={(e) => e.stopPropagation()}>
             <div className='flex items-center justify-between mb-4'>
               <h2 className='text-base font-semibold text-charcoal'>{t('admin.dashboard.quick_add_title')}</h2>
               <button

@@ -2,7 +2,7 @@ import { forwardRef } from 'react';
 import { cn } from '@/lib/utils';
 
 const BASE =
-  'w-full rounded-[5px] border border-gray-200 bg-white text-sm text-charcoal placeholder:text-warm-gray outline-none transition-colors disabled:opacity-50 disabled:cursor-not-allowed focus:border-charcoal focus:shadow-[0_0_0_3px_rgba(0,0,0,0.05)]';
+  'w-full rounded-[5px] border border-border bg-background text-sm text-charcoal placeholder:text-warm-gray outline-none transition-colors disabled:opacity-50 disabled:cursor-not-allowed focus:border-charcoal focus:shadow-[0_0_0_3px_rgba(0,0,0,0.05)]';
 
 // ---------------------------------------------------------------------------
 // InputField

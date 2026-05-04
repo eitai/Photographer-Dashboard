@@ -32,7 +32,7 @@ export const BulkActionBar = ({ count, onClear, onDelete, onSelectAll, allSelect
       {onSelectAll && (
         <button
           onClick={onSelectAll}
-          className='flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium text-charcoal border border-beige bg-white hover:border-blush hover:bg-blush/10 transition-colors'
+          className='flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium text-charcoal border border-beige bg-card hover:border-blush hover:bg-blush/10 transition-colors'
         >
           {allSelected ? (
             <>
