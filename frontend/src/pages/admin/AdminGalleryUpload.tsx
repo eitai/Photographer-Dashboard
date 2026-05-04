@@ -277,7 +277,7 @@ export const AdminGalleryUpload = () => {
         {activeTab === 'images' && (
           <div className='flex flex-1 overflow-hidden bg-background'>
             {/* Folder sidebar */}
-            <div className='w-48 shrink-0 border-e border-beige overflow-y-auto py-3 px-2'>
+            <div className='w-72 shrink-0 border-e border-beige overflow-y-auto py-3 px-2'>
               <FolderSidebar
                 folders={folders}
                 activeFolderId={activeFolderId}

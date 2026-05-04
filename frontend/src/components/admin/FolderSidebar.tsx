@@ -131,7 +131,7 @@ export function FolderSidebar({
             >
               {isActive(folder._id) ? <FolderOpen size={14} className='shrink-0 text-blush' /> : <Folder size={14} className='shrink-0' />}
               <span className='flex-1 truncate'>{folder.name}</span>
-              <span className='text-xs tabular-nums opacity-60'>{imageCounts[folder._id] ?? 0}</span>
+              <span className='text-xs tabular-nums opacity-60 group-hover:invisible'>{imageCounts[folder._id] ?? 0}</span>
             </button>
           )}
 
