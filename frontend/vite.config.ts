@@ -12,6 +12,8 @@ export default defineConfig({
     },
   },
   plugins: [react()],
+  // Required for the @jsquash WASM workers to bundle correctly with code-splitting.
+  worker: { format: 'es' },
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),

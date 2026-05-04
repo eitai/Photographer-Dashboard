@@ -1,0 +1,67 @@
+{
+  "_comment_about_this_file": [
+    "Minimal Wasabi IAM policy for the production app + worker.",
+    "",
+    "Replace REPLACE_WITH_BOX_OUTBOUND_IP/32 with the prod box's outbound",
+    "IPv4. To find it, on the box itself:",
+    "    curl -4 ifconfig.me",
+    "    curl -4 https://api.ipify.org",
+    "",
+    "If the box egresses through multiple IPs (multi-homed, NAT pool, or",
+    "bring-your-own-IP setups), list them all:",
+    "    \"aws:SourceIp\": [\"203.0.113.5/32\", \"203.0.113.6/32\"]",
+    "",
+    "If you cannot pin an IP at all (cloud provider rotates egress), drop",
+    "the Condition block, but compensate by:",
+    "  - using short-lived STS-style keys if Wasabi supports it for your",
+    "    plan, OR",
+    "  - rotating the static keys on a tighter schedule (every 30 days),",
+    "    AND",
+    "  - logging every PutObject from CloudTrail/Wasabi audit log into a",
+    "    separate alerting pipeline.",
+    "",
+    "The bucket name 'photo-prod' must match S3_BUCKET in /etc/photo/env.",
+    "If you change the bucket name, change BOTH places.",
+    "",
+    "This policy is the MINIMUM the app needs. Specifically, it does NOT",
+    "grant: s3:PutBucketPolicy, s3:PutBucketLifecycleConfiguration,",
+    "s3:PutBucketCors, s3:BypassGovernanceRetention. Those are admin",
+    "operations performed by the ops owner, not the app, and live under a",
+    "separate root/admin user.",
+    "",
+    "After updating, re-attach via Wasabi console -> IAM -> Policies, or",
+    "via aws-cli:",
+    "    aws --endpoint-url=https://s3.eu-central-1.wasabisys.com \\",
+    "        iam put-user-policy --user-name photo-app \\",
+    "        --policy-name photo-app-prod \\",
+    "        --policy-document file://ops/wasabi-iam-policy.example.json"
+  ],
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "AllowAppOps",
+      "Effect": "Allow",
+      "Action": [
+        "s3:PutObject",
+        "s3:GetObject",
+        "s3:DeleteObject",
+        "s3:ListBucket",
+        "s3:GetBucketLocation",
+        "s3:AbortMultipartUpload",
+        "s3:ListBucketMultipartUploads",
+        "s3:ListMultipartUploadParts"
+      ],
+      "Resource": [
+        "arn:aws:s3:::photo-prod",
+        "arn:aws:s3:::photo-prod/*"
+      ],
+      "Condition": {
+        "IpAddress": {
+          "aws:SourceIp": [
+            "REPLACE_WITH_BOX_OUTBOUND_IP/32"
+          ]
+        }
+      }
+    }
+  ]
+}

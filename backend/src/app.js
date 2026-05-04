@@ -178,6 +178,12 @@ v1.use('/admin-products',            require('./routes/adminProducts'));
 v1.use('/product-orders',            require('./routes/productOrders'));
 v1.use('/p/:id',                     require('./routes/public'));
 
+// Direct browser → Wasabi multipart upload pipeline + pg-boss compression
+// queue. Mounted alongside the legacy /galleries/:id/images flow — both
+// remain active. See services/storage.js, queue/index.js, workers/index.js.
+v1.use('/uploads',                   require('./routes/uploads'));
+v1.use('/admin/queue',               require('./routes/queue'));
+
 app.use('/api/v1', v1);
 app.use('/api',    v1); // backward compat — existing clients keep working
 

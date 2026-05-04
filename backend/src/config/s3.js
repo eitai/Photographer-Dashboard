@@ -335,6 +335,11 @@ module.exports = {
   generatePresignedUrl,
   generatePreview,
   listAdminStorageBytes,
+  // Exposed so services/storage.js (the multipart-direct upload pipeline) can
+  // reuse the same S3Client instance instead of constructing its own — keeps a
+  // single connection pool / credentials provider in memory.
+  getS3Client: _getClient,
+  cfg,
   processUpload:        (...a) => { _logStatus(); return _orig.processUpload(...a); },
   processUploadAsWebP:  (...a) => { _logStatus(); return _orig.processUploadAsWebP(...a); },
   processThumbnail:     (...a) => { _logStatus(); return _orig.processThumbnail(...a); },

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { toast } from 'sonner';
 import { AdminLayout } from '@/components/admin/AdminLayout';
@@ -8,14 +8,16 @@ import { DeleteConfirmModal } from '@/components/admin/DeleteConfirmModal';
 import { ImageGrid } from '@/components/admin/ImageGrid';
 import { BulkActionBar } from '@/components/admin/BulkActionBar';
 import { UploadQueue } from '@/components/admin/UploadQueue';
+import { FolderUploadQueue } from '@/components/admin/FolderUploadQueue';
 import { useGalleryUpload } from '@/hooks/useGalleryUpload';
+import { useGalleryFolderUpload } from '@/hooks/useGalleryFolderUpload';
 import { useGalleryData } from '@/hooks/useGalleryData';
 import { useImageDeletion } from '@/hooks/useImageDeletion';
 import { useVideoUpload } from '@/hooks/useVideoUpload';
 import { useUpdateGallery } from '@/hooks/useQueries';
 import { useI18n } from '@/lib/i18n';
 import { getImageUrl } from '@/lib/api';
-import { ArrowLeft, CloudUpload, Video, Trash2, X, Images } from 'lucide-react';
+import { ArrowLeft, CloudUpload, Video, Trash2, X, Images, FolderUp, Sparkles } from 'lucide-react';
 import { Button } from '@/components/admin/Button';
 
 /** Convert an ISO/DB timestamp to the value format expected by datetime-local inputs (YYYY-MM-DDTHH:mm). */
@@ -36,6 +38,22 @@ export const AdminGalleryUpload = () => {
 
   const { gallery, setGallery, loadError, images, loadImages } = useGalleryData(id);
   const { queue, dragging, setDragging, inputRef, handleFiles, onDrop, cancelUpload: cancelImageUpload, isUploading } = useGalleryUpload(id, loadImages);
+
+  // ── New direct-to-S3 folder upload pipeline (Slice 5C) ───────────────────────
+  // Coexists with the legacy useGalleryUpload flow. The user opts in via
+  // the "Try folder upload" toggle below the legacy drop zone. JXL sidecars
+  // are produced for 8-bit PNGs ≤ 512 MiB; everything else goes plain.
+  const {
+    queue: folderQueue,
+    summary: folderSummary,
+    isUploading: folderIsUploading,
+    dragging: folderDragging,
+    setDragging: setFolderDragging,
+    handleFiles: handleFolderFiles,
+    onDrop: onFolderDrop,
+  } = useGalleryFolderUpload(id, loadImages);
+  const folderInputRef = useRef<HTMLInputElement>(null);
+  const [showFolderUpload, setShowFolderUpload] = useState(false);
   const { toDelete, setToDelete, bulkDeleting, deleteProgress, confirmDelete } = useImageDeletion(id, () => {
     setSelectedIds(new Set());
     loadImages();
@@ -236,11 +254,97 @@ export const AdminGalleryUpload = () => {
                   onChange={(e) => e.target.files && handleFiles(e.target.files)}
                 />
               </div>
+
+              {/* ── New folder upload pipeline (Slice 5C) ─────────────────────
+                  Toggleable, sits below the legacy drop zone. The legacy
+                  flow above (multer → backend → S3) is unchanged. */}
+              <div className='mt-2 flex items-center justify-end'>
+                <button
+                  type='button'
+                  onClick={() => setShowFolderUpload((s) => !s)}
+                  className='inline-flex items-center gap-1.5 text-xs text-warm-gray hover:text-charcoal transition-colors px-2.5 py-1 rounded-lg hover:bg-muted/50'
+                >
+                  <Sparkles size={12} className='text-blush' />
+                  {showFolderUpload
+                    ? t('admin.upload.drag')
+                    : t('admin.upload.folder_button')}
+                </button>
+              </div>
+
+              {showFolderUpload && (
+                <div className='mt-2'>
+                  <div
+                    role='button'
+                    tabIndex={0}
+                    aria-label={t('admin.upload.folder_drag')}
+                    onDragOver={(e) => {
+                      e.preventDefault();
+                      setFolderDragging(true);
+                    }}
+                    onDragLeave={() => setFolderDragging(false)}
+                    onDrop={(e) => {
+                      void onFolderDrop(e);
+                    }}
+                    onClick={() => folderInputRef.current?.click()}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        folderInputRef.current?.click();
+                      }
+                    }}
+                    className={`flex items-center gap-3 border-2 border-dashed rounded-xl px-5 py-3 cursor-pointer transition-colors ${
+                      folderDragging
+                        ? 'border-blush bg-blush/10'
+                        : 'border-beige hover:border-blush/50 bg-muted/30'
+                    }`}
+                  >
+                    <FolderUp size={20} className='text-warm-gray shrink-0' />
+                    <div className='min-w-0'>
+                      <p className='text-sm text-charcoal font-medium leading-tight truncate'>
+                        {t('admin.upload.folder_drag')}
+                      </p>
+                      <p className='text-xs text-warm-gray truncate'>
+                        {t('admin.upload.folder_browse')}
+                      </p>
+                    </div>
+                    <input
+                      ref={folderInputRef}
+                      type='file'
+                      multiple
+                      // Non-standard but universally supported: lets the user pick
+                      // an entire directory tree. webkitRelativePath is read by
+                      // the hook to preserve folder structure.
+                      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+                      // @ts-expect-error — webkitdirectory isn't in React's HTMLInputElement types
+                      webkitdirectory=''
+                      directory=''
+                      className='hidden'
+                      onChange={(e) => {
+                        if (e.target.files) {
+                          void handleFolderFiles(Array.from(e.target.files));
+                          // Reset so picking the same folder twice still re-fires.
+                          e.target.value = '';
+                        }
+                      }}
+                    />
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Upload queue + bulk bar — fixed */}
             <div className='shrink-0 px-4 md:px-8 pt-3'>
               <UploadQueue queue={queue} isUploading={isUploading} onCancel={cancelImageUpload} />
+              {/* Folder upload progress + per-file rows. Renders nothing when
+                  the folder queue is empty, so it's free when the legacy
+                  flow is in use. */}
+              {showFolderUpload && (
+                <FolderUploadQueue
+                  queue={folderQueue}
+                  summary={folderSummary}
+                  isUploading={folderIsUploading}
+                />
+              )}
               <BulkActionBar
                 count={selectedIds.size}
                 onClear={() => setSelectedIds(new Set())}

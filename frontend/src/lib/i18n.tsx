@@ -322,6 +322,31 @@ const translations: Record<string, Record<Lang, string>> = {
   'admin.upload.delete_title': { he: 'מחיקה', en: 'Delete' },
   'admin.upload.open_title': { he: 'פתיחה', en: 'Open' },
 
+  // ── Admin: Folder upload (Slice 5C — direct-to-S3 + JXL sidecar) ───────────
+  'admin.upload.folder_button': { he: 'העלאת תיקייה', en: 'Upload folder' },
+  'admin.upload.folder_drag': {
+    he: 'גרור ושחרר תיקייה כאן (כולל תתי-תיקיות)',
+    en: 'Drag & drop a folder here (subfolders included)',
+  },
+  'admin.upload.folder_browse': {
+    he: 'או לחץ לבחירת תיקייה — נתיב הקובץ נשמר',
+    en: 'or click to choose a folder — relative paths preserved',
+  },
+  'admin.upload.queued': { he: 'בתור', en: 'Queued' },
+  'admin.upload.hashing': { he: 'מחשב חתימה…', en: 'Hashing…' },
+  'admin.upload.encoding': { he: 'מקודד JXL…', en: 'Encoding JXL…' },
+  'admin.upload.uploading': { he: 'מעלה…', en: 'Uploading…' },
+  'admin.upload.completing': { he: 'מסיים…', en: 'Finalizing…' },
+  'admin.upload.summary_files': {
+    he: 'הועלו {done}/{total} קבצים',
+    en: 'Uploaded {done}/{total} files',
+  },
+  'admin.upload.summary_failed': {
+    he: '{count} נכשלו',
+    en: '{count} failed',
+  },
+  'admin.upload.overall': { he: 'התקדמות כוללת', en: 'Overall progress' },
+
   // ── Admin: Selections ───────────────────────────────────────────────────────
   'admin.selections.title': { he: 'בחירות לקוחות', en: 'Client Selections' },
   'admin.selections.galleries': { he: 'גלריות עם בחירות', en: 'Galleries with Submissions' },

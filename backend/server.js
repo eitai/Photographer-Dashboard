@@ -1,5 +1,12 @@
 require('dotenv').config();
 
+// Project secrets (AWS keys, JWT secret, SMTP password) are mounted by
+// systemd via LoadCredential= when running in production. This helper reads
+// $CREDENTIALS_DIRECTORY and projects each file's contents into process.env
+// under its UPPERCASED filename. Must run BEFORE validateEnv() so the
+// startup check sees the credential-mounted values. No-op outside systemd.
+require('./src/utils/loadSystemdCredentials').loadSystemdCredentials();
+
 // ── Startup validation ────────────────────────────────────────────────────────
 const { validateEnv } = require('./src/config/validateEnv');
 const { ok, missing } = validateEnv();
@@ -129,6 +136,18 @@ async function start() {
     logger.info('[migrate] gallery_images.preview_path column ensured');
   } catch (err) {
     logger.warn('[migrate] gallery_images.preview_path migration skipped:', err.message);
+  }
+
+  // ── assets table (compression pipeline) ──────────────────────────────────
+  try {
+    const assetsSql = require('fs').readFileSync(
+      require('path').join(__dirname, 'src/db/migrations/007_assets.sql'),
+      'utf8'
+    );
+    await pool.query(assetsSql);
+    logger.info('[migrate] assets table ensured');
+  } catch (err) {
+    logger.warn('[migrate] assets migration skipped:', err.message);
   }
 
   try {
