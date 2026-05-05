@@ -207,6 +207,7 @@ const translations: Record<string, Record<Lang, string>> = {
   'admin.common.no_email': { he: 'אין כתובת אימייל ללקוח', en: 'Client has no email address' },
   'admin.common.email': { he: 'אימייל', en: 'Email' },
   'admin.common.notes': { he: 'הערות', en: 'Notes' },
+  'admin.common.event_date': { he: 'תאריך אירוע', en: 'Event Date' },
   'admin.common.status': { he: 'סטטוס', en: 'Status' },
   'admin.common.session_type': { he: 'סוג צילום', en: 'Session Type' },
   'admin.common.back_clients': { he: 'חזרה ללקוחות', en: 'Back to clients' },

@@ -4,10 +4,7 @@ import api, { getImageUrl } from '@/lib/api';
 import { useI18n } from '@/lib/i18n';
 import { DeliveryGallery } from '@/components/gallery/DeliveryGallery';
 import { SelectionGallery } from '@/components/gallery/SelectionGallery';
-import { ProductOrdersClient } from '@/components/gallery/ProductOrdersClient';
-import { fetchProductOrdersByToken } from '@/services/productOrderService';
 import type { GalleryData, GalleryImage } from '@/types/gallery';
-import type { ProductOrder } from '@/services/productOrderService';
 
 export const ClientGallery = () => {
   const { token } = useParams<{ token: string }>();
@@ -16,9 +13,6 @@ export const ClientGallery = () => {
   const [images, setImages] = useState<GalleryImage[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
-  const [productOrders, setProductOrders] = useState<ProductOrder[]>([]);
-  const [theme, setTheme] = useState('soft');
-
   const resolveImageUrl = useCallback((path: string) => getImageUrl(path), []);
 
   useEffect(() => {
@@ -30,22 +24,6 @@ export const ClientGallery = () => {
         setGallery(galleryData);
         const imgRes = await api.get(`/galleries/${galleryData._id}/images`);
         setImages(imgRes.data);
-        // Load photographer theme — non-blocking
-        if (galleryData.adminId) {
-          try {
-            const settingsRes = await api.get(`/p/${galleryData.adminId}/settings`);
-            setTheme(settingsRes.data.theme || 'soft');
-          } catch {
-            // theme is optional — fall back to default
-          }
-        }
-        // Load product orders for this client — non-blocking, no error on failure
-        try {
-          const orders = await fetchProductOrdersByToken(token);
-          setProductOrders(orders);
-        } catch {
-          // product orders are optional — silently ignore
-        }
       } catch {
         setError(true);
       } finally {
@@ -61,7 +39,7 @@ export const ClientGallery = () => {
   );
 
   const themeWrapper = (children: React.ReactNode) => (
-    <div data-theme={theme} style={{ backgroundColor: 'var(--background)', minHeight: '100vh' }} className='flex flex-col'>
+    <div data-theme='bw' style={{ backgroundColor: 'var(--background)', minHeight: '100vh' }} className='flex flex-col'>
       {children}
     </div>
   );
@@ -104,7 +82,6 @@ export const ClientGallery = () => {
     <>
       {header}
       <SelectionGallery gallery={gallery} images={images} getImageUrl={resolveImageUrl} />
-      {productOrders.length > 0 && <ProductOrdersClient orders={productOrders} getImageUrl={resolveImageUrl} />}
     </>
   );
 };

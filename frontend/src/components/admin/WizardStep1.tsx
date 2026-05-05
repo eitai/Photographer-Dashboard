@@ -11,6 +11,7 @@ const clientSchema = z.object({
   email: z.preprocess((val) => (val === '' ? undefined : val), z.string().optional()),
   sessionType: z.string().optional(),
   notes: z.string().optional(),
+  eventDate: z.string().optional(),
 });
 
 type ClientFormValues = z.infer<typeof clientSchema>;
@@ -53,6 +54,11 @@ export const WizardStep1 = ({ form, onNext, onCancel, disabled = false }: Wizard
             value={form.watch('sessionType') ?? ''}
             onChange={(val) => form.setValue('sessionType', val)}
           />
+        </div>
+
+        <div>
+          <label className='block text-xs text-warm-gray mb-1'>{t('admin.common.event_date')}</label>
+          <InputField type='date' {...register('eventDate')} disabled={disabled} />
         </div>
 
         <div className='col-span-full'>

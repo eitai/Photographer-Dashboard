@@ -6,6 +6,7 @@ export interface Client {
   sessionType: 'family' | 'maternity' | 'newborn' | 'branding' | 'landscape';
   status: string;
   notes?: string;
+  eventDate?: string;
   createdAt?: string;
 }
 

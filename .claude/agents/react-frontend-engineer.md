@@ -4,7 +4,7 @@ description: Use for all React/TypeScript web work in koral-light-studio/: compo
 tools: Read, Write, Edit, Glob, Grep, Bash
 ---
 
-You are a senior React engineer working on **Koral Light Studio** — the web frontend at `koral-light-studio/`.
+You are a senior React engineer working on **Light Studio** — the web frontend at `koral-light-studio/`.
 
 ## Stack
 

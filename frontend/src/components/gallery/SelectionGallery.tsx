@@ -64,28 +64,26 @@ export const SelectionGallery = ({ gallery, images, getImageUrl }: Props) => {
     ? images.filter((img) => img.folderIds?.includes(activeFolderId))
     : images;
 
-  const VIRTUALIZATION_THRESHOLD = 100;
+  const VIRTUALIZATION_THRESHOLD = 500;
 
   // Responsive column count
   const [columnCount, setColumnCount] = useState(() => {
-    if (typeof window === 'undefined') return 4;
+    if (typeof window === 'undefined') return 3;
     if (window.innerWidth < 640) return 2;
-    if (window.innerWidth < 1024) return 3;
-    return 4;
+    return 3;
   });
 
   useEffect(() => {
     const onResize = () => {
       if (window.innerWidth < 640) setColumnCount(2);
-      else if (window.innerWidth < 1024) setColumnCount(3);
-      else setColumnCount(4);
+      else setColumnCount(3);
     };
     window.addEventListener('resize', onResize);
     return () => window.removeEventListener('resize', onResize);
   }, []);
 
   const isVirtualized = visibleImages.length > VIRTUALIZATION_THRESHOLD;
-  const stickyTop = selectedIds.size > 0 ? 109 : 56; // 56px header + 53px selection bar
+  const stickyTop = 109; // 56px header + 53px action bar
 
   const toggleSelect = (imageId: string) => {
     setSelectedIds((prev) => {
@@ -310,50 +308,49 @@ export const SelectionGallery = ({ gallery, images, getImageUrl }: Props) => {
             </FadeIn>
           )}
 
-          {selectedIds.size > 0 && (
-            <div className='sticky top-14 z-40 backdrop-blur-sm py-3 mb-8 -mx-6 px-6' style={{ backgroundColor: 'color-mix(in srgb, var(--background) 90%, transparent)', borderBottom: '1px solid var(--border)' }}>
-              <div className='flex items-center justify-between max-w-[1100px] mx-auto'>
-                <span className='text-sm font-sans font-medium' style={{ color: atMax ? 'var(--primary)' : 'var(--muted-foreground)' }}>
-                  {hasLimit ? `${selectedIds.size} / ${gallery.maxSelections}` : selectedIds.size}
-                  {atMax && <span className='ms-2 text-xs'>— {t('gallery.max_reached')}</span>}
-                </span>
-                <div className='flex items-center gap-2'>
+          <div className='sticky top-14 z-40 backdrop-blur-sm py-3 mb-8 -mx-6 px-6' style={{ backgroundColor: 'color-mix(in srgb, var(--background) 90%, transparent)', borderBottom: '1px solid var(--border)' }}>
+            <div className='flex items-center justify-between max-w-[1100px] mx-auto'>
+              <span className='text-sm font-sans font-medium' style={{ color: atMax ? 'var(--primary)' : 'var(--muted-foreground)' }}>
+                {hasLimit ? `${selectedIds.size} / ${gallery.maxSelections}` : selectedIds.size}
+                {atMax && <span className='ms-2 text-xs'>— {t('gallery.max_reached')}</span>}
+              </span>
+              <div className='flex items-center gap-2'>
+                <button
+                  onClick={handleDownloadAll}
+                  disabled={isDownloadingAll}
+                  className='flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-sans font-medium transition-colors disabled:opacity-60'
+                  style={{ border: '1px solid var(--border)', color: 'var(--foreground)', backgroundColor: 'var(--background)' }}
+                >
+                  <Download size={14} />
+                  {isDownloadingAll && downloadAllProgress
+                    ? `${downloadAllProgress.done} / ${downloadAllProgress.total}`
+                    : t('gallery.download_all')}
+                </button>
+                <button
+                  onClick={handleDownloadSelected}
+                  disabled={selectedIds.size === 0 || isDownloading}
+                  className='flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-sans font-medium transition-colors disabled:opacity-40'
+                  style={{ border: '1px solid var(--border)', color: 'var(--foreground)', backgroundColor: 'var(--background)' }}
+                >
+                  <Download size={14} />
+                  {isDownloading && downloadProgress
+                    ? `${downloadProgress.done} / ${downloadProgress.total}`
+                    : t('gallery.download_selected')}
+                </button>
+                {selectionEnabled && (
                   <button
-                    onClick={handleDownloadAll}
-                    disabled={isDownloadingAll}
-                    className='flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-sans font-medium transition-colors disabled:opacity-60'
-                    style={{ border: '1px solid var(--border)', color: 'var(--foreground)', backgroundColor: 'var(--background)' }}
+                    onClick={handleSubmit}
+                    disabled={selectedIds.size === 0}
+                    className='flex items-center gap-2 px-6 py-2 rounded-xl text-sm font-sans font-medium transition-colors disabled:opacity-40'
+                    style={{ backgroundColor: 'var(--primary)', color: 'var(--primary-foreground)' }}
                   >
-                    <Download size={14} />
-                    {isDownloadingAll && downloadAllProgress
-                      ? `${downloadAllProgress.done} / ${downloadAllProgress.total}`
-                      : t('gallery.download_all')}
+                    <Send size={14} />
+                    {t('gallery.send_selection')}
                   </button>
-                  <button
-                    onClick={handleDownloadSelected}
-                    disabled={isDownloading}
-                    className='flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-sans font-medium transition-colors disabled:opacity-60'
-                    style={{ border: '1px solid var(--border)', color: 'var(--foreground)', backgroundColor: 'var(--background)' }}
-                  >
-                    <Download size={14} />
-                    {isDownloading && downloadProgress
-                      ? `${downloadProgress.done} / ${downloadProgress.total}`
-                      : t('gallery.download_selected')}
-                  </button>
-                  {selectionEnabled && (
-                    <button
-                      onClick={handleSubmit}
-                      className='flex items-center gap-2 px-6 py-2 rounded-xl text-sm font-sans font-medium transition-colors'
-                      style={{ backgroundColor: 'var(--primary)', color: 'var(--primary-foreground)' }}
-                    >
-                      <Send size={14} />
-                      {t('gallery.send_selection')}
-                    </button>
-                  )}
-                </div>
+                )}
               </div>
             </div>
-          )}
+          </div>
 
           {/* Folder navigation — mobile: horizontal chips, desktop: sidebar handled below */}
           {hasFolders && isMobile && (
@@ -428,7 +425,7 @@ export const SelectionGallery = ({ gallery, images, getImageUrl }: Props) => {
                 <VirtualizedGalleryGrid
                   images={visibleImages}
                   columnCount={columnCount}
-                  rowHeight={280}
+                  rowHeight={220}
                   stickyTop={stickyTop}
                   renderItem={renderImageCard}
                 />

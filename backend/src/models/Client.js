@@ -34,8 +34,8 @@ async function find(filter = {}) {
 
 async function create(data) {
   const { rows } = await pool.query(
-    `INSERT INTO clients (admin_id, name, phone, email, session_type, notes, status)
-     VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
+    `INSERT INTO clients (admin_id, name, phone, email, session_type, notes, status, event_date)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
     [
       data.adminId,
       data.name,
@@ -44,6 +44,7 @@ async function create(data) {
       data.sessionType || null,
       data.notes || null,
       data.status || 'gallery_sent',
+      data.eventDate || null,
     ]
   );
   return rowToCamel(rows[0]);
@@ -63,6 +64,7 @@ async function findOneAndUpdate(filter, update, opts = {}, pgClient = null) {
     sessionType: 'session_type',
     notes: 'notes',
     status: 'status',
+    eventDate: 'event_date',
   };
 
   const src = update.$set || update;

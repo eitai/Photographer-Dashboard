@@ -165,17 +165,24 @@ export const AdminClientDetail = () => {
         <ArrowRight size={14} /> {t('admin.common.back_clients')}
       </Link>
       <div className='space-y-6'>
-        <ErrorBoundary label='Client Info'>
-          <ClientInfoCard
-            client={client}
-            editing={editing}
-            setEditing={setEditing}
-            form={form}
-            setForm={setForm}
-            saving={updateClient.isPending}
-            save={save}
-          />
-        </ErrorBoundary>
+        {/* Top row: client info + product orders side by side */}
+        <div className='grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch'>
+          <ErrorBoundary label='Client Info'>
+            <ClientInfoCard
+              client={client}
+              editing={editing}
+              setEditing={setEditing}
+              form={form}
+              setForm={setForm}
+              saving={updateClient.isPending}
+              save={save}
+            />
+          </ErrorBoundary>
+          <ErrorBoundary label='Product Orders'>
+            <ProductOrdersSection clientId={id!} clientName={client.name} galleries={galleries} clientEmail={client.email} />
+          </ErrorBoundary>
+        </div>
+        {/* Galleries below */}
         <ErrorBoundary label='Galleries'>
           <GalleriesSection
             galleries={galleries}
@@ -203,11 +210,6 @@ export const AdminClientDetail = () => {
             setDeleteImageTarget={setDeleteImageTarget}
           />
         </ErrorBoundary>
-        <div className='lg:w-[40%]'>
-          <ErrorBoundary label='Product Orders'>
-            <ProductOrdersSection clientId={id!} clientName={client.name} galleries={galleries} clientEmail={client.email} />
-          </ErrorBoundary>
-        </div>
       </div>
       <ConfirmationModals
         deleteSubTarget={deleteSubTarget}

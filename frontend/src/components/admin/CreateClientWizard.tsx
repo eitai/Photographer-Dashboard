@@ -48,6 +48,7 @@ export const CreateClientWizard = ({ isOpen, onClose }: CreateClientWizardProps)
         ),
         sessionType: z.string().optional(),
         notes: z.string().optional(),
+        eventDate: z.string().optional(),
       }),
     [t],
   );
@@ -56,7 +57,7 @@ export const CreateClientWizard = ({ isOpen, onClose }: CreateClientWizardProps)
 
   const form = useForm<ClientFormValues>({
     resolver: zodResolver(clientSchema),
-    defaultValues: { name: '', phone: '', email: '', sessionType: '', notes: '' },
+    defaultValues: { name: '', phone: '', email: '', sessionType: '', notes: '', eventDate: '' },
   });
 
   const closeAndReset = () => {
@@ -76,13 +77,14 @@ export const CreateClientWizard = ({ isOpen, onClose }: CreateClientWizardProps)
     setSaving(true);
     setSubmitError('');
     try {
-      const { name, phone, email, sessionType, notes } = form.getValues();
+      const { name, phone, email, sessionType, notes, eventDate } = form.getValues();
       const newClient = await createClient.mutateAsync({
         name,
         ...(phone ? { phone } : {}),
         ...(email ? { email } : {}),
         ...(sessionType && VALID_SESSION_TYPES.includes(sessionType) ? { sessionType: sessionType as 'family' | 'maternity' | 'newborn' | 'branding' | 'landscape' } : {}),
         ...(notes ? { notes } : {}),
+        ...(eventDate ? { eventDate } : {}),
         status: 'gallery_sent',
       });
       if (productRows.length > 0) {

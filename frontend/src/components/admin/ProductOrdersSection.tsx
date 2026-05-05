@@ -146,9 +146,9 @@ export const ProductOrdersSection = ({ clientId, clientName, galleries, clientEm
 
   return (
     <>
-    <section className='bg-card rounded-2xl border border-beige p-6 space-y-4 max-h-[560px] overflow-y-auto'>
-      {/* Header */}
-      <div className='flex items-center justify-between flex-wrap gap-2'>
+    <section className='bg-card rounded-2xl border border-beige flex flex-col max-h-[560px]'>
+      {/* Header — pinned */}
+      <div className='flex items-center justify-between flex-wrap gap-2 px-6 py-4 shrink-0 border-b border-beige'>
         <h2 className=' text-lg text-charcoal flex items-center gap-2'>
           <Package size={18} className='text-blush' />
           {t('admin.products.title')}
@@ -191,7 +191,8 @@ export const ProductOrdersSection = ({ clientId, clientName, galleries, clientEm
         </div>
       </div>
 
-      {/* Orders list */}
+      {/* Orders list — scrollable */}
+      <div className='flex-1 overflow-y-auto px-6 py-4 space-y-3'>
       {loading ? (
         <p className='text-sm text-warm-gray'>{t('admin.common.loading')}</p>
       ) : orders.length === 0 ? (
@@ -206,7 +207,7 @@ export const ProductOrdersSection = ({ clientId, clientName, galleries, clientEm
           </button>
         </div>
       ) : (
-        <div className='space-y-3'>
+        <>
           {orders.map((order) => (
             <div key={order._id} className={`rounded-xl border overflow-hidden transition-all duration-200 hover:shadow-sm ${
                 order.status === 'submitted'
@@ -456,8 +457,9 @@ export const ProductOrdersSection = ({ clientId, clientName, galleries, clientEm
               </div>
             </div>
           ))}
-        </div>
+        </>
       )}
+      </div>
     </section>
 
     {/* Add product modal */}

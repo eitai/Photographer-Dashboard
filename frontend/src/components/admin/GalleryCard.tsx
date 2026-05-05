@@ -10,6 +10,13 @@ import { useGalleryPreviewImages, useSubmissions } from '@/hooks/useQueries';
 import { getImageUrl } from '@/lib/api';
 import { downloadZip } from '@/lib/downloadZip';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { SESSION_TYPE_KEYS } from '@/components/admin/SessionTypeCombobox';
+
+const getGalleryDisplayName = (name: string, t: (key: string) => string) => {
+  if (!SESSION_TYPE_KEYS.includes(name)) return name;
+  const translated = t(`admin.session.${name}`);
+  return translated.startsWith('admin.session.') ? name : translated;
+};
 
 function useExpiryBadge(expiresAt: string | null | undefined, t: (key: string) => string) {
   if (!expiresAt) return null;
@@ -126,7 +133,7 @@ export const GalleryCard = ({
       {/* Clickable header — navigates into the gallery */}
       <Link to={`/admin/galleries/${g._id}`} className='flex items-start gap-3 p-4 hover:bg-muted/40 transition-colors'>
         <div className='flex-1 min-w-0'>
-          <p className='text-sm font-semibold text-charcoal truncate'>{g.name}</p>
+          <p className='text-sm font-semibold text-charcoal truncate'>{getGalleryDisplayName(g.name, t)}</p>
           <div className='mt-1'>
             <StatusBadge status={g.status} />
           </div>

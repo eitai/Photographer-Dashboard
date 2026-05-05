@@ -225,6 +225,13 @@ async function start() {
     logger.warn('[migrate] product_orders status constraint migration skipped:', err.message);
   }
 
+  try {
+    await pool.query(`ALTER TABLE clients ADD COLUMN IF NOT EXISTS event_date DATE`);
+    logger.info('[migrate] clients.event_date column ensured');
+  } catch (err) {
+    logger.warn('[migrate] clients.event_date migration skipped:', err.message);
+  }
+
   // ── Gallery auto-deletion scheduler ──────────────────────────────────────
   const CLEANUP_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
 
