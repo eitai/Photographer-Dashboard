@@ -17,6 +17,7 @@ const Portfolio = lazy(() => import('./pages/Portfolio').then((m) => ({ default:
 const Contact = lazy(() => import('./pages/Contact').then((m) => ({ default: m.Contact })));
 const ClientGallery = lazy(() => import('./pages/ClientGallery').then((m) => ({ default: m.ClientGallery })));
 const ClientProductsPage = lazy(() => import('./pages/ClientProductsPage').then((m) => ({ default: m.ClientProductsPage })));
+const ClientProductOrderPage = lazy(() => import('./pages/ClientProductOrderPage').then((m) => ({ default: m.ClientProductOrderPage })));
 const Blog = lazy(() => import('./pages/Blog').then((m) => ({ default: m.Blog })));
 const BlogPost = lazy(() => import('./pages/BlogPost').then((m) => ({ default: m.BlogPost })));
 const NotFound = lazy(() => import('./pages/NotFound').then((m) => ({ default: m.NotFound })));
@@ -104,6 +105,7 @@ export const App = () => (
                   }
                 />
                 <Route path='/gallery/:token' element={<ClientGallery />} />
+                <Route path='/products/order/:orderToken' element={<ClientProductOrderPage />} />
                 <Route path='/products/:token' element={<ClientProductsPage />} />
 
                 {/* Admin routes — no Navbar/Footer */}

@@ -203,9 +203,11 @@ export const AdminClientDetail = () => {
             setDeleteImageTarget={setDeleteImageTarget}
           />
         </ErrorBoundary>
-        <ErrorBoundary label='Product Orders'>
-          <ProductOrdersSection clientId={id!} clientName={client.name} galleries={galleries} />
-        </ErrorBoundary>
+        <div className='lg:w-[40%]'>
+          <ErrorBoundary label='Product Orders'>
+            <ProductOrdersSection clientId={id!} clientName={client.name} galleries={galleries} clientEmail={client.email} />
+          </ErrorBoundary>
+        </div>
       </div>
       <ConfirmationModals
         deleteSubTarget={deleteSubTarget}

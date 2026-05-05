@@ -30,12 +30,12 @@ interface ImageWithGallery extends GalleryImage {
 
 // ── OrderPanel ────────────────────────────────────────────────────────────────
 
-interface OrderPanelProps {
+export interface OrderPanelProps {
   order: ProductOrder;
   onSubmitted: (orderId: string) => void;
 }
 
-const OrderPanel = ({ order, onSubmitted }: OrderPanelProps) => {
+export const OrderPanel = ({ order, onSubmitted }: OrderPanelProps) => {
   const galleries = order.allowedGalleryIds as GalleryTab[];
 
   const [activeGalleryId, setActiveGalleryId] = useState<string | null>(

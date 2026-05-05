@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api, { getMyStorage, getAdminStorage, setAdminQuota } from '@/lib/api';
 import * as clientService from '@/services/clientService';
 import * as galleryService from '@/services/galleryService';
-import { fetchProductOrders } from '@/services/productOrderService';
+import { fetchProductOrders, updateProductOrderGalleries, deliverProductOrder } from '@/services/productOrderService';
 import { Client } from '@/types/admin';
 import type { GalleryData } from '@/types/gallery';
 
@@ -299,6 +299,27 @@ export function useUpdateGallery() {
       // Invalidate the flat list and client-scoped lists, but NOT the single gallery
       queryClient.invalidateQueries({ queryKey: queryKeys.galleries, exact: true });
       queryClient.invalidateQueries({ queryKey: ['galleries', 'client'] });
+    },
+  });
+}
+
+export function useDeliverProductOrder(clientId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (orderId: string) => deliverProductOrder(orderId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.productOrders(clientId) });
+    },
+  });
+}
+
+export function useUpdateProductOrderGalleries(clientId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ orderId, allowedGalleryIds }: { orderId: string; allowedGalleryIds: string[] }) =>
+      updateProductOrderGalleries(orderId, { allowedGalleryIds }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.productOrders(clientId) });
     },
   });
 }

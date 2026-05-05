@@ -17,7 +17,9 @@ export interface ProductOrder {
   maxPhotos: number;
   allowedGalleryIds: { _id: string; name: string; isDelivery: boolean }[];
   selectedPhotoIds: SelectedPhoto[];
-  status: 'pending' | 'submitted';
+  status: 'pending' | 'submitted' | 'delivered';
+  token: string;
+  linkEnabled: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -51,3 +53,31 @@ export const submitProductOrderSelection = (
   selectedPhotoIds: SelectedPhoto[],
 ): Promise<ProductOrder> =>
   api.put(`/product-orders/${orderId}/selection`, { selectedPhotoIds }).then((r) => r.data);
+
+export const fetchProductOrderByOrderToken = (orderToken: string): Promise<ProductOrder> =>
+  api.get(`/product-orders/order/${orderToken}`).then((r) => r.data);
+
+export const toggleProductOrderLink = (orderId: string, enabled: boolean): Promise<ProductOrder> =>
+  api.patch(`/product-orders/${orderId}/link`, { enabled }).then((r) => r.data);
+
+export interface UpdateAllowedGalleriesPayload {
+  allowedGalleryIds: string[];
+}
+
+export const updateProductOrderGalleries = (
+  orderId: string,
+  payload: UpdateAllowedGalleriesPayload,
+): Promise<ProductOrder> =>
+  api.patch(`/product-orders/${orderId}/galleries`, payload).then((r) => r.data);
+
+export interface SendLinksEmailPayload {
+  clientId: string;
+  clientName: string;
+  clientEmail: string;
+}
+
+export const sendProductOrderLinksEmail = (payload: SendLinksEmailPayload): Promise<{ message: string; count: number }> =>
+  api.post('/product-orders/send-links-email', payload).then((r) => r.data);
+
+export const deliverProductOrder = (orderId: string): Promise<ProductOrder> =>
+  api.patch(`/product-orders/${orderId}/deliver`).then((r) => r.data);

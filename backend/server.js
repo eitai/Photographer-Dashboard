@@ -199,6 +199,32 @@ async function start() {
     logger.warn('[migrate] gallery_folders migration skipped:', err.message);
   }
 
+  try {
+    await pool.query(`
+      ALTER TABLE product_orders
+        ADD COLUMN IF NOT EXISTS token TEXT UNIQUE DEFAULT encode(gen_random_bytes(16), 'hex'),
+        ADD COLUMN IF NOT EXISTS link_enabled BOOLEAN NOT NULL DEFAULT FALSE
+    `);
+    logger.info('[migrate] product_orders token + link_enabled columns ensured');
+  } catch (err) {
+    logger.warn('[migrate] product_orders token migration skipped:', err.message);
+  }
+
+  try {
+    await pool.query(`
+      ALTER TABLE product_orders
+        DROP CONSTRAINT IF EXISTS product_orders_status_check
+    `);
+    await pool.query(`
+      ALTER TABLE product_orders
+        ADD CONSTRAINT product_orders_status_check
+        CHECK (status IN ('pending', 'submitted', 'delivered'))
+    `);
+    logger.info('[migrate] product_orders_status_check constraint ensured');
+  } catch (err) {
+    logger.warn('[migrate] product_orders status constraint migration skipped:', err.message);
+  }
+
   // ── Gallery auto-deletion scheduler ──────────────────────────────────────
   const CLEANUP_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
 

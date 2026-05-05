@@ -1,35 +1,23 @@
-import { useCallback, useMemo } from 'react';
+import { useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { AdminLayout } from '@/components/admin/AdminLayout';
-import { InputField, TextareaField } from '@/components/admin/InputField';
+import { InputField } from '@/components/admin/InputField';
 import { StatusBadge } from '@/components/admin/StatusBadge';
 import { useI18n } from '@/lib/i18n';
-import { useClients, useCreateClient, useDeleteClient } from '@/hooks/useQueries';
+import { useClients, useDeleteClient } from '@/hooks/useQueries';
 import { Plus, Search, Trash2 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
 import { useModal } from '@/hooks/useModal';
 import { Modal } from '@/components/ui/Modal';
 import { useSearch } from '@/hooks/useSearch';
 import type { Client } from '@/types/admin';
 import { useDeleteConfirmation } from '@/hooks/useDeleteConfirmation';
 import { Button } from '@/components/admin/Button';
-
-
-type ClientFormValues = { name: string; phone?: string; email?: string; notes?: string };
+import { CreateClientWizard } from '@/components/admin/CreateClientWizard';
 
 export const AdminClients = () => {
   const { t } = useI18n();
-  const clientSchema = useMemo(() => z.object({
-    name: z.string().min(1, t('admin.clients.name_required')),
-    phone: z.preprocess((val) => (val === '' ? undefined : val), z.string().regex(/^[0-9+\-\s().]{7,20}$/, t('admin.clients.invalid_phone')).optional()),
-    email: z.preprocess((val) => (val === '' ? undefined : val), z.string().email(t('admin.clients.invalid_email')).optional()),
-    notes: z.string().optional(),
-  }), [t]);
   const { data: clients = [], isLoading } = useClients();
-  const createClient = useCreateClient();
   const deleteClient = useDeleteClient();
 
   const form = useModal();
@@ -46,26 +34,6 @@ export const AdminClients = () => {
       [deleteClient],
     ),
   );
-
-  const {
-    register,
-    handleSubmit,
-    reset,
-    formState: { errors },
-  } = useForm<ClientFormValues>({
-    resolver: zodResolver(clientSchema),
-    defaultValues: { name: '', phone: '', email: '', notes: '' },
-  });
-
-  const closeAndReset = () => {
-    form.close();
-    reset();
-  };
-
-  const onSubmit = async (data: ClientFormValues) => {
-    await createClient.mutateAsync(data);
-    closeAndReset();
-  };
 
   const displaySessionType = (st: string) => {
     const translated = t(`admin.session.${st}`);
@@ -94,57 +62,7 @@ export const AdminClients = () => {
         </Button>
       </div>
 
-      {/* Create client modal */}
-      <Modal isOpen={form.isOpen} onClose={closeAndReset} maxWidth='max-w-lg'>
-        <h3 className='text-lg text-charcoal mb-4'>{t('admin.clients.new')}</h3>
-        <form onSubmit={handleSubmit(onSubmit)} className='space-y-4'>
-          <div className='grid grid-cols-1 sm:grid-cols-2 gap-4'>
-            <div>
-              <label className='block text-xs text-warm-gray mb-1'>{t('admin.common.name')}</label>
-              <InputField
-                type='text'
-                {...register('name')}
-                className='py-2.5 min-h-[44px]'
-              />
-              {errors.name && <p className='text-xs text-rose-500 mt-1'>{errors.name.message}</p>}
-            </div>
-            <div>
-              <label className='block text-xs text-warm-gray mb-1'>{t('admin.common.phone')}</label>
-              <InputField
-                type='tel'
-                {...register('phone')}
-                className='py-2.5 min-h-[44px]'
-              />
-              {errors.phone && <p className='text-xs text-rose-500 mt-1'>{errors.phone.message}</p>}
-            </div>
-            <div>
-              <label className='block text-xs text-warm-gray mb-1'>{t('admin.common.email')}</label>
-              <InputField
-                type='email'
-                {...register('email')}
-                className='py-2.5 min-h-[44px]'
-              />
-              {errors.email && <p className='text-xs text-rose-500 mt-1'>{errors.email.message}</p>}
-            </div>
-          </div>
-          <div>
-            <label className='block text-xs text-warm-gray mb-1'>{t('admin.common.notes')}</label>
-            <TextareaField
-              {...register('notes')}
-              rows={2}
-              className='py-2.5 min-h-[44px]'
-            />
-          </div>
-          <div className='flex gap-3 pt-1'>
-            <Button type='submit' variant='primary' size='lg' className='flex-1' disabled={createClient.isPending}>
-              {createClient.isPending ? t('admin.common.saving') : t('admin.clients.create')}
-            </Button>
-            <Button type='button' variant='ghost' size='lg' className='flex-1' onClick={closeAndReset}>
-              {t('admin.common.cancel')}
-            </Button>
-          </div>
-        </form>
-      </Modal>
+      <CreateClientWizard isOpen={form.isOpen} onClose={form.close} />
 
       {/* Table */}
       <div className='bg-card rounded-xl border border-beige overflow-x-auto'>
@@ -170,6 +88,7 @@ export const AdminClients = () => {
                 <th className='text-xs text-warm-gray font-medium px-4 py-3 text-start hidden sm:table-cell'>{t('admin.clients.col_session')}</th>
                 <th className='text-xs text-warm-gray font-medium px-4 py-3 text-start hidden md:table-cell'>{t('admin.common.email')}</th>
                 <th className='text-xs text-warm-gray font-medium px-4 py-3 text-start hidden md:table-cell'>{t('admin.common.phone')}</th>
+                <th className='text-xs text-warm-gray font-medium px-4 py-3 text-start hidden lg:table-cell'>{t('admin.common.created_at')}</th>
                 <th className='text-xs text-warm-gray font-medium px-4 py-3 text-start'>{t('admin.common.status')}</th>
                 <th className='w-[80px]' />
               </tr>
@@ -186,6 +105,9 @@ export const AdminClients = () => {
                     <div className='truncate max-w-[180px]'>{c.email || '—'}</div>
                   </td>
                   <td className='px-4 py-3 text-warm-gray whitespace-nowrap hidden md:table-cell'>{c.phone || '—'}</td>
+                  <td className='px-4 py-3 text-warm-gray whitespace-nowrap hidden lg:table-cell text-xs'>
+                    {c.createdAt ? new Date(c.createdAt).toLocaleDateString() : '—'}
+                  </td>
                   <td className='px-4 py-3'>
                     <StatusBadge status={c.status} />
                   </td>

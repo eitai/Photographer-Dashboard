@@ -29,6 +29,7 @@ export interface GalleryData {
   isDelivery: boolean;
   isActive: boolean;
   deliveryOf?: string;
+  createdAt?: string;
   lastEmailSentAt?: string;
   expiresAt?: string | null;
   sessionType?: string;

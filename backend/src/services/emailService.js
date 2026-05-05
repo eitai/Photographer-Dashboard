@@ -327,4 +327,75 @@ async function sendGalleryLink({ clientName, clientEmail, galleryName, galleryUr
   return true;
 }
 
-module.exports = { sendGalleryLink };
+async function sendProductOrderLinks({ clientName, clientEmail, studioName, links, lang = 'he' }) {
+  const transporter = createTransporter();
+  if (!transporter) {
+    console.warn('[email] SMTP not configured — skipping product order email');
+    return false;
+  }
+
+  const isHe = lang === 'he';
+  const dir = isHe ? 'rtl' : 'ltr';
+  const studio = esc(studioName || 'LightStudio');
+
+  const subject = isHe
+    ? `${studio} · הזמנות המוצרים שלך מוכנות לבחירה`
+    : `${studio} · Your product orders are ready for selection`;
+
+  const greeting = isHe ? `שלום ${esc(clientName)},` : `Hi ${esc(clientName)},`;
+  const intro = isHe
+    ? 'הצלם שלך הכין עבורך הזמנות מוצרים לבחירת תמונות. לחץ על כל קישור כדי לבחור תמונות:'
+    : 'Your photographer has prepared product orders for photo selection. Click each link to select your photos:';
+
+  const linksHtml = links.map((l) => `
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:16px;">
+      <tr>
+        <td style="background-color:#FAF8F4;border-radius:12px;padding:16px 20px;border:1px solid #F0EAE4;">
+          <p style="margin:0 0 8px;font-family:'Inter',Arial,sans-serif;font-size:14px;font-weight:600;color:#2C1F1F;">${esc(l.name)}</p>
+          <p style="margin:0 0 12px;font-family:'Inter',Arial,sans-serif;font-size:12px;color:#7A6060;">${l.type === 'album' ? (isHe ? 'אלבום' : 'Album') : (isHe ? 'הדפסה' : 'Print')}</p>
+          <a href="${l.url}" style="display:inline-block;padding:10px 24px;background-color:#2C1F1F;color:#FAF8F4;text-decoration:none;border-radius:30px;font-family:'Inter',Arial,sans-serif;font-size:13px;font-weight:600;">
+            ${isHe ? 'בחר תמונות ←' : 'Select Photos →'}
+          </a>
+        </td>
+      </tr>
+    </table>
+  `).join('');
+
+  const html = `<!DOCTYPE html>
+<html lang="${isHe ? 'he' : 'en'}" dir="${dir}">
+<head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/></head>
+<body style="margin:0;padding:0;background-color:#FAF8F4;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#FAF8F4;">
+  <tr><td align="center" style="padding:48px 16px;">
+    <table role="presentation" width="580" cellpadding="0" cellspacing="0" border="0" style="max-width:580px;width:100%;background-color:#ffffff;border-radius:20px;box-shadow:0 4px 32px rgba(44,31,31,0.07);overflow:hidden;">
+      <tr><td style="background:linear-gradient(90deg,#E7B8B5 0%,#D4A0A0 100%);height:5px;font-size:0;">&nbsp;</td></tr>
+      <tr><td align="center" style="padding:36px 40px 24px;">
+        <p style="margin:0 0 8px;font-family:'Inter',Arial,sans-serif;font-size:11px;font-weight:600;letter-spacing:5px;color:#C48F8C;text-transform:uppercase;">${studio}</p>
+        <h1 style="margin:0;font-family:'Playfair Display',Georgia,serif;font-size:26px;font-weight:400;color:#2C1F1F;">${isHe ? 'הזמנות המוצרים שלך' : 'Your Product Orders'}</h1>
+      </td></tr>
+      <tr><td dir="${dir}" style="padding:0 40px 40px;">
+        <p style="margin:0 0 24px;font-family:'Inter',Arial,sans-serif;font-size:16px;font-weight:500;color:#2C1F1F;">${greeting}</p>
+        <p style="margin:0 0 28px;font-family:'Inter',Arial,sans-serif;font-size:15px;color:#5C4B4B;line-height:1.8;">${intro}</p>
+        ${linksHtml}
+      </td></tr>
+      <tr><td align="center" style="padding:24px 40px 32px;background-color:#FAF8F4;border-top:1px solid #F0EAE4;">
+        <p style="margin:0;font-family:'Playfair Display',Georgia,serif;font-size:14px;color:#2C1F1F;">${studio}</p>
+        <p style="margin:4px 0 0;font-family:'Inter',Arial,sans-serif;font-size:10px;color:#C8B8B8;letter-spacing:0.5px;">Powered by Koral Light Studio</p>
+      </td></tr>
+      <tr><td style="background:linear-gradient(90deg,#E7B8B5 0%,#D4A0A0 100%);height:4px;font-size:0;">&nbsp;</td></tr>
+    </table>
+  </td></tr>
+</table>
+</body></html>`;
+
+  await transporter.sendMail({
+    from: process.env.SMTP_FROM || `"${studioName || 'LightStudio'}" <${process.env.SMTP_USER}>`,
+    to: clientEmail,
+    subject,
+    html,
+  });
+
+  return true;
+}
+
+module.exports = { sendGalleryLink, sendProductOrderLinks };

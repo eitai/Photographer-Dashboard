@@ -130,6 +130,11 @@ export const GalleryCard = ({
           <div className='mt-1'>
             <StatusBadge status={g.status} />
           </div>
+          {g.createdAt && (
+            <p className='text-[10px] text-warm-gray mt-1'>
+              {new Date(g.createdAt).toLocaleDateString()}
+            </p>
+          )}
           {g.lastEmailSentAt && (
             <p className='flex items-center gap-1 mt-1 text-[10px] text-warm-gray'>
               <Mail size={9} />
