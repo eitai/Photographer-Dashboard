@@ -127,6 +127,16 @@ router.post('/seed', asyncHandler(async (req, res) => {
 
 const FRONTEND_URL = () => (process.env.FRONTEND_URL || 'http://localhost:8080').split(',')[0].trim().replace(/\/$/, '');
 
+// Derive Google callback URL from GOOGLE_CALLBACK_URL if set, otherwise from
+// FRONTEND_URL (works in production where nginx proxies /api/ to the backend).
+// Falls back to localhost:5000 only in dev where frontend and backend differ ports.
+const googleCallbackUrl = () => {
+  if (process.env.GOOGLE_CALLBACK_URL) return process.env.GOOGLE_CALLBACK_URL;
+  const base = FRONTEND_URL();
+  if (!base.includes('localhost')) return `${base}/api/auth/google/callback`;
+  return 'http://localhost:5000/api/auth/google/callback';
+};
+
 // ── State-param helpers (avoids express-session dependency) ───────────────────
 // We encode { adminId } as a signed JWT in the OAuth `state` param so the
 // link-callback can identify which admin is being linked.
@@ -151,7 +161,7 @@ router.get('/google', (req, res) => {
   }
   const params = new URLSearchParams({
     client_id: clientID,
-    redirect_uri: process.env.GOOGLE_CALLBACK_URL || 'http://localhost:5000/api/auth/google/callback',
+    redirect_uri: googleCallbackUrl(),
     response_type: 'code',
     scope: 'openid email profile',
     access_type: 'online',
@@ -164,7 +174,7 @@ router.get('/google', (req, res) => {
 // ── GET /api/auth/google/callback — unified callback for login + link flows ─
 router.get('/google/callback', asyncHandler(async (req, res) => {
   const { code, state, error } = req.query;
-  const callbackUrl = process.env.GOOGLE_CALLBACK_URL || 'http://localhost:5000/api/auth/google/callback';
+  const callbackUrl = googleCallbackUrl();
 
   if (error || !code) {
     return res.redirect(`${FRONTEND_URL()}/admin?sso=error`);
@@ -237,7 +247,7 @@ router.get('/google/link', protect, (req, res) => {
   if (!clientID) {
     return res.redirect(`${FRONTEND_URL()}/admin/settings?sso=error&reason=not_configured`);
   }
-  const callbackUrl = process.env.GOOGLE_CALLBACK_URL || 'http://localhost:5000/api/auth/google/callback';
+  const callbackUrl = googleCallbackUrl();
   const params = new URLSearchParams({
     client_id: clientID,
     redirect_uri: callbackUrl,
