@@ -21,6 +21,7 @@ FROM nginx:alpine
 
 # Copy built React app
 COPY --from=builder /app/dist /usr/share/nginx/html
+RUN chmod -R 755 /usr/share/nginx/html
 
 # Copy nginx config (routes /api and /uploads to backend, SPA fallback for /)
 COPY nginx.conf /etc/nginx/conf.d/default.conf
