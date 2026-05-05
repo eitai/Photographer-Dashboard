@@ -100,7 +100,8 @@
       "Bash(python3 \"C:/Users/eitai/.claude/skills/ui-ux-pro-max/scripts/search.py\" \"photography studio admin dashboard product orders management clean\" --design-system -p \"Koral Light Studio Admin\")",
       "Bash(py \"C:/Users/eitai/.claude/skills/ui-ux-pro-max/scripts/search.py\" \"photography studio admin dashboard product orders management clean\" --design-system -p \"Koral Light Studio Admin\")",
       "Bash(py \"C:/Users/eitai/.claude/skills/ui-ux-pro-max/scripts/search.py\" \"admin panel card list sections dividers hierarchy clean\" --domain ux -n 8)",
-      "Bash(py \"C:/Users/eitai/.claude/skills/ui-ux-pro-max/scripts/search.py\" \"SaaS admin tool clean minimal professional\" --domain style -n 5)"
+      "Bash(py \"C:/Users/eitai/.claude/skills/ui-ux-pro-max/scripts/search.py\" \"SaaS admin tool clean minimal professional\" --domain style -n 5)",
+      "Bash(docker compose *)"
     ],
     "deny": [
       "Bash(taskkill *)",
