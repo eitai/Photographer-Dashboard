@@ -25,7 +25,7 @@ export const ClientInfoCard = ({ client, editing, setEditing, form, setForm, sav
   };
 
   return (
-    <div className='bg-card rounded-2xl border border-beige flex flex-col h-full max-h-[560px]'>
+    <div className='bg-card rounded-2xl border border-beige flex flex-col h-full max-h-[560px] shadow-[1px_1px_5px_rgba(0,0,0,0.4)]'>
 
       {/* ── Header ─────────────────────────────────────────────────────────── */}
       <div className='px-6 pt-6 pb-4 border-b border-beige shrink-0'>

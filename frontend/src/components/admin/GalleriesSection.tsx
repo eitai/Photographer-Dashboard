@@ -100,7 +100,7 @@ export const GalleriesSection = ({
   };
 
   return (
-    <div className='bg-card rounded-xl border border-beige p-6'>
+    <div className='bg-card rounded-xl border border-beige p-6 shadow-[1px_1px_5px_rgba(0,0,0,0.4)]'>
       <div className='flex items-center justify-between mb-4'>
         <div className='flex items-center gap-2'>
           <Images size={16} className='text-warm-gray' />

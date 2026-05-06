@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Package, Trash2, Download, Plus, Link as LinkIcon, Mail, Check, Copy, Pencil, X } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
 import { useI18n } from '@/lib/i18n';
+import { SESSION_TYPE_KEYS } from '@/components/admin/SessionTypeCombobox';
 import { getImageUrl } from '@/lib/api';
 import { downloadZip } from '@/lib/downloadZip';
 import {
@@ -29,6 +30,11 @@ const defaultForm = {
 
 export const ProductOrdersSection = ({ clientId, clientName, galleries, clientEmail }: Props) => {
   const { t } = useI18n();
+  const tGallery = (name: string) => {
+    if (!SESSION_TYPE_KEYS.includes(name)) return name;
+    const translated = t(`admin.session.${name}`);
+    return translated.startsWith('admin.session.') ? name : translated;
+  };
   const { data: orders = [], isLoading: loading, refetch } = useProductOrders(clientId);
   const { data: catalogProducts = [] } = useAdminProducts();
   const updateGalleries = useUpdateProductOrderGalleries(clientId);
@@ -146,7 +152,7 @@ export const ProductOrdersSection = ({ clientId, clientName, galleries, clientEm
 
   return (
     <>
-    <section className='bg-card rounded-2xl border border-beige flex flex-col max-h-[560px]'>
+    <section className='bg-card rounded-2xl border border-beige flex flex-col max-h-[560px] shadow-[1px_1px_5px_rgba(0,0,0,0.4)]'>
       {/* Header — pinned */}
       <div className='flex items-center justify-between flex-wrap gap-2 px-6 py-4 shrink-0 border-b border-beige'>
         <h2 className=' text-lg text-charcoal flex items-center gap-2'>
@@ -282,7 +288,7 @@ export const ProductOrdersSection = ({ clientId, clientName, galleries, clientEm
                       {Array.isArray(order.allowedGalleryIds) && order.allowedGalleryIds.length > 0 ? (
                         <div className='flex flex-wrap gap-1 mt-1'>
                           {(order.allowedGalleryIds as Array<{ _id: string; name: string } | string>).map((g) => {
-                            const name = typeof g === 'string' ? g : g.name;
+                            const name = tGallery(typeof g === 'string' ? g : g.name);
                             const key = typeof g === 'string' ? g : g._id;
                             return (
                               <span key={key} className='text-[11px] bg-beige/60 text-warm-gray px-2 py-0.5 rounded-full border border-beige'>
@@ -311,7 +317,7 @@ export const ProductOrdersSection = ({ clientId, clientName, galleries, clientEm
                       {Array.isArray(order.allowedGalleryIds) && order.allowedGalleryIds.length > 0 ? (
                         <div className='flex flex-wrap gap-1 mt-1'>
                           {(order.allowedGalleryIds as Array<{ _id: string; name: string } | string>).map((g) => {
-                            const name = typeof g === 'string' ? g : g.name;
+                            const name = tGallery(typeof g === 'string' ? g : g.name);
                             const key = typeof g === 'string' ? g : g._id;
                             return (
                               <span key={key} className='text-[11px] bg-beige/60 text-warm-gray px-2 py-0.5 rounded-full border border-beige'>
@@ -343,7 +349,7 @@ export const ProductOrdersSection = ({ clientId, clientName, galleries, clientEm
                                 className='accent-blush'
                               />
                               <label htmlFor={`gallery-${order._id}-${g._id}`} className='text-xs text-charcoal cursor-pointer'>
-                                {g.name}
+                                {tGallery(g.name)}
                               </label>
                             </li>
                           ))}
