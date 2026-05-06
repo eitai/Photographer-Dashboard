@@ -430,7 +430,7 @@ export const SelectionGallery = ({ gallery, images, getImageUrl }: Props) => {
                   renderItem={renderImageCard}
                 />
               ) : (
-                <Masonry breakpointCols={{ default: 4, 1024: 3, 640: 2 }} className='masonry-grid' columnClassName='masonry-grid_column'>
+                <Masonry breakpointCols={{ default: 3, 640: 2 }} className='masonry-grid' columnClassName='masonry-grid_column'>
                   {visibleImages.map((img, i) => {
                     const isSelected = selectedIds.has(img._id);
                     const isBlocked = selectionEnabled && !isSelected && atMax;

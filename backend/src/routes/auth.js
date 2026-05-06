@@ -20,7 +20,7 @@ const isSecure = (req) => process.env.NODE_ENV === 'production' || req?.headers?
 const cookieOptions = (req, maxAgeMs = 7 * 24 * 60 * 60 * 1000) => ({
   httpOnly: true,
   secure: isSecure(req),
-  sameSite: isSecure(req) ? 'strict' : 'lax',
+  sameSite: 'lax',
   maxAge: maxAgeMs,
 });
 

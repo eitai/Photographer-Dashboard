@@ -40,7 +40,13 @@ interface AuthState {
 //
 // koral_admin_token — Legacy key. Never written by current code; removed by
 //                     clearAuthAndRedirect() for cleanup only.
-const _stored = localStorage.getItem('koral_admin_user');
+// If this page load is the result of an SSO callback, the previous admin's
+// localStorage cache is stale — ignore it so ProtectedRoute waits for the
+// server-verified /auth/me response before rendering.
+const _ssoLanding = new URLSearchParams(window.location.search).get('sso') === 'success';
+if (_ssoLanding) localStorage.removeItem('koral_admin_user');
+
+const _stored = _ssoLanding ? null : localStorage.getItem('koral_admin_user');
 let _initialAdmin: AdminUser | null = null;
 if (_stored) {
   try {
