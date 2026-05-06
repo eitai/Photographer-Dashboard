@@ -44,7 +44,13 @@ interface AuthState {
 // localStorage cache is stale — ignore it so ProtectedRoute waits for the
 // server-verified /auth/me response before rendering.
 const _ssoLanding = new URLSearchParams(window.location.search).get('sso') === 'success';
-if (_ssoLanding) localStorage.removeItem('koral_admin_user');
+if (_ssoLanding) {
+  localStorage.removeItem('koral_admin_user');
+  // Force useVerifyAuth to re-fetch /auth/me instead of using a stale cache
+  // from the previous session — otherwise isFetching stays false, ProtectedRoute
+  // sees admin=null+isVerifying=false, and redirects back to login immediately.
+  queryClient.removeQueries({ queryKey: ['auth', 'me'] });
+}
 
 const _stored = _ssoLanding ? null : localStorage.getItem('koral_admin_user');
 let _initialAdmin: AdminUser | null = null;
