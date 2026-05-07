@@ -65,6 +65,7 @@ async function findOneAndUpdate(filter, update, opts = {}, pgClient = null) {
     notes: 'notes',
     status: 'status',
     eventDate: 'event_date',
+    faceRecognitionEnabled: 'face_recognition_enabled',
   };
 
   const src = update.$set || update;

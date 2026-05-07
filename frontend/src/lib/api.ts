@@ -78,4 +78,113 @@ export const getAdminStorage = (adminId: string): Promise<import('@/types/admin'
 export const setAdminQuota = (adminId: string, quotaGB: number): Promise<{ adminId: string; quotaBytes: number; quotaGB: number }> =>
   api.patch(`/admins/${adminId}/quota`, { quotaGB }).then((r) => r.data);
 
+// ---- Face Reference ----
+
+export interface FaceReferenceStatus {
+  hasReference: boolean;
+  imagePath?: string;
+  modelVersion?: string;
+  updatedAt?: string;
+}
+
+export interface FaceReferenceUploadResult {
+  referenceId: string;
+  clientId: string;
+}
+
+export const getClientFaceReference = (clientId: string): Promise<FaceReferenceStatus> =>
+  api.get(`/clients/${clientId}/face-reference`).then((r) => r.data);
+
+export const uploadClientFaceReference = (clientId: string, file: File): Promise<FaceReferenceUploadResult> => {
+  const formData = new FormData();
+  formData.append('reference', file);
+  return api
+    .post(`/clients/${clientId}/face-reference`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    })
+    .then((r) => r.data);
+};
+
+export const deleteClientFaceReference = (clientId: string): Promise<void> =>
+  api.delete(`/clients/${clientId}/face-reference`).then((r) => r.data);
+
+export interface TaggedImagesPage {
+  images: import('@/types/admin').GalleryImage[];
+  total: number;
+  page: number;
+  totalPages: number;
+}
+
+export const getClientTaggedImages = (clientId: string, page = 1, limit = 50): Promise<TaggedImagesPage> =>
+  api.get(`/clients/${clientId}/tagged-images`, { params: { page, limit } }).then((r) => r.data);
+
+// ---- Face Recognition Jobs ----
+
+export type FaceRecognitionJobStatus = 'queued' | 'running' | 'done' | 'failed';
+
+export interface FaceRecognitionJob {
+  id: string;
+  galleryId: string;
+  totalImages: number;
+  processed: number;
+  matched: number;
+  status: FaceRecognitionJobStatus;
+  errorMessage?: string;
+  startedAt?: string;
+  finishedAt?: string;
+}
+
+export const getFaceRecognitionStatus = (galleryId: string): Promise<FaceRecognitionJob> =>
+  api.get(`/galleries/${galleryId}/face-recognition/status`).then((r) => r.data);
+
+export const runFaceRecognition = (galleryId: string): Promise<{ jobId: string }> =>
+  api.post(`/galleries/${galleryId}/face-recognition/run`).then((r) => r.data);
+
+// ---- Face Tags ----
+
+export interface FaceTag {
+  id: string;
+  clientId: string;
+  clientName?: string;
+  confidence: number;
+  boundingBox: { x: number; y: number; width: number; height: number };
+  status: string;
+  confirmedByAdmin: boolean;
+}
+
+export const getImageFaceTags = (galleryId: string, imageId: string): Promise<FaceTag[]> =>
+  api.get(`/galleries/${galleryId}/images/${imageId}/face-tags`).then((r) => r.data);
+
+export const updateFaceTag = (
+  galleryId: string,
+  imageId: string,
+  tagId: string,
+  data: { confirmed?: boolean; clientId?: string },
+): Promise<FaceTag> =>
+  api.patch(`/galleries/${galleryId}/images/${imageId}/face-tags/${tagId}`, data).then((r) => r.data);
+
+export const deleteFaceTag = (galleryId: string, imageId: string, tagId: string): Promise<void> =>
+  api.delete(`/galleries/${galleryId}/images/${imageId}/face-tags/${tagId}`).then((r) => r.data);
+
+// ---- Face Groups (filter strip) ----
+
+export interface FaceGroup {
+  groupKey: string;
+  status: 'matched' | 'unmatched';
+  clientId: string | null;
+  clientName?: string | null;
+  referencePhotoPath?: string | null;
+  repBoundingBox?: { x: number; y: number; width: number; height: number } | null;
+  repThumbnailPath?: string | null;
+  faceCropPath?: string | null;
+  photoCount: number;
+  imageIds: string[];
+}
+
+export const getGalleryFaceGroups = (galleryId: string): Promise<FaceGroup[]> =>
+  api.get(`/galleries/${galleryId}/face-recognition/faces`).then((r) => r.data);
+
+export const getGalleryFaceGroupsPublic = (galleryId: string, token: string): Promise<FaceGroup[]> =>
+  api.get(`/galleries/${galleryId}/face-recognition/faces`, { params: { token } }).then((r) => r.data);
+
 export default api;

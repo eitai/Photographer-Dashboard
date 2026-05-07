@@ -1,5 +1,6 @@
 export interface Client {
   _id: string;
+  id?: string;
   name: string;
   email?: string;
   phone?: string;
@@ -8,6 +9,7 @@ export interface Client {
   notes?: string;
   eventDate?: string;
   createdAt?: string;
+  faceRecognitionEnabled?: boolean;
 }
 
 export interface AdminRecord {

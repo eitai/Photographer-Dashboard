@@ -4,6 +4,7 @@ import api, { getImageUrl } from '@/lib/api';
 import { useI18n } from '@/lib/i18n';
 import { DeliveryGallery } from '@/components/gallery/DeliveryGallery';
 import { SelectionGallery } from '@/components/gallery/SelectionGallery';
+import { FaceFilterStrip } from '@/components/gallery/FaceFilterStrip';
 import type { GalleryData, GalleryImage } from '@/types/gallery';
 
 export const ClientGallery = () => {
@@ -13,6 +14,8 @@ export const ClientGallery = () => {
   const [images, setImages] = useState<GalleryImage[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const [activeFaceGroupKey, setActiveFaceGroupKey] = useState<string | null>(null);
+  const [faceFilteredIds, setFaceFilteredIds] = useState<Set<string> | null>(null);
   const resolveImageUrl = useCallback((path: string) => getImageUrl(path), []);
 
   useEffect(() => {
@@ -81,7 +84,26 @@ export const ClientGallery = () => {
   return themeWrapper(
     <>
       {header}
-      <SelectionGallery gallery={gallery} images={images} getImageUrl={resolveImageUrl} />
+      {gallery && token && (
+        <div className='px-4 pt-4'>
+          <FaceFilterStrip
+            galleryId={gallery._id}
+            showNames={false}
+            selectedGroupKey={activeFaceGroupKey}
+            onSelect={(groupKey, imageIds) => {
+              setActiveFaceGroupKey(groupKey);
+              setFaceFilteredIds(groupKey ? new Set(imageIds) : null);
+            }}
+            galleryToken={token}
+          />
+        </div>
+      )}
+      <SelectionGallery
+        gallery={gallery}
+        images={images}
+        getImageUrl={resolveImageUrl}
+        filteredImageIds={faceFilteredIds}
+      />
     </>
   );
 };

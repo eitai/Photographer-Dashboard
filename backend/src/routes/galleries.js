@@ -358,13 +358,22 @@ router.post('/:id/reactivate', protect, asyncHandler(async (req, res) => {
 router.delete('/:id', protect, asyncHandler(async (req, res) => {
   if (!UUID_RE.test(req.params.id))
     return res.status(400).json({ message: 'Invalid ID format' });
-  const gallery = await Gallery.findOneAndDelete({ _id: req.params.id, adminId: req.admin.id });
+
+  // Verify ownership before touching anything
+  const gallery = await Gallery.findOne({ _id: req.params.id, adminId: req.admin.id });
   if (!gallery) return res.status(404).json({ message: 'Gallery not found' });
 
-  // Clean up image files from S3 or local disk (DB rows cascade-delete via FK)
+  // Fetch image file paths BEFORE deleting the gallery row.
+  // gallery_images has ON DELETE CASCADE — the DB rows are wiped the moment
+  // the gallery is deleted, so querying after deletion always returns [].
   const images = await GalleryImage.find({ galleryId: req.params.id });
-  const THUMB_DIR    = path.join(__dirname, '../../uploads/thumbnails');
-  const PREVIEW_DIR  = path.join(__dirname, '../../uploads/previews');
+
+  // Delete gallery row (cascades to gallery_images, gallery_submissions, etc.)
+  await Gallery.findOneAndDelete({ _id: req.params.id, adminId: req.admin.id });
+
+  // Clean up image files from S3 or local disk
+  const THUMB_DIR   = path.join(__dirname, '../../uploads/thumbnails');
+  const PREVIEW_DIR = path.join(__dirname, '../../uploads/previews');
   await Promise.all(
     images.flatMap((img) => [
       img.path          ? s3.deleteUpload(img.path,          UPLOADS_DIR) : Promise.resolve(),
@@ -374,12 +383,10 @@ router.delete('/:id', protect, asyncHandler(async (req, res) => {
     ])
   );
 
-  // Clean up video files from disk
+  // Clean up video files from S3 or local disk via the same helper used by
+  // the individual video-delete route (v.path is an S3 key or local path)
   if (Array.isArray(gallery.videos)) {
-    for (const v of gallery.videos) {
-      const filePath = path.join(__dirname, '../../uploads', path.basename(v.filename));
-      if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
-    }
+    await Promise.all(gallery.videos.map((v) => s3.deleteUpload(v.path, UPLOADS_DIR)));
   }
 
   res.json({ message: 'Gallery deleted' });

@@ -242,7 +242,7 @@ export const DeliveryGallery = ({ gallery, images, getImageUrl }: Props) => {
                     <button
                       onClick={() => setLightboxIndex(i)}
                       className='absolute top-3 start-3 w-8 h-8 rounded-full bg-black/50 backdrop-blur-sm text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 hover:bg-black/70'
-                      aria-label='Expand image'
+                      aria-label={t('gallery.expand_image')}
                     >
                       <Maximize2 size={13} />
                     </button>

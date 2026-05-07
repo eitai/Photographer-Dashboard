@@ -12,6 +12,8 @@ const asyncHandler = require('../middleware/asyncHandler');
 const logger = require('../utils/logger');
 const { UUID_RE } = require('../utils/uuid');
 const s3 = require('../config/s3');
+const { getQueue, JOB_NAMES } = require('../queue');
+const pool = require('../db');
 
 const router = express.Router({ mergeParams: true });
 
@@ -127,6 +129,49 @@ router.post('/', protect, checkQuota, upload.array('images', 5000), validateImag
   );
 
   const created = await GalleryImage.insertMany(imageDocs);
+
+  // Fire-and-forget: enqueue face recognition for ALL gallery images — never block the 201 response.
+  // We fetch the full ID list so the worker processes previously uploaded images too,
+  // and uses the idempotency guard in processImageForRecognition to skip already-tagged ones.
+  pool.query(
+    `SELECT id FROM gallery_images WHERE gallery_id = $1 ORDER BY sort_order ASC`,
+    [galleryId]
+  ).then(({ rows: allImgRows }) => {
+    const allImageIds = allImgRows.map((r) => r.id);
+    return pool.query(
+      `INSERT INTO face_recognition_jobs (gallery_id, admin_id, total_images, status)
+       VALUES ($1, $2, $3, 'queued')
+       ON CONFLICT (gallery_id) DO UPDATE
+         SET total_images   = EXCLUDED.total_images,
+             -- Only reset progress when the previous run finished; keep counters intact
+             -- if recognition is already queued/running so the UI isn't disrupted.
+             status         = CASE WHEN face_recognition_jobs.status IN ('done','failed')
+                                   THEN 'queued' ELSE face_recognition_jobs.status END,
+             processed      = CASE WHEN face_recognition_jobs.status IN ('done','failed')
+                                   THEN 0 ELSE face_recognition_jobs.processed END,
+             matched        = CASE WHEN face_recognition_jobs.status IN ('done','failed')
+                                   THEN 0 ELSE face_recognition_jobs.matched END,
+             error_message  = CASE WHEN face_recognition_jobs.status IN ('done','failed')
+                                   THEN NULL ELSE face_recognition_jobs.error_message END,
+             started_at     = CASE WHEN face_recognition_jobs.status IN ('done','failed')
+                                   THEN NULL ELSE face_recognition_jobs.started_at END,
+             finished_at    = CASE WHEN face_recognition_jobs.status IN ('done','failed')
+                                   THEN NULL ELSE face_recognition_jobs.finished_at END`,
+      [galleryId, req.admin.id, allImageIds.length]
+    ).then(() => getQueue()).then((boss) =>
+      boss.send(
+        JOB_NAMES.FACE_RECOGNITION,
+        { galleryId, adminId: req.admin.id, imageIds: allImageIds },
+        {
+          singletonKey:    `face:${galleryId}`,
+          retryLimit:      2,
+          retryDelay:      60,
+          expireInSeconds: 7200,
+        }
+      )
+    );
+  }).catch((err) => logger.warn('[images] face recognition enqueue failed:', err.message));
+
   res.status(201).json(created);
 }));
 

@@ -9,10 +9,12 @@ import { ImageGrid } from '@/components/admin/ImageGrid';
 import { BulkActionBar } from '@/components/admin/BulkActionBar';
 import { UploadQueue } from '@/components/admin/UploadQueue';
 import { FolderSidebar } from '@/components/admin/FolderSidebar';
+import { FaceFilterStrip } from '@/components/gallery/FaceFilterStrip';
 import { useGalleryUpload } from '@/hooks/useGalleryUpload';
 import { useGalleryData } from '@/hooks/useGalleryData';
 import { useImageDeletion } from '@/hooks/useImageDeletion';
 import { useVideoUpload } from '@/hooks/useVideoUpload';
+import { useQueryClient } from '@tanstack/react-query';
 import { useUpdateGallery } from '@/hooks/useQueries';
 import { useFolders } from '@/hooks/useFolders';
 import { useI18n } from '@/lib/i18n';
@@ -38,6 +40,8 @@ export const AdminGalleryUpload = () => {
 
   const { gallery, setGallery, loadError, images, loadImages } = useGalleryData(id);
   const [activeFolderId, setActiveFolderId] = useState<string | null>(null);
+  const [activeFaceGroupKey, setActiveFaceGroupKey] = useState<string | null>(null);
+  const [faceFilteredIds, setFaceFilteredIds] = useState<Set<string> | null>(null);
   const { folders, create: createFolder, rename: renameFolder, remove: removeFolder } = useFolders(id);
   const { queue, dragging, setDragging, inputRef, handleFiles, cancelUpload: cancelImageUpload, isUploading } = useGalleryUpload(id, loadImages);
   const { toDelete, setToDelete, bulkDeleting, deleteProgress, confirmDelete } = useImageDeletion(id, () => {
@@ -49,6 +53,7 @@ export const AdminGalleryUpload = () => {
     setGallery,
   );
 
+  const queryClient = useQueryClient();
   const updateGallery = useUpdateGallery();
 
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -64,9 +69,40 @@ export const AdminGalleryUpload = () => {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [gallery?.expiresAt]);
 
-  const visibleImages = activeFolderId
-    ? images.filter((img) => img.folderIds?.includes(activeFolderId))
-    : images;
+  // When upload finishes, reset the face groups cache so FaceFilterStrip
+  // After upload finishes: kick the recognition status query so the status bar
+  // appears immediately (it was idle because no job existed before the upload).
+  // We also stagger a second refetch 1.5 s later to handle the fire-and-forget
+  // timing on the backend (job insert happens after the 201 response is sent).
+  const prevIsUploading = useRef(false);
+  useEffect(() => {
+    if (!prevIsUploading.current || isUploading || !id) {
+      prevIsUploading.current = isUploading;
+      return;
+    }
+    prevIsUploading.current = isUploading;
+    queryClient.refetchQueries({ queryKey: ['faceGroups', id] });
+    queryClient.refetchQueries({ queryKey: ['faceRecognitionStatus', id] });
+    const t = setTimeout(() => {
+      queryClient.refetchQueries({ queryKey: ['faceRecognitionStatus', id] });
+    }, 1_500);
+    return () => clearTimeout(t);
+  }, [isUploading, id, queryClient]);
+
+  const visibleImages = (() => {
+    let imgs = activeFolderId
+      ? images.filter((img) => img.folderIds?.includes(activeFolderId))
+      : images;
+    if (faceFilteredIds !== null) {
+      imgs = imgs.filter((img) => faceFilteredIds.has(img._id));
+    }
+    return imgs;
+  })();
+
+  useEffect(() => {
+    setActiveFaceGroupKey(null);
+    setFaceFilteredIds(null);
+  }, [activeFolderId]);
 
   const toggleSelect = (imgId: string) => {
     setSelectedIds((prev) => {
@@ -125,8 +161,45 @@ export const AdminGalleryUpload = () => {
               <h1 className='text-xl font-semibold text-charcoal truncate leading-tight'>{gallery.name}</h1>
               {gallery.clientName && <p className='text-sm text-warm-gray mt-0.5 truncate'>{gallery.clientName}</p>}
             </div>
-            <div className='shrink-0 pt-0.5'>
-              <StatusBadge status={gallery.status} />
+            <div className='shrink-0 flex flex-col items-end gap-2'>
+              <div className='pt-0.5'>
+                <StatusBadge status={gallery.status} />
+              </div>
+              {/* Square upload box — directly below status badge */}
+              <div
+                role='button'
+                tabIndex={0}
+                aria-label={t('admin.upload.drop_images_label')}
+                onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
+                onDragLeave={() => setDragging(false)}
+                onDrop={(e) => { e.preventDefault(); setDragging(false); handleFiles(e.dataTransfer.files, activeFolderId); }}
+                onClick={() => inputRef.current?.click()}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); inputRef.current?.click(); }
+                }}
+                className={`w-28 h-28 flex flex-col items-center justify-center gap-1.5 border-2 border-dashed rounded-2xl cursor-pointer transition-colors ${
+                  dragging ? 'border-blush bg-blush/10' : 'border-beige hover:border-blush/50 bg-muted/30'
+                }`}
+              >
+                <CloudUpload size={22} className='text-warm-gray shrink-0' />
+                <div className='text-center px-2'>
+                  <p className='text-xs text-charcoal font-medium leading-tight'>{t('admin.upload.drag')}</p>
+                  <p className='text-[10px] text-warm-gray mt-0.5'>{t('admin.upload.browse')}</p>
+                </div>
+                <input
+                  ref={inputRef}
+                  type='file'
+                  multiple
+                  accept='image/*'
+                  className='hidden'
+                  onChange={(e) => e.target.files && handleFiles(e.target.files, activeFolderId)}
+                />
+              </div>
+              {activeFolderId && (
+                <p className='text-[10px] text-blush font-medium text-end leading-tight'>
+                  {folders.find((f) => f._id === activeFolderId)?.name}
+                </p>
+              )}
             </div>
           </div>
 
@@ -276,103 +349,70 @@ export const AdminGalleryUpload = () => {
         {/* ── IMAGES TAB ── */}
         {activeTab === 'images' && (
           <div className='flex flex-1 overflow-hidden bg-background'>
-            {/* Folder sidebar */}
-            <div className='w-72 shrink-0 border-e border-beige overflow-y-auto py-3 px-2'>
-              <FolderSidebar
-                folders={folders}
-                activeFolderId={activeFolderId}
-                onSelectFolder={(id) => { setActiveFolderId(id); setSelectedIds(new Set()); }}
-                onCreateFolder={(name) => createFolder.mutateAsync(name)}
-                onRenameFolder={(folderId, name) => renameFolder.mutate({ folderId, name })}
-                onDeleteFolder={(folderId) => {
-                  removeFolder.mutate(folderId);
-                  if (activeFolderId === folderId) setActiveFolderId(null);
-                }}
-                imageCounts={Object.fromEntries(
-                  folders.map((f) => [f._id, images.filter((img) => img.folderIds?.includes(f._id)).length])
-                )}
-                totalCount={images.length}
-              />
-            </div>
-
-            {/* Main content area */}
-            <div className='flex flex-col flex-1 overflow-hidden'>
-              {/* Drop zone — compact, fixed */}
-              <div className='shrink-0 px-4 md:px-6 pt-4'>
-                {activeFolderId && (
-                  <p className='text-xs text-blush font-medium mb-2'>
-                    {t('admin.gallery.folder_uploading_to')} {folders.find((f) => f._id === activeFolderId)?.name}
-                  </p>
-                )}
-                <div
-                  role='button'
-                  tabIndex={0}
-                  aria-label={t('admin.upload.drop_images_label')}
-                  onDragOver={(e) => {
-                    e.preventDefault();
-                    setDragging(true);
+              {/* Folder sidebar */}
+              <div className='w-72 shrink-0 border-e border-beige overflow-y-auto py-3 px-2'>
+                <FolderSidebar
+                  folders={folders}
+                  activeFolderId={activeFolderId}
+                  onSelectFolder={(id) => { setActiveFolderId(id); setSelectedIds(new Set()); }}
+                  onCreateFolder={(name) => createFolder.mutateAsync(name)}
+                  onRenameFolder={(folderId, name) => renameFolder.mutate({ folderId, name })}
+                  onDeleteFolder={(folderId) => {
+                    removeFolder.mutate(folderId);
+                    if (activeFolderId === folderId) setActiveFolderId(null);
                   }}
-                  onDragLeave={() => setDragging(false)}
-                  onDrop={(e) => { e.preventDefault(); setDragging(false); handleFiles(e.dataTransfer.files, activeFolderId); }}
-                  onClick={() => inputRef.current?.click()}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault();
-                      inputRef.current?.click();
-                    }
-                  }}
-                  className={`flex items-center gap-3 border-2 border-dashed rounded-xl px-5 py-3 cursor-pointer transition-colors ${
-                    dragging ? 'border-blush bg-blush/10' : 'border-beige hover:border-blush/50 bg-muted/30'
-                  }`}
-                >
-                  <CloudUpload size={20} className='text-warm-gray shrink-0' />
-                  <div>
-                    <p className='text-sm text-charcoal font-medium leading-tight'>{t('admin.upload.drag')}</p>
-                    <p className='text-xs text-warm-gray'>{t('admin.upload.browse')}</p>
-                  </div>
-                  <input
-                    ref={inputRef}
-                    type='file'
-                    multiple
-                    accept='image/*'
-                    className='hidden'
-                    onChange={(e) => e.target.files && handleFiles(e.target.files, activeFolderId)}
-                  />
-                </div>
-              </div>
-
-              {/* Upload queue + bulk bar — fixed */}
-              <div className='shrink-0 px-4 md:px-6 pt-3'>
-                <UploadQueue queue={queue} isUploading={isUploading} onCancel={cancelImageUpload} />
-                <BulkActionBar
-                  count={selectedIds.size}
-                  onClear={() => setSelectedIds(new Set())}
-                  onDelete={() => setToDelete([...selectedIds])}
-                  allSelected={selectedIds.size === visibleImages.length && visibleImages.length > 0}
-                  onSelectAll={() =>
-                    selectedIds.size === visibleImages.length
-                      ? setSelectedIds(new Set())
-                      : setSelectedIds(new Set(visibleImages.map((img) => img._id)))
-                  }
+                  imageCounts={Object.fromEntries(
+                    folders.map((f) => [f._id, images.filter((img) => img.folderIds?.includes(f._id)).length])
+                  )}
+                  totalCount={images.length}
                 />
               </div>
 
-              {/* Image grid — only scrollable area */}
-              <div className='flex-1 overflow-y-auto py-4 px-4 md:px-6 pb-6'>
-                {visibleImages.length > 0 && (
-                  <ImageGrid
-                    images={visibleImages}
-                    selectedIds={selectedIds}
-                    onToggleSelect={toggleSelect}
-                    onOpenLightbox={(idx) => setLightboxIndex(images.indexOf(visibleImages[idx]))}
-                    onRequestDelete={(imgId) => setToDelete([imgId])}
+              {/* Main content area */}
+              <div className='flex flex-col flex-1 overflow-hidden'>
+                {/* Upload queue + face strip + bulk bar — fixed */}
+                <div className='shrink-0 px-4 md:px-6 pt-3'>
+                  <UploadQueue queue={queue} isUploading={isUploading} onCancel={cancelImageUpload} />
+                  {id && (
+                    <FaceFilterStrip
+                      galleryId={id}
+                      showNames={true}
+                      selectedGroupKey={activeFaceGroupKey}
+                      onSelect={(groupKey, imageIds) => {
+                        setActiveFaceGroupKey(groupKey);
+                        setFaceFilteredIds(groupKey ? new Set(imageIds) : null);
+                      }}
+                    />
+                  )}
+                  <BulkActionBar
+                    count={selectedIds.size}
+                    onClear={() => setSelectedIds(new Set())}
+                    onDelete={() => setToDelete([...selectedIds])}
+                    allSelected={selectedIds.size === visibleImages.length && visibleImages.length > 0}
+                    onSelectAll={() =>
+                      selectedIds.size === visibleImages.length
+                        ? setSelectedIds(new Set())
+                        : setSelectedIds(new Set(visibleImages.map((img) => img._id)))
+                    }
                   />
-                )}
-                {visibleImages.length === 0 && queue.length === 0 && (
-                  <p className='text-sm text-warm-gray text-center py-16'>{t('admin.upload.no_images')}</p>
-                )}
+                </div>
+
+                {/* Image grid — only scrollable area */}
+                <div className='flex-1 overflow-y-auto py-4 px-4 md:px-6 pb-6'>
+                  {visibleImages.length > 0 && (
+                    <ImageGrid
+                      images={visibleImages}
+                      selectedIds={selectedIds}
+                      onToggleSelect={toggleSelect}
+                      onOpenLightbox={(idx) => setLightboxIndex(images.indexOf(visibleImages[idx]))}
+                      onRequestDelete={(imgId) => setToDelete([imgId])}
+                    />
+                  )}
+                  {visibleImages.length === 0 && queue.length === 0 && (
+                    <p className='text-sm text-warm-gray text-center py-16'>{t('admin.upload.no_images')}</p>
+                  )}
+                </div>
               </div>
-            </div>
           </div>
         )}
 

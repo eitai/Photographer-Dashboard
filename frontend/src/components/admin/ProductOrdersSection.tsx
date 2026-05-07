@@ -59,7 +59,7 @@ export const ProductOrdersSection = ({ clientId, clientName, galleries, clientEm
     e.preventDefault();
     setError('');
     if (!form.name.trim()) {
-      setError('Name is required');
+      setError(t('admin.products.name_required'));
       return;
     }
     setCreating(true);
@@ -75,7 +75,7 @@ export const ProductOrdersSection = ({ clientId, clientName, galleries, clientEm
       setShowForm(false);
       refetch();
     } catch {
-      setError('Failed to create product order');
+      setError(t('admin.products.create_failed'));
     } finally {
       setCreating(false);
     }

@@ -44,7 +44,7 @@ const parseOrigins = (raw) =>
 
 const allowedOrigins = [
   ...parseOrigins(process.env.FRONTEND_URL),
-  ...(process.env.NODE_ENV !== 'production' ? [process.env.FRONTEND_URL, 'http://localhost:5173', 'http://localhost:3000'] : []),
+  ...(process.env.NODE_ENV !== 'production' ? ['http://localhost:8080', 'http://localhost:5173', 'http://localhost:3000'] : []),
 ];
 
 app.use(
@@ -166,8 +166,10 @@ const v1 = express.Router();
 v1.use('/media', require('./routes/media'));
 v1.use('/auth', require('./routes/auth'));
 v1.use('/clients', require('./routes/clients'));
+v1.use('/clients', require('./routes/clientFaceReference'));
 v1.use('/galleries', require('./routes/galleries'));
 v1.use('/galleries/:galleryId/images', require('./routes/images'));
+v1.use('/galleries/:galleryId/face-recognition', require('./routes/faceRecognition'));
 v1.use('/galleries/:galleryId/folders', require('./routes/folders'));
 v1.use('/galleries/:galleryId', require('./routes/selections'));
 v1.use('/blog', require('./routes/blog'));

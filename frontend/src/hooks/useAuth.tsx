@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { useAuthStore } from '@/store/authStore';
+import { useAuthStore, type AdminUser } from '@/store/authStore';
 import { verifyAuth } from '@/lib/api';
 
 export function useAuth() {
@@ -21,25 +21,30 @@ export function useAuth() {
  * The localStorage cache still provides optimistic hydration so there is no
  * blank-screen flash before the ping resolves.
  */
-export function useVerifyAuth(): { isVerifying: boolean } {
+export function useVerifyAuth(): { isVerifying: boolean; queryAdmin: AdminUser | null } {
   const setAdmin = useAuthStore((s) => s.setAdmin);
 
-  const { isFetching, data } = useQuery({
+  const { isFetching, isPending, data } = useQuery({
     queryKey: ['auth', 'me'] as const,
     queryFn: verifyAuth,
-    // One-shot session check per page load.
-    // Subsequent 401s on any other request will trigger clearAuthAndRedirect.
     staleTime: Infinity,
     retry: false,
   });
 
-  // Write the server result back into the store once the ping resolves.
-  // This overwrites any tampered localStorage value with the real server user.
+  // Sync the server-authoritative user into the Zustand store so the rest of
+  // the app (sidebar, profile, etc.) can read it without going through React Query.
   useEffect(() => {
     if (data?.admin) {
       setAdmin(data.admin);
     }
   }, [data, setAdmin]);
 
-  return { isVerifying: isFetching };
+  // isPending = no data in cache yet (true from render #1 before the fetch starts).
+  // isFetching = network request actively in-flight.
+  // queryAdmin is returned synchronously so ProtectedRoute can use it on the same
+  // render that data arrives — before the useEffect above updates the Zustand store.
+  return {
+    isVerifying: isPending || isFetching,
+    queryAdmin: data?.admin ?? null,
+  };
 }

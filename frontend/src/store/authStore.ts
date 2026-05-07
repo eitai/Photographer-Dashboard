@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import api from '@/lib/api';
-import { queryClient } from '@/App';
+import { queryClient } from '@/lib/queryClient';
 
 export interface AdminUser {
   id: string;

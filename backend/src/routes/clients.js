@@ -55,6 +55,18 @@ router.put('/:id', asyncHandler(async (req, res) => {
   res.json(client);
 }));
 
+// PATCH /api/clients/:id  — partial update (e.g. faceRecognitionEnabled toggle)
+router.patch('/:id', asyncHandler(async (req, res) => {
+  if (!UUID_RE.test(req.params.id))
+    return res.status(400).json({ message: 'Invalid ID format' });
+  const client = await Client.findOneAndUpdate(
+    { _id: req.params.id, adminId: req.admin.id },
+    req.body
+  );
+  if (!client) return res.status(404).json({ message: 'Client not found' });
+  res.json(client);
+}));
+
 // DELETE /api/clients/:id
 router.delete('/:id', asyncHandler(async (req, res) => {
   if (!UUID_RE.test(req.params.id))

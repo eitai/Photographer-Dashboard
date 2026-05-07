@@ -2,7 +2,8 @@ import { Suspense, lazy } from 'react';
 import { Toaster } from '@/components/ui/toaster';
 import { Toaster as Sonner } from '@/components/ui/sonner';
 import { TooltipProvider } from '@/components/ui/tooltip';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryClientProvider } from '@tanstack/react-query';
+import { queryClient } from '@/lib/queryClient';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { HelmetProvider } from 'react-helmet-async';
 import { I18nProvider } from '@/lib/i18n';
@@ -48,8 +49,6 @@ const AdminContact = lazy(() => import('./pages/admin/AdminContact').then((m) =>
 // route level, so it cannot ship to production builds.
 const S3UploadTest = lazy(() => import('./pages/admin/_S3UploadTest').then((m) => ({ default: m.S3UploadTest })));
 
-export const queryClient = new QueryClient();
-
 // Layout wrapper for public pages (shows Navbar/Footer/WhatsApp)
 const PublicLayout = ({ children }: { children: React.ReactNode }) => (
   <>
@@ -67,7 +66,7 @@ export const App = () => (
         <I18nProvider>
             <Toaster />
             <Sonner />
-            <BrowserRouter>
+            <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
               <Suspense fallback={null}>
                 <Routes>
                   {/* Public routes */}

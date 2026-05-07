@@ -55,9 +55,15 @@ router.post(
   }),
 );
 
+const clearCookieOpts = (req) => ({
+  httpOnly: true,
+  secure: isSecure(req),
+  sameSite: 'lax',
+});
+
 // POST /api/auth/logout
 router.post('/logout', (req, res) => {
-  res.clearCookie('koral_token', cookieOptions(req));
+  res.clearCookie('koral_token', clearCookieOpts(req));
   res.json({ message: 'Logged out' });
 });
 
@@ -134,7 +140,11 @@ router.post(
 
 // ── Google OAuth helpers ───────────────────────────────────────────────────────
 
-const FRONTEND_URL = () => process.env.FRONTEND_URL.split(',')[0].trim().replace(/\/$/, '');
+const FRONTEND_URL = () => {
+  const url = process.env.FRONTEND_URL;
+  if (!url) return 'http://localhost:8080';
+  return url.split(',')[0].trim().replace(/\/$/, '');
+};
 
 // Derive Google callback URL from GOOGLE_CALLBACK_URL if set, otherwise from
 // FRONTEND_URL (works in production where nginx proxies /api/ to the backend).

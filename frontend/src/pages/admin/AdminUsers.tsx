@@ -342,7 +342,7 @@ export const AdminUsers = () => {
                               setProfileForm((f) => ({ ...f, username: e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, '') }))
                             }
                             className='font-mono'
-                            placeholder='user123'
+                            placeholder={t('admin.users.username_ph')}
                           />
                         </div>
                         <div>
@@ -426,21 +426,21 @@ export const AdminUsers = () => {
                           />
                         </div>
                         <div>
-                          <label className={labelClass}>Instagram</label>
+                          <label className={labelClass}>{t('admin.settings.instagram')}</label>
                           <InputField
                             type='text'
                             value={landingForm.instagramHandle}
                             onChange={(e) => setLandingForm((f) => ({ ...f, instagramHandle: e.target.value }))}
-                            placeholder='@username'
+                            placeholder={t('admin.users.instagram_ph')}
                           />
                         </div>
                         <div>
-                          <label className={labelClass}>Facebook URL</label>
+                          <label className={labelClass}>{t('admin.settings.facebook')}</label>
                           <InputField
                             type='url'
                             value={landingForm.facebookUrl}
                             onChange={(e) => setLandingForm((f) => ({ ...f, facebookUrl: e.target.value }))}
-                            placeholder='https://facebook.com/...'
+                            placeholder={t('admin.users.facebook_ph')}
                           />
                         </div>
                       </div>
@@ -608,7 +608,7 @@ export const AdminUsers = () => {
                   value={form.email}
                   onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
                   required
-                  placeholder='email@example.com'
+                  placeholder={t('admin.users.email_ph')}
                 />
               </div>
               <div>
@@ -638,7 +638,7 @@ export const AdminUsers = () => {
                   type='text'
                   value={form.username}
                   onChange={(e) => setForm((f) => ({ ...f, username: e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, '') }))}
-                  placeholder='user123'
+                  placeholder={t('admin.users.username_ph')}
                   className='font-mono'
                 />
                 <p className='text-[10px] text-warm-gray mt-0.5'>{t('admin.users.username_hint')}</p>
@@ -649,7 +649,7 @@ export const AdminUsers = () => {
                   type='text'
                   value={form.studioName}
                   onChange={(e) => setForm((f) => ({ ...f, studioName: e.target.value }))}
-                  placeholder='Studio Name'
+                  placeholder={t('admin.users.studio_name_ph')}
                 />
               </div>
               <div className='sm:col-span-2'>

@@ -25,9 +25,6 @@ interface ImageWithGallery extends GalleryImage {
   galleryId: string;
 }
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
-
-
 // ── OrderPanel ────────────────────────────────────────────────────────────────
 
 export interface OrderPanelProps {
@@ -97,7 +94,6 @@ export const OrderPanel = ({ order, onSubmitted }: OrderPanelProps) => {
           return next;
         }
         if (next.size >= order.maxPhotos) {
-          // Flash the max indicator
           setMaxReachedFlash(true);
           setTimeout(() => setMaxReachedFlash(false), 1200);
           return prev;
@@ -130,8 +126,7 @@ export const OrderPanel = ({ order, onSubmitted }: OrderPanelProps) => {
   };
 
   const typeLabel = order.type === 'album' ? 'Album' : 'Print';
-  const typeBadgeClass =
-    order.type === 'album' ? 'bg-violet-50 text-violet-700 border-violet-200' : 'bg-amber-50 text-amber-700 border-amber-200';
+  const typeBadgeClass = 'bg-white/5 text-white/70 border-white/20';
 
   // ── Submitted state ──────────────────────────────────────────────────────────
 
@@ -139,19 +134,19 @@ export const OrderPanel = ({ order, onSubmitted }: OrderPanelProps) => {
     const submittedPhotos = Array.from(selectedPhotos.values());
     return (
       <FadeIn>
-        <div className='border border-beige rounded-2xl overflow-hidden'>
+        <div className='bg-[#111111] border border-white/10 rounded-2xl overflow-hidden'>
           {/* Header */}
-          <div className='px-5 py-4 bg-ivory border-b border-beige flex items-center gap-3 flex-wrap'>
+          <div className='px-5 py-4 bg-[#0D0D0D] border-b border-white/10 flex items-center gap-3 flex-wrap'>
             <div className='flex-1 min-w-0'>
               <div className='flex items-center gap-2 flex-wrap'>
-                <h3 className=' text-base text-charcoal'>{order.name}</h3>
+                <h3 className='font-playfair text-base text-white'>{order.name}</h3>
                 <span className={`text-[11px] px-2 py-0.5 rounded-full border ${typeBadgeClass}`}>{typeLabel}</span>
-                <span className='text-[11px] px-2 py-0.5 rounded-full border bg-green-50 text-green-700 border-green-200 flex items-center gap-1'>
+                <span className='text-[11px] px-2 py-0.5 rounded-full border bg-white/10 text-white/80 border-white/20 flex items-center gap-1'>
                   <Check size={10} />
                   Submitted
                 </span>
               </div>
-              <p className='text-xs text-warm-gray mt-0.5'>
+              <p className='text-xs text-white/50 mt-0.5'>
                 {submittedPhotos.length} photo{submittedPhotos.length !== 1 ? 's' : ''} selected
               </p>
             </div>
@@ -164,8 +159,7 @@ export const OrderPanel = ({ order, onSubmitted }: OrderPanelProps) => {
                 {submittedPhotos.map((photo) => (
                   <div
                     key={photo.imageId}
-                    className='relative aspect-square rounded-lg overflow-hidden ring-2'
-                    style={{ boxShadow: '0 0 0 2px #E7B8B5' }}
+                    className='relative aspect-square rounded-lg overflow-hidden ring-2 ring-white/60'
                   >
                     <img
                       src={getImageUrl(photo.thumbnailPath || photo.path)}
@@ -173,11 +167,8 @@ export const OrderPanel = ({ order, onSubmitted }: OrderPanelProps) => {
                       className='w-full h-full object-cover'
                       loading='lazy'
                     />
-                    <div
-                      className='absolute top-1 right-1 w-5 h-5 rounded-full flex items-center justify-center'
-                      style={{ backgroundColor: '#E7B8B5' }}
-                    >
-                      <Check size={10} className='text-white' />
+                    <div className='absolute top-1 end-1 w-5 h-5 rounded-full bg-white flex items-center justify-center'>
+                      <Check size={10} className='text-black' />
                     </div>
                   </div>
                 ))}
@@ -193,16 +184,16 @@ export const OrderPanel = ({ order, onSubmitted }: OrderPanelProps) => {
 
   return (
     <FadeIn>
-      <div className='border border-beige rounded-2xl overflow-hidden'>
+      <div className='bg-[#111111] border border-white/10 rounded-2xl overflow-hidden'>
         {/* Order header + sticky submit bar */}
-        <div className='sticky top-0 z-10 px-5 py-4 bg-ivory border-b border-beige'>
+        <div className='sticky top-[69px] z-10 px-5 py-4 bg-[#0D0D0D] border-b border-white/10'>
           <div className='flex items-start justify-between gap-3 flex-wrap'>
             <div className='min-w-0'>
               <div className='flex items-center gap-2 flex-wrap'>
-                <h3 className=' text-base text-charcoal'>{order.name}</h3>
+                <h3 className='font-playfair text-base text-white'>{order.name}</h3>
                 <span className={`text-[11px] px-2 py-0.5 rounded-full border ${typeBadgeClass}`}>{typeLabel}</span>
               </div>
-              <p className='text-xs text-warm-gray mt-0.5'>
+              <p className='text-xs text-white/40 mt-0.5'>
                 Select up to {order.maxPhotos} photo{order.maxPhotos !== 1 ? 's' : ''}
               </p>
             </div>
@@ -210,7 +201,7 @@ export const OrderPanel = ({ order, onSubmitted }: OrderPanelProps) => {
             <div className='flex items-center gap-3 shrink-0'>
               <span
                 className={`text-sm font-medium transition-colors duration-300 ${
-                  maxReachedFlash ? 'text-blush scale-105' : atMax ? 'text-blush' : 'text-warm-gray'
+                  maxReachedFlash ? 'text-red-400 scale-105' : atMax ? 'text-red-400' : 'text-white/60'
                 }`}
               >
                 {selectedPhotos.size} / {order.maxPhotos}
@@ -220,7 +211,7 @@ export const OrderPanel = ({ order, onSubmitted }: OrderPanelProps) => {
               <button
                 onClick={handleSubmit}
                 disabled={submitting || selectedPhotos.size === 0}
-                className='flex items-center gap-2 px-4 py-2 bg-blush text-white text-sm rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50'
+                className='flex items-center gap-2 px-4 py-2 bg-white text-black text-sm rounded-lg hover:bg-white/90 transition-opacity disabled:opacity-50'
               >
                 <Send size={13} />
                 {submitting ? 'Submitting…' : 'Submit Selection'}
@@ -235,8 +226,8 @@ export const OrderPanel = ({ order, onSubmitted }: OrderPanelProps) => {
                 onClick={() => setActiveGalleryId(null)}
                 className={`px-3 py-1 text-xs rounded-full border transition-colors ${
                   activeGalleryId === null
-                    ? 'bg-blush text-white border-blush'
-                    : 'bg-white text-warm-gray border-beige hover:border-blush hover:text-charcoal'
+                    ? 'bg-white text-black border-white'
+                    : 'border-white/20 text-white/40 hover:text-white hover:border-white/50'
                 }`}
               >
                 All ({allImages.length})
@@ -249,8 +240,8 @@ export const OrderPanel = ({ order, onSubmitted }: OrderPanelProps) => {
                     onClick={() => setActiveGalleryId(g._id)}
                     className={`px-3 py-1 text-xs rounded-full border transition-colors ${
                       activeGalleryId === g._id
-                        ? 'bg-blush text-white border-blush'
-                        : 'bg-white text-warm-gray border-beige hover:border-blush hover:text-charcoal'
+                        ? 'bg-white text-black border-white'
+                        : 'border-white/20 text-white/40 hover:text-white hover:border-white/50'
                     }`}
                   >
                     {g.name} ({count})
@@ -265,11 +256,11 @@ export const OrderPanel = ({ order, onSubmitted }: OrderPanelProps) => {
         <div className='p-4'>
           {imagesLoading ? (
             <div className='flex items-center justify-center py-16 gap-3'>
-              <div className='w-5 h-5 border-2 border-blush border-t-transparent rounded-full animate-spin' />
-              <p className='text-sm text-warm-gray'>Loading photos…</p>
+              <div className='w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin' />
+              <p className='text-sm text-white/40'>Loading photos…</p>
             </div>
           ) : visibleImages.length === 0 ? (
-            <p className='text-center text-sm text-warm-gray py-12'>No photos available.</p>
+            <p className='text-center text-sm text-white/40 py-12'>No photos available.</p>
           ) : (
             <Masonry breakpointCols={{ default: 4, 1024: 3, 640: 2 }} className='masonry-grid' columnClassName='masonry-grid_column'>
               {visibleImages.map((img, i) => {
@@ -282,9 +273,8 @@ export const OrderPanel = ({ order, onSubmitted }: OrderPanelProps) => {
                         if (!isBlocked) togglePhoto(img);
                       }}
                       className={`group relative rounded-xl overflow-hidden transition-all duration-200 mb-3 ${
-                        isBlocked ? 'cursor-not-allowed opacity-40' : 'cursor-pointer'
-                      }`}
-                      style={isSelected ? { boxShadow: '0 0 0 3px #E7B8B5' } : {}}
+                        isBlocked ? 'opacity-20 cursor-not-allowed' : 'cursor-pointer'
+                      } ${isSelected ? 'ring-2 ring-white shadow-[0_0_0_2px_rgba(255,255,255,0.8)]' : ''}`}
                     >
                       <img
                         src={getImageUrl(img.thumbnailPath || img.path)}
@@ -295,16 +285,13 @@ export const OrderPanel = ({ order, onSubmitted }: OrderPanelProps) => {
 
                       {/* Hover overlay */}
                       {!isBlocked && (
-                        <div className='absolute inset-0 bg-foreground/0 group-hover:bg-foreground/20 transition-colors duration-200 pointer-events-none' />
+                        <div className='absolute inset-0 bg-white/0 group-hover:bg-white/[0.08] transition-colors duration-200 pointer-events-none' />
                       )}
 
                       {/* Selected check badge */}
                       {isSelected ? (
-                        <div
-                          className='absolute top-2 right-2 w-7 h-7 rounded-full flex items-center justify-center shadow-sm'
-                          style={{ backgroundColor: '#E7B8B5' }}
-                        >
-                          <Check size={13} className='text-white' />
+                        <div className='absolute top-2 end-2 w-7 h-7 rounded-full bg-white flex items-center justify-center shadow-sm'>
+                          <Check size={13} className='text-black' />
                         </div>
                       ) : !isBlocked ? (
                         <button
@@ -312,7 +299,7 @@ export const OrderPanel = ({ order, onSubmitted }: OrderPanelProps) => {
                             e.stopPropagation();
                             togglePhoto(img);
                           }}
-                          className='absolute top-2 right-2 w-7 h-7 rounded-full bg-black/40 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200'
+                          className='absolute top-2 end-2 w-7 h-7 rounded-full bg-white/10 border border-white/30 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200'
                           aria-label='Select photo'
                         >
                           <Check size={13} />
@@ -346,11 +333,9 @@ export const ClientProductsPage = () => {
       try {
         const data = await fetchProductOrdersByToken(token);
         setOrders(data);
-        // Derive client name from first gallery's context if available
         if (data.length > 0) {
           const firstGalleries = data[0].allowedGalleryIds as { _id: string; name: string }[];
           if (firstGalleries.length > 0) {
-            // Try to get client name from the gallery token endpoint
             try {
               const gRes = await api.get(`/galleries/token/${token}`);
               setClientName(gRes.data.clientName || '');
@@ -375,13 +360,10 @@ export const ClientProductsPage = () => {
 
   if (loading) {
     return (
-      <main className='min-h-screen flex items-center justify-center' style={{ backgroundColor: '#FAF8F4' }}>
+      <main className='min-h-screen bg-[#0A0A0A] flex items-center justify-center'>
         <div className='flex flex-col items-center gap-4'>
-          <div
-            className='w-8 h-8 border-2 border-t-transparent rounded-full animate-spin'
-            style={{ borderColor: '#E7B8B5', borderTopColor: 'transparent' }}
-          />
-          <p className='text-sm text-warm-gray'>Loading your products…</p>
+          <div className='w-8 h-8 border-2 border-white/20 border-t-white rounded-full animate-spin' />
+          <p className='text-sm text-white/40'>Loading your products…</p>
         </div>
       </main>
     );
@@ -391,12 +373,12 @@ export const ClientProductsPage = () => {
 
   if (error) {
     return (
-      <main className='min-h-screen flex items-center justify-center px-6' style={{ backgroundColor: '#FAF8F4' }}>
+      <main className='min-h-screen bg-[#0A0A0A] flex items-center justify-center px-6'>
         <FadeIn>
           <div className='text-center'>
-            <Package size={40} className='mx-auto mb-4 text-beige' />
-            <p className=' text-2xl text-charcoal mb-2'>Link not found</p>
-            <p className='text-sm text-warm-gray'>This link may have expired or is invalid. Please contact your photographer.</p>
+            <Package size={40} className='mx-auto mb-4 text-white/20' />
+            <p className='font-playfair text-2xl text-white mb-2'>Link not found</p>
+            <p className='text-sm text-white/40'>This link may have expired or is invalid. Please contact your photographer.</p>
           </div>
         </FadeIn>
       </main>
@@ -407,12 +389,12 @@ export const ClientProductsPage = () => {
 
   if (orders.length === 0) {
     return (
-      <main className='min-h-screen flex items-center justify-center px-6' style={{ backgroundColor: '#FAF8F4' }}>
+      <main className='min-h-screen bg-[#0A0A0A] flex items-center justify-center px-6'>
         <FadeIn>
           <div className='text-center'>
-            <ShoppingBag size={40} className='mx-auto mb-4 text-beige' />
-            <p className=' text-2xl text-charcoal mb-2'>{t('products.no_products_title')}</p>
-            <p className='text-sm text-warm-gray'>{t('products.no_products_desc')}</p>
+            <ShoppingBag size={40} className='mx-auto mb-4 text-white/20' />
+            <p className='font-playfair text-2xl text-white mb-2'>{t('products.no_products_title')}</p>
+            <p className='text-sm text-white/40'>{t('products.no_products_desc')}</p>
           </div>
         </FadeIn>
       </main>
@@ -424,19 +406,17 @@ export const ClientProductsPage = () => {
   const allSubmitted = orders.every((o) => o.status === 'submitted');
 
   return (
-    <main className='min-h-screen' style={{ backgroundColor: '#FAF8F4' }}>
+    <main className='min-h-screen bg-[#0A0A0A]'>
       {/* Page header */}
-      <header className='border-b border-beige bg-white/70 backdrop-blur-sm sticky top-0 z-20'>
+      <header className='bg-black border-b border-white/10 backdrop-blur-sm sticky top-0 z-20'>
         <div className='max-w-5xl mx-auto px-4 sm:px-6 py-4 flex items-center gap-3'>
-          <div className='w-8 h-8 rounded-full flex items-center justify-center shrink-0' style={{ backgroundColor: '#E7B8B5' }}>
-            <ShoppingBag size={15} className='text-white' />
-          </div>
+          <ShoppingBag size={18} className='text-white shrink-0' />
           <div className='min-w-0'>
-            <h1 className=' text-lg text-charcoal leading-tight'>Your Products</h1>
-            {clientName && <p className='text-xs text-warm-gray truncate'>{clientName}</p>}
+            <h1 className='font-playfair text-lg text-white leading-tight'>Your Products</h1>
+            {clientName && <p className='text-xs text-white/40 truncate'>{clientName}</p>}
           </div>
           {allSubmitted && (
-            <span className='ms-auto text-xs flex items-center gap-1.5 text-green-700 bg-green-50 border border-green-200 px-3 py-1 rounded-full'>
+            <span className='ms-auto text-xs flex items-center gap-1.5 text-white bg-white/10 border border-white/20 px-3 py-1 rounded-full'>
               <Check size={11} />
               All submitted
             </span>
@@ -455,7 +435,7 @@ export const ClientProductsPage = () => {
 
       {/* Footer */}
       <footer className='text-center py-8 mt-4'>
-        <p className='text-xs text-warm-gray/60'>LIGHT STUDIO</p>
+        <p className='text-white/20 text-xs tracking-widest uppercase'>Light Studio</p>
       </footer>
     </main>
   );

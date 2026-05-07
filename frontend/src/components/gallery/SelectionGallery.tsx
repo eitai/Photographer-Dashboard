@@ -16,9 +16,11 @@ interface Props {
   gallery: GalleryData;
   images: GalleryImage[];
   getImageUrl: (path: string) => string;
+  filteredImageIds?: Set<string> | null;
+  selectedFaceGroupKey?: string | null;
 }
 
-export const SelectionGallery = ({ gallery, images, getImageUrl }: Props) => {
+export const SelectionGallery = ({ gallery, images, getImageUrl, filteredImageIds }: Props) => {
   const { t } = useI18n();
   const isMobile = useIsMobile();
   const selectionEnabled = gallery.selectionEnabled !== false;
@@ -60,9 +62,15 @@ export const SelectionGallery = ({ gallery, images, getImageUrl }: Props) => {
   const hasLimit = selectionEnabled && gallery.maxSelections > 0;
   const atMax = hasLimit && selectedIds.size >= gallery.maxSelections;
 
-  const visibleImages = activeFolderId
-    ? images.filter((img) => img.folderIds?.includes(activeFolderId))
-    : images;
+  const visibleImages = (() => {
+    let imgs = activeFolderId
+      ? images.filter((img) => img.folderIds?.includes(activeFolderId))
+      : images;
+    if (filteredImageIds != null) {
+      imgs = imgs.filter((img) => filteredImageIds.has(img._id));
+    }
+    return imgs;
+  })();
 
   const VIRTUALIZATION_THRESHOLD = 500;
 
@@ -181,7 +189,7 @@ export const SelectionGallery = ({ gallery, images, getImageUrl }: Props) => {
         <button
           onClick={(e) => { e.stopPropagation(); setLightboxIndex(i); }}
           className='absolute top-2 start-2 w-8 h-8 rounded-full bg-black/40 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200'
-          aria-label='Expand image'
+          aria-label={t('gallery.expand_image')}
         >
           <Maximize2 size={14} />
         </button>
@@ -202,7 +210,7 @@ export const SelectionGallery = ({ gallery, images, getImageUrl }: Props) => {
             className={`absolute bottom-2 start-2 w-7 h-7 rounded-full flex items-center justify-center transition-all duration-200 ${
               heroId === img._id ? 'bg-amber-400 text-white opacity-100 shadow-md' : 'bg-black/40 text-white opacity-0 group-hover:opacity-100'
             }`}
-            title='Mark as hero photo'
+            title={t('gallery.mark_hero')}
           >
             <Star size={12} fill={heroId === img._id ? 'currentColor' : 'none'} />
           </button>
@@ -215,7 +223,7 @@ export const SelectionGallery = ({ gallery, images, getImageUrl }: Props) => {
               imageComments[img._id]?.trim() ? 'opacity-100 text-charcoal' : 'bg-black/40 text-white opacity-0 group-hover:opacity-100'
             }`}
             style={imageComments[img._id]?.trim() ? { backgroundColor: '#E7B8B5' } : {}}
-            title='Add note'
+            title={t('gallery.add_note')}
           >
             <MessageCircle size={12} />
           </button>
@@ -236,7 +244,7 @@ export const SelectionGallery = ({ gallery, images, getImageUrl }: Props) => {
               className='w-full bg-white/10 text-white text-xs placeholder-white/50 border border-white/20 rounded-lg px-2 py-1.5 resize-none focus:outline-none focus:border-white/40'
             />
             <button onClick={() => setActiveCommentId(null)} className='mt-1 text-[10px] text-white/70 hover:text-white'>
-              סגור
+              {t('gallery.close_note')}
             </button>
           </div>
         )}
@@ -269,16 +277,9 @@ export const SelectionGallery = ({ gallery, images, getImageUrl }: Props) => {
       <section className='section-spacing'>
         <div className='container-narrow'>
           <FadeIn>
-            <div className='text-center mb-12 max-w-[50%] mx-auto'>
-              <p className='text-2xl md:text-3xl mb-2' style={{ color: 'var(--foreground)' }}>{gallery.headerMessage}</p>
-              {gallery.clientName && <p className='font-sans' style={{ color: 'var(--muted-foreground)' }}>{gallery.clientName}</p>}
-              {selectedIds.size > 0 && (
-                <p className='text-sm font-sans mt-2' style={{ color: 'var(--muted-foreground)' }}>
-                  {hasLimit
-                    ? `${selectedIds.size} ${t('gallery.select_of')} ${gallery.maxSelections} ${t('gallery.images_selected')}`
-                    : `${selectedIds.size} ${t('gallery.images_selected')}`}
-                </p>
-              )}
+            <div className='text-center mb-5'>
+              <p className='text-lg mb-1' style={{ color: 'var(--foreground)' }}>{gallery.headerMessage}</p>
+              {gallery.clientName && <p className='text-sm font-sans' style={{ color: 'var(--muted-foreground)' }}>{gallery.clientName}</p>}
             </div>
           </FadeIn>
 
@@ -308,7 +309,7 @@ export const SelectionGallery = ({ gallery, images, getImageUrl }: Props) => {
             </FadeIn>
           )}
 
-          <div className='sticky top-14 z-40 backdrop-blur-sm py-3 mb-8 -mx-6 px-6' style={{ backgroundColor: 'color-mix(in srgb, var(--background) 90%, transparent)', borderBottom: '1px solid var(--border)' }}>
+          <div className='sticky top-14 z-40 backdrop-blur-sm py-2 mb-4 -mx-6 px-6' style={{ backgroundColor: 'color-mix(in srgb, var(--background) 90%, transparent)', borderBottom: '1px solid var(--border)' }}>
             <div className='flex items-center justify-between max-w-[1100px] mx-auto'>
               <span className='text-sm font-sans font-medium' style={{ color: atMax ? 'var(--primary)' : 'var(--muted-foreground)' }}>
                 {hasLimit ? `${selectedIds.size} / ${gallery.maxSelections}` : selectedIds.size}
@@ -461,7 +462,7 @@ export const SelectionGallery = ({ gallery, images, getImageUrl }: Props) => {
                           <button
                             onClick={(e) => { e.stopPropagation(); setLightboxIndex(i); }}
                             className='absolute top-2 start-2 w-8 h-8 rounded-full bg-black/40 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200'
-                            aria-label='Expand image'
+                            aria-label={t('gallery.expand_image')}
                           >
                             <Maximize2 size={14} />
                           </button>
@@ -482,7 +483,7 @@ export const SelectionGallery = ({ gallery, images, getImageUrl }: Props) => {
                                   ? 'bg-amber-400 text-white opacity-100 shadow-md'
                                   : 'bg-black/40 text-white opacity-0 group-hover:opacity-100'
                               }`}
-                              title='Mark as hero photo'
+                              title={t('gallery.mark_hero')}
                             >
                               <Star size={12} fill={heroId === img._id ? 'currentColor' : 'none'} />
                             </button>
@@ -496,7 +497,7 @@ export const SelectionGallery = ({ gallery, images, getImageUrl }: Props) => {
                                   : 'bg-black/40 text-white opacity-0 group-hover:opacity-100'
                               }`}
                               style={imageComments[img._id]?.trim() ? { backgroundColor: '#E7B8B5' } : {}}
-                              title='Add note'
+                              title={t('gallery.add_note')}
                             >
                               <MessageCircle size={12} />
                             </button>
@@ -511,7 +512,7 @@ export const SelectionGallery = ({ gallery, images, getImageUrl }: Props) => {
                                 autoFocus
                                 value={imageComments[img._id] || ''}
                                 onChange={(e) => setImageComments((prev) => ({ ...prev, [img._id]: e.target.value }))}
-                                placeholder='הוסף הערה לתמונה...'
+                                placeholder={t('gallery.note_placeholder')}
                                 rows={2}
                                 className='w-full bg-white/10 text-white text-xs placeholder-white/50 border border-white/20 rounded-lg px-2 py-1.5 resize-none focus:outline-none focus:border-white/40'
                               />

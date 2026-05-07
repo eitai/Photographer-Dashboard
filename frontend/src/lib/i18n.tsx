@@ -1230,6 +1230,74 @@ const translations: Record<string, Record<Lang, string>> = {
   'admin.editor.categories.branding': { he: 'מיתוג', en: 'Branding' },
   'admin.editor.categories.landscape': { he: 'נוף', en: 'Landscape' },
   'admin.editor.categories.behind_lens': { he: 'מאחורי העדשה', en: 'Behind the Lens' },
+
+  // Face filter strip
+  'gallery.face_filter_title': { he: 'אנשים', en: 'People' },
+  'gallery.face_filter_all': { he: 'הכל', en: 'All' },
+  'gallery.face_filter_label': { he: 'סינון לפי אדם', en: 'Filter by person' },
+  'gallery.face_unknown': { he: 'לא מזוהה', en: 'Unknown' },
+
+  // ── Admin: Face recognition — ClientFaceReferenceCard ───────────────────────
+  'admin.face.card_title': { he: 'תמונת ייחוס לזיהוי פנים', en: 'Face Recognition Reference' },
+  'admin.face.upload_success': { he: 'תמונת הייחוס הועלתה בהצלחה', en: 'Reference photo uploaded successfully' },
+  'admin.face.upload_failed': { he: 'העלאת תמונת הייחוס נכשלה', en: 'Failed to upload reference photo' },
+  'admin.face.remove_success': { he: 'תמונת הייחוס הוסרה', en: 'Reference photo removed' },
+  'admin.face.remove_failed': { he: 'הסרת תמונת הייחוס נכשלה', en: 'Failed to remove reference photo' },
+  'admin.face.enabled_success': { he: 'זיהוי פנים הופעל', en: 'Face recognition enabled' },
+  'admin.face.disabled_success': { he: 'זיהוי פנים כובה', en: 'Face recognition disabled' },
+  'admin.face.toggle_failed': { he: 'עדכון ההגדרה נכשל', en: 'Failed to update setting' },
+  'admin.face.invalid_type': { he: 'מותרות תמונות JPG, PNG או WEBP בלבד', en: 'Only JPG, PNG, or WEBP images are allowed' },
+  'admin.face.too_large': { he: 'התמונה חייבת להיות קטנה מ-5 MB', en: 'Image must be smaller than 5 MB' },
+  'admin.face.confirm_remove': { he: 'להסיר את תמונת הייחוס? תוצאות זיהוי הפנים יאבדו.', en: 'Remove the reference photo? Face recognition results will be lost.' },
+  'admin.face.model_label': { he: 'מודל:', en: 'Model:' },
+  'admin.face.updated_label': { he: 'עודכן:', en: 'Updated:' },
+  'admin.face.toggle_label': { he: 'זיהוי פנים', en: 'Face recognition' },
+  'admin.face.toggle_aria': { he: 'הפעל/כבה זיהוי פנים', en: 'Toggle face recognition' },
+  'admin.face.replace': { he: 'החלף', en: 'Replace' },
+  'admin.face.remove': { he: 'הסר', en: 'Remove' },
+  'admin.face.no_reference': { he: 'לא הוגדרה תמונת ייחוס. העלה פורטרט ברור כדי להפעיל זיהוי פנים.', en: 'No reference photo set. Upload a clear portrait to enable face detection.' },
+  'admin.face.upload_aria': { he: 'העלה תמונת ייחוס לזיהוי פנים', en: 'Upload face reference photo' },
+  'admin.face.drop_prompt': { he: 'גרור תמונה לכאן או לחץ לבחירה', en: 'Drop photo here or click to browse' },
+  'admin.face.format_hint': { he: 'JPG · PNG · WEBP · מקסימום 5 MB', en: 'JPG · PNG · WEBP · max 5 MB' },
+
+  // ── Admin: Face recognition — ClientTaggedImagesTab ─────────────────────────
+  'admin.face.tagged_loading': { he: 'טוען תמונות מתויגות…', en: 'Loading tagged photos…' },
+  'admin.face.tagged_load_failed': { he: 'טעינת התמונות המתויגות נכשלה.', en: 'Failed to load tagged photos.' },
+  'admin.face.tagged_empty_title': { he: 'אין תמונות מתויגות עדיין', en: 'No tagged photos yet' },
+  'admin.face.tagged_empty_desc': { he: 'העלה תמונת ייחוס והפעל זיהוי פנים בגלריות כדי לראות תמונות תואמות כאן.', en: 'Upload a reference photo and run face recognition on galleries to see matched images here.' },
+  'admin.face.tagged_matched': { he: 'תמונות תואמות', en: 'photos matched' },
+  'admin.face.prev_page': { he: 'עמוד קודם', en: 'Previous page' },
+  'admin.face.next_page': { he: 'עמוד הבא', en: 'Next page' },
+  'admin.face.page_of': { he: 'עמוד {page} מתוך {total}', en: 'Page {page} of {total}' },
+
+  // ── Admin: Face recognition — FaceRecognitionStatusBar ──────────────────────
+  'admin.face.status_queued': { he: 'זיהוי פנים בתור…', en: 'Face recognition queued…' },
+  'admin.face.status_running': { he: 'מזהה פנים…', en: 'Recognizing faces…' },
+  'admin.face.matched_label': { he: 'תואמו', en: 'matched' },
+  'admin.face.status_done': { he: 'זיהוי פנים הושלם — {n} לקוחות תואמו', en: 'Face recognition complete — {n} clients matched' },
+  'admin.face.status_done_one': { he: 'זיהוי פנים הושלם — לקוח אחד תואם', en: 'Face recognition complete — 1 client matched' },
+  'admin.face.status_failed': { he: 'זיהוי פנים נכשל', en: 'Face recognition failed' },
+  'admin.face.retry': { he: 'נסה שוב', en: 'Retry' },
+  'admin.face.restarted': { he: 'זיהוי פנים הופעל מחדש', en: 'Face recognition restarted' },
+  'admin.face.start_failed': { he: 'הפעלת זיהוי הפנים נכשלה', en: 'Failed to start face recognition' },
+
+  // ── Gallery: image card actions ──────────────────────────────────────────────
+  'gallery.expand_image': { he: 'הגדל תמונה', en: 'Expand image' },
+  'gallery.mark_hero': { he: 'סמן כתמונה ראשית', en: 'Mark as hero photo' },
+  'gallery.add_note': { he: 'הוסף הערה', en: 'Add note' },
+  'gallery.note_placeholder': { he: 'הוסף הערה לתמונה...', en: 'Add a note for this photo...' },
+  'gallery.close_note': { he: 'סגור', en: 'Close' },
+
+  // ── Admin: Product orders — inline errors ────────────────────────────────────
+  'admin.products.name_required': { he: 'שם המוצר הוא שדה חובה', en: 'Name is required' },
+  'admin.products.create_failed': { he: 'יצירת המוצר נכשלה', en: 'Failed to create product order' },
+
+  // ── Admin: Users — field placeholders ────────────────────────────────────────
+  'admin.users.username_ph': { he: 'user123', en: 'user123' },
+  'admin.users.email_ph': { he: 'email@example.com', en: 'email@example.com' },
+  'admin.users.instagram_ph': { he: '@username', en: '@username' },
+  'admin.users.facebook_ph': { he: 'https://facebook.com/...', en: 'https://facebook.com/...' },
+  'admin.users.studio_name_ph': { he: 'שם הסטודיו', en: 'Studio Name' },
 };
 
 const I18nContext = createContext<I18nContextType | null>(null);
