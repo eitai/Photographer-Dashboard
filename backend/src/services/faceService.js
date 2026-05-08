@@ -194,7 +194,7 @@ async function enrollClientReference(clientId, adminId, imageBuffer) {
 
   if (s3.isEnabled()) {
     const buffer = await sharp(imageBuffer).jpeg({ quality: 85 }).toBuffer();
-    imagePath = await s3.uploadBuffer(buffer, `face-references/${filename}`, 'image/jpeg');
+    imagePath = await s3.uploadBuffer(buffer, `admins/${adminId}/face-references/${filename}`, 'image/jpeg');
   } else {
     const refDir = path.join(__dirname, '../../uploads/face-references');
     if (!fs.existsSync(refDir)) fs.mkdirSync(refDir, { recursive: true });

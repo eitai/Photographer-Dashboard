@@ -7,8 +7,11 @@ const pool = require('../db');
 const { rowToCamel } = require('../db/utils');
 const Client = require('../models/Client');
 const faceService = require('../services/faceService');
+const s3 = require('../config/s3');
 const fs = require('fs');
 const path = require('path');
+
+const UPLOADS_DIR = path.join(__dirname, '../../uploads');
 
 const router = express.Router();
 
@@ -74,10 +77,9 @@ router.delete('/:id/face-reference', protect, asyncHandler(async (req, res) => {
   const deleted = await faceService.deleteClientReference(req.params.id, req.admin.id);
   if (!deleted) return res.status(404).json({ message: 'No reference photo found' });
 
-  // Delete local file if applicable
-  if (deleted.imagePath && deleted.imagePath.startsWith('/uploads/')) {
-    const localPath = path.join(__dirname, '../../', deleted.imagePath);
-    if (fs.existsSync(localPath)) fs.unlink(localPath, () => {});
+  // Delete the reference image from S3 or local disk
+  if (deleted.imagePath) {
+    await s3.deleteUpload(deleted.imagePath, UPLOADS_DIR);
   }
 
   res.json({ message: 'Reference photo removed' });

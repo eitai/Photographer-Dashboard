@@ -23,7 +23,7 @@ const VIDEO_EXT = /\.(mp4|mov|avi|webm)$/i;
  *           request gets a new presigned URL (different signature timestamp), which
  *           confuses browsers trying to buffer/seek.
  *
- * The key must start with "admins/" — prevents path-traversal to other bucket paths.
+ * The key must start with "admins/" or "face-references/" — prevents path-traversal to other bucket paths.
  */
 router.get('/*', asyncHandler(async (req, res) => {
   if (!s3.isEnabled()) {
@@ -32,7 +32,11 @@ router.get('/*', asyncHandler(async (req, res) => {
 
   const key = req.params[0];
 
-  if (!key || !key.startsWith('admins/')) {
+  // admins/   — all current uploads (images, thumbnails, previews, face crops)
+  // face-references/  — legacy face reference photos uploaded before the path
+  //                     was changed to admins/<id>/face-references/
+  const ALLOWED_PREFIXES = ['admins/', 'face-references/'];
+  if (!key || !ALLOWED_PREFIXES.some((p) => key.startsWith(p))) {
     return res.status(400).json({ message: 'Invalid media key' });
   }
 

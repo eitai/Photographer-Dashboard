@@ -5,28 +5,36 @@ export const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 /**
  * Resolve a stored image/video path to a fully-qualified URL.
  *
- * Three formats are handled:
+ * Four formats are handled:
  *
- *  1. S3 key  (new format)  — "admins/<id>/file.jpg"
+ *  1. S3 key  (new format)  — "admins/<id>/file.jpg" or "face-references/..."
  *     → routed through /api/media/<key> which generates a presigned URL
  *       and redirects 302. Transparent to <img>, <video>, fetch, etc.
  *
- *  2. Legacy full S3 URL — "https://bucket.s3.amazonaws.com/admins/..."
- *     → key is extracted from the URL and routed the same way.
+ *  2. Full S3 URL — any provider (AWS, Wasabi, R2, MinIO, …)
+ *     → key is extracted by finding the first known prefix in the path, then
+ *       routed through /api/media/ the same way as format 1.
  *
  *  3. Local /uploads/... path (dev with S3 disabled)
  *     → backend URL is prepended; served directly as a static file.
+ *
+ *  4. Unrecognised https:// URL (should not occur in practice)
+ *     → returned as-is so the browser can attempt to load it directly.
  */
 export const getImageUrl = (path: string): string => {
   if (!path) return '';
   // Local static file (dev, S3 not configured)
   if (path.startsWith('/')) return `${API_BASE}${path}`;
-  // Legacy full S3 URL — extract key after ".amazonaws.com/"
-  if (path.startsWith('https://') && path.includes('.amazonaws.com/')) {
-    const key = path.split('.amazonaws.com/').pop();
-    if (key) return `${API_BASE}/api/media/${key}`;
+  // Full S3 URL from any provider — extract the S3 key by finding the first
+  // known key prefix. Both "admins/" and "face-references/" are valid prefixes.
+  if (path.startsWith('https://')) {
+    for (const prefix of ['/admins/', '/face-references/']) {
+      const idx = path.indexOf(prefix);
+      if (idx !== -1) return `${API_BASE}/api/media/${path.slice(idx + 1)}`;
+    }
+    return path; // unrecognised full URL — serve directly
   }
-  // New format: raw S3 key (e.g. "admins/<id>/file.jpg")
+  // Raw S3 key (e.g. "admins/<id>/file.jpg" or "face-references/...")
   return `${API_BASE}/api/media/${path}`;
 };
 

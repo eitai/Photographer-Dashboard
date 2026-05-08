@@ -141,7 +141,7 @@ export const AdminGalleryUpload = () => {
   return (
     <AdminLayout>
       {/* Fills the layout content area — no outer scroll */}
-      <div className='flex flex-col h-full -mx-4 md:-mx-8 -my-6 overflow-hidden'>
+      <div className='flex flex-col -mx-4 md:-mx-8 -my-6 md:h-full md:overflow-hidden'>
         {/* ── Header ── */}
         <div className='shrink-0 px-4 md:px-8 pt-4 pb-0 bg-background border-b border-beige'>
           {/* Back button */}
@@ -155,17 +155,119 @@ export const AdminGalleryUpload = () => {
             {gallery.clientId ? t('admin.common.back_client') : t('admin.common.back_clients')}
           </Link>
 
-          {/* Gallery title row */}
-          <div className='flex items-start justify-between gap-4 mb-3'>
-            <div className='min-w-0'>
-              <h1 className='text-xl font-semibold text-charcoal truncate leading-tight'>{gallery.name}</h1>
-              {gallery.clientName && <p className='text-sm text-warm-gray mt-0.5 truncate'>{gallery.clientName}</p>}
-            </div>
-            <div className='shrink-0 flex flex-col items-end gap-2'>
-              <div className='pt-0.5'>
-                <StatusBadge status={gallery.status} />
+          {/* Two-column body: management controls (left) + status & upload (right) */}
+          <div className='flex flex-col md:flex-row items-start gap-4 mb-3'>
+
+            {/* ── Left: gallery info + all management controls ── */}
+            <div className='w-full md:flex-1 md:min-w-0 space-y-3'>
+              {/* Title */}
+              <div>
+                <h1 className='text-xl font-semibold text-charcoal truncate leading-tight'>{gallery.name}</h1>
+                {gallery.clientName && <p className='text-sm text-warm-gray mt-0.5 truncate'>{gallery.clientName}</p>}
               </div>
-              {/* Square upload box — directly below status badge */}
+
+              {/* Selection enabled toggle */}
+              <div className='flex items-center gap-2'>
+                <label className='text-xs text-warm-gray shrink-0'>{t('admin.gallery.selection_enabled')}</label>
+                <button
+                  type='button'
+                  onClick={async () => {
+                    const next = gallery.selectionEnabled === false ? true : false;
+                    try {
+                      await updateGallery.mutateAsync({ id: id!, data: { selectionEnabled: next } });
+                      toast.success(t('admin.gallery.selection_saved'));
+                    } catch {
+                      toast.error(t('admin.gallery.selection_save_failed'));
+                    }
+                  }}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs transition-colors ${
+                    gallery.selectionEnabled !== false
+                      ? 'border-blush bg-blush/10 text-charcoal'
+                      : 'border-beige bg-muted/20 text-warm-gray'
+                  }`}
+                >
+                  {gallery.selectionEnabled !== false ? <Images size={12} className='text-blush' /> : <Eye size={12} />}
+                  {gallery.selectionEnabled !== false ? t('admin.gallery.selection_enabled_on') : t('admin.gallery.selection_enabled_off')}
+                </button>
+              </div>
+
+              {/* Max selections */}
+              <div className='flex items-center gap-2 flex-wrap'>
+                <label className='text-xs text-warm-gray shrink-0'>{t('admin.client.max_selections')}</label>
+                <input
+                  type='number'
+                  min={1}
+                  max={500}
+                  disabled={!gallery.selectionEnabled || (gallery.maxSelections ?? 10) === 0}
+                  value={(gallery.maxSelections ?? 10) === 0 ? '' : (gallery.maxSelections ?? 10)}
+                  onChange={(e) => setGallery((prev: typeof gallery) => prev ? { ...prev, maxSelections: Number(e.target.value) } : prev)}
+                  onBlur={async (e) => {
+                    const val = Number(e.target.value);
+                    if (!val || val < 1) return;
+                    try {
+                      await updateGallery.mutateAsync({ id: id!, data: { maxSelections: val } });
+                      toast.success(t('admin.gallery.selection_saved'));
+                    } catch {
+                      toast.error(t('admin.gallery.selection_save_failed'));
+                    }
+                  }}
+                  placeholder='10'
+                  className='w-20 px-2.5 py-1.5 rounded-lg border border-beige bg-muted/30 text-xs text-charcoal focus:outline-none focus:ring-2 focus:ring-blush/50 disabled:opacity-40 disabled:cursor-not-allowed'
+                />
+                <button
+                  type='button'
+                  title={t('admin.users.unlimited_label')}
+                  disabled={!gallery.selectionEnabled}
+                  onClick={async () => {
+                    const next = (gallery.maxSelections ?? 10) === 0 ? 10 : 0;
+                    try {
+                      await updateGallery.mutateAsync({ id: id!, data: { maxSelections: next } });
+                    } catch {
+                      toast.error(t('admin.gallery.selection_save_failed'));
+                    }
+                  }}
+                  className={`shrink-0 p-1.5 rounded-lg border transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
+                    (gallery.maxSelections ?? 10) === 0
+                      ? 'bg-blush text-white border-blush'
+                      : 'border-beige text-warm-gray hover:border-blush hover:text-blush'
+                  }`}
+                >
+                  <InfinityIcon size={14} />
+                </button>
+              </div>
+
+              {/* Expiry date */}
+              <div className='flex items-center gap-2 flex-wrap'>
+                <label className='text-xs text-warm-gray shrink-0'>{t('admin.gallery.expires_at_label')}</label>
+                <input
+                  type='datetime-local'
+                  value={expiresAtInput}
+                  onChange={(e) => setExpiresAtInput(e.target.value)}
+                  className='px-2.5 py-1.5 rounded-lg border border-beige bg-muted/30 text-xs text-charcoal focus:outline-none focus:ring-2 focus:ring-blush/50'
+                />
+                {expiresAtInput && (
+                  <button
+                    type='button'
+                    onClick={() => setExpiresAtInput('')}
+                    className='text-xs text-warm-gray hover:text-rose-500 transition-colors px-2 py-1 rounded-lg border border-beige hover:border-rose-200 hover:bg-rose-50'
+                  >
+                    {t('admin.gallery.expires_at_clear')}
+                  </button>
+                )}
+                <button
+                  type='button'
+                  onClick={handleSaveExpiry}
+                  disabled={updateGallery.isPending}
+                  className='text-xs bg-blush text-white px-3 py-1.5 rounded-lg hover:bg-blush/80 transition-colors disabled:opacity-60'
+                >
+                  {updateGallery.isPending ? t('admin.gallery.expires_at_saving') : t('admin.gallery.expires_at_save')}
+                </button>
+              </div>
+            </div>
+
+            {/* ── Right: status badge + upload box ── */}
+            <div className='w-full md:w-auto md:shrink-0 flex flex-col items-center gap-2'>
+              <StatusBadge status={gallery.status} />
               <div
                 role='button'
                 tabIndex={0}
@@ -177,14 +279,14 @@ export const AdminGalleryUpload = () => {
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); inputRef.current?.click(); }
                 }}
-                className={`w-28 h-28 flex flex-col items-center justify-center gap-1.5 border-2 border-dashed rounded-2xl cursor-pointer transition-colors ${
+                className={`w-full md:w-48 h-48 flex flex-col items-center justify-center gap-2 border-2 border-dashed rounded-2xl cursor-pointer transition-colors ${
                   dragging ? 'border-blush bg-blush/10' : 'border-beige hover:border-blush/50 bg-muted/30'
                 }`}
               >
-                <CloudUpload size={22} className='text-warm-gray shrink-0' />
-                <div className='text-center px-2'>
-                  <p className='text-xs text-charcoal font-medium leading-tight'>{t('admin.upload.drag')}</p>
-                  <p className='text-[10px] text-warm-gray mt-0.5'>{t('admin.upload.browse')}</p>
+                <CloudUpload size={28} className='text-warm-gray shrink-0' />
+                <div className='text-center px-3'>
+                  <p className='text-sm text-charcoal font-medium leading-tight'>{t('admin.upload.drag')}</p>
+                  <p className='text-xs text-warm-gray mt-0.5'>{t('admin.upload.browse')}</p>
                 </div>
                 <input
                   ref={inputRef}
@@ -196,109 +298,12 @@ export const AdminGalleryUpload = () => {
                 />
               </div>
               {activeFolderId && (
-                <p className='text-[10px] text-blush font-medium text-end leading-tight'>
+                <p className='text-[10px] text-blush font-medium text-center leading-tight'>
                   {folders.find((f) => f._id === activeFolderId)?.name}
                 </p>
               )}
             </div>
-          </div>
 
-          {/* Selection enabled toggle */}
-          <div className='flex items-center gap-2 mb-3'>
-            <label className='text-xs text-warm-gray shrink-0'>{t('admin.gallery.selection_enabled')}</label>
-            <button
-              type='button'
-              onClick={async () => {
-                const next = gallery.selectionEnabled === false ? true : false;
-                try {
-                  await updateGallery.mutateAsync({ id: id!, data: { selectionEnabled: next } });
-                  toast.success(t('admin.gallery.selection_saved'));
-                } catch {
-                  toast.error(t('admin.gallery.selection_save_failed'));
-                }
-              }}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs transition-colors ${
-                gallery.selectionEnabled !== false
-                  ? 'border-blush bg-blush/10 text-charcoal'
-                  : 'border-beige bg-muted/20 text-warm-gray'
-              }`}
-            >
-              {gallery.selectionEnabled !== false ? <Images size={12} className='text-blush' /> : <Eye size={12} />}
-              {gallery.selectionEnabled !== false ? t('admin.gallery.selection_enabled_on') : t('admin.gallery.selection_enabled_off')}
-            </button>
-          </div>
-
-          {/* Max selections */}
-          <div className='flex items-center gap-2 mb-3 flex-wrap'>
-            <label className='text-xs text-warm-gray shrink-0'>{t('admin.client.max_selections')}</label>
-            <input
-              type='number'
-              min={1}
-              max={500}
-              disabled={!gallery.selectionEnabled || (gallery.maxSelections ?? 10) === 0}
-              value={(gallery.maxSelections ?? 10) === 0 ? '' : (gallery.maxSelections ?? 10)}
-              onChange={(e) => setGallery((prev: typeof gallery) => prev ? { ...prev, maxSelections: Number(e.target.value) } : prev)}
-              onBlur={async (e) => {
-                const val = Number(e.target.value);
-                if (!val || val < 1) return;
-                try {
-                  await updateGallery.mutateAsync({ id: id!, data: { maxSelections: val } });
-                  toast.success(t('admin.gallery.selection_saved'));
-                } catch {
-                  toast.error(t('admin.gallery.selection_save_failed'));
-                }
-              }}
-              placeholder='10'
-              className='w-20 px-2.5 py-1.5 rounded-lg border border-beige bg-muted/30 text-xs text-charcoal focus:outline-none focus:ring-2 focus:ring-blush/50 disabled:opacity-40 disabled:cursor-not-allowed'
-            />
-            <button
-              type='button'
-              title={t('admin.users.unlimited_label')}
-              disabled={!gallery.selectionEnabled}
-              onClick={async () => {
-                const next = (gallery.maxSelections ?? 10) === 0 ? 10 : 0;
-                try {
-                  await updateGallery.mutateAsync({ id: id!, data: { maxSelections: next } });
-                } catch {
-                  toast.error(t('admin.gallery.selection_save_failed'));
-                }
-              }}
-              className={`shrink-0 p-1.5 rounded-lg border transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
-                (gallery.maxSelections ?? 10) === 0
-                  ? 'bg-blush text-white border-blush'
-                  : 'border-beige text-warm-gray hover:border-blush hover:text-blush'
-              }`}
-            >
-              <InfinityIcon size={14} />
-            </button>
-          </div>
-
-          {/* Expiry date editor */}
-          <div className='flex items-center gap-2 mb-3 flex-wrap'>
-            <label className='text-xs text-warm-gray shrink-0'>{t('admin.gallery.expires_at_label')}</label>
-            <input
-              type='datetime-local'
-              value={expiresAtInput}
-              onChange={(e) => setExpiresAtInput(e.target.value)}
-              className='px-2.5 py-1.5 rounded-lg border border-beige bg-muted/30 text-xs text-charcoal focus:outline-none focus:ring-2 focus:ring-blush/50'
-            />
-            {expiresAtInput && (
-              <button
-                type='button'
-                onClick={() => setExpiresAtInput('')}
-                className='text-xs text-warm-gray hover:text-rose-500 transition-colors px-2 py-1 rounded-lg border border-beige hover:border-rose-200 hover:bg-rose-50'
-              >
-                {t('admin.gallery.expires_at_clear')}
-              </button>
-            )}
-            <button
-              type='button'
-              onClick={handleSaveExpiry}
-              disabled={updateGallery.isPending}
-              className='text-xs bg-blush text-white px-3 py-1.5 rounded-lg hover:bg-blush/80 transition-colors disabled:opacity-60'
-            >
-              {updateGallery.isPending ? t('admin.gallery.expires_at_saving') : t('admin.gallery.expires_at_save')}
-            </button>
           </div>
 
           {/* Tab bar */}
@@ -348,9 +353,9 @@ export const AdminGalleryUpload = () => {
 
         {/* ── IMAGES TAB ── */}
         {activeTab === 'images' && (
-          <div className='flex flex-1 overflow-hidden bg-background'>
-              {/* Folder sidebar */}
-              <div className='w-72 shrink-0 border-e border-beige overflow-y-auto py-3 px-2'>
+          <div className='flex bg-background md:flex-1 md:overflow-hidden'>
+              {/* Folder sidebar — desktop only */}
+              <div className='hidden md:block w-72 shrink-0 border-e border-beige overflow-y-auto py-3 px-2'>
                 <FolderSidebar
                   folders={folders}
                   activeFolderId={activeFolderId}
@@ -369,7 +374,38 @@ export const AdminGalleryUpload = () => {
               </div>
 
               {/* Main content area */}
-              <div className='flex flex-col flex-1 overflow-hidden'>
+              <div className='flex flex-col w-full md:flex-1 md:overflow-hidden'>
+                {/* Mobile folder chips — visible only below md */}
+                {folders.length > 0 && (
+                  <div className='md:hidden shrink-0 flex gap-2 overflow-x-auto px-4 pt-3 pb-2 border-b border-beige scrollbar-hide'>
+                    <button
+                      type='button'
+                      onClick={() => { setActiveFolderId(null); setSelectedIds(new Set()); }}
+                      className={`shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+                        activeFolderId === null ? 'bg-charcoal text-white' : 'bg-beige text-charcoal hover:bg-blush/30'
+                      }`}
+                    >
+                      {t('gallery.folder_all')}
+                      <span className='opacity-60'>{images.length}</span>
+                    </button>
+                    {folders.map((f) => (
+                      <button
+                        key={f._id}
+                        type='button'
+                        onClick={() => { setActiveFolderId(f._id); setSelectedIds(new Set()); }}
+                        className={`shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+                          activeFolderId === f._id ? 'bg-charcoal text-white' : 'bg-beige text-charcoal hover:bg-blush/30'
+                        }`}
+                      >
+                        {f.name}
+                        <span className='opacity-60'>
+                          {images.filter((img) => img.folderIds?.includes(f._id)).length}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+
                 {/* Upload queue + face strip + bulk bar — fixed */}
                 <div className='shrink-0 px-4 md:px-6 pt-3'>
                   <UploadQueue queue={queue} isUploading={isUploading} onCancel={cancelImageUpload} />
@@ -398,7 +434,7 @@ export const AdminGalleryUpload = () => {
                 </div>
 
                 {/* Image grid — only scrollable area */}
-                <div className='flex-1 overflow-y-auto py-4 px-4 md:px-6 pb-6'>
+                <div className='min-h-[55vh] md:min-h-0 md:flex-1 md:overflow-y-auto py-4 px-4 md:px-6 pb-6'>
                   {visibleImages.length > 0 && (
                     <ImageGrid
                       images={visibleImages}
