@@ -42,9 +42,17 @@ router.get('/*', asyncHandler(async (req, res) => {
 
   const signedUrl = await s3.generatePresignedUrl(key);
 
-  // Proxy all content through the backend so fetch() in the browser stays
-  // same-origin and avoids S3 CORS restrictions. Range requests are forwarded
-  // for video seeking support.
+  // Images → 302 redirect to the presigned URL.
+  // The browser follows the redirect directly to S3 — no proxying overhead,
+  // works with all Node.js versions, and scales without saturating the backend.
+  if (!VIDEO_EXT.test(key)) {
+    res.setHeader('Cache-Control', 'private, max-age=3600');
+    return res.redirect(302, signedUrl);
+  }
+
+  // Videos → proxy so the browser can send Range requests for seeking.
+  // Redirecting breaks video streaming because each Range request arrives with
+  // a different timestamp, producing a different presigned signature that S3 rejects.
   const upstreamHeaders = {};
   if (req.headers.range) upstreamHeaders['Range'] = req.headers.range;
 
