@@ -92,6 +92,11 @@ const globalLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   message: { message: 'Too many requests, please try again later.' },
+  // Skip media proxy requests — a gallery with 200 images generates 200+
+  // concurrent /api/media/* requests on page load, and the 2000/15-min
+  // cap can be hit by an admin viewing several large galleries in a session.
+  // Media routes have no sensitive data; rate-limit only the API surface.
+  skip: (req) => req.path.startsWith('/media/') || req.path === '/media',
 });
 app.use('/api', globalLimiter);
 

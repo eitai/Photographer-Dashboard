@@ -3,6 +3,7 @@ const { Readable } = require('stream');
 const helmet = require('helmet');
 const asyncHandler = require('../middleware/asyncHandler');
 const s3 = require('../config/s3');
+const logger = require('../utils/logger');
 
 const router = express.Router();
 
@@ -49,7 +50,17 @@ router.get('/*', asyncHandler(async (req, res) => {
   res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
   res.setHeader('Access-Control-Allow-Origin', '*');
 
-  const signedUrl = await s3.generatePresignedUrl(key);
+  const t0 = Date.now();
+  logger.info(`[media] GET key="${key}" range="${req.headers.range || ''}" ip=${req.ip}`);
+
+  let signedUrl;
+  try {
+    signedUrl = await s3.generatePresignedUrl(key);
+    logger.info(`[media] presign ok key="${key}" dt=${Date.now() - t0}ms`);
+  } catch (err) {
+    logger.error(`[media] presign FAILED key="${key}" err=${err.message}`);
+    return res.status(500).json({ message: 'Failed to generate media URL' });
+  }
 
   // Forward Range header for video seeking; images don't need it.
   const upstreamHeaders = {};
@@ -57,11 +68,35 @@ router.get('/*', asyncHandler(async (req, res) => {
     upstreamHeaders['Range'] = req.headers.range;
   }
 
-  const upstream = await fetch(signedUrl, { headers: upstreamHeaders });
+  // 20-second timeout — prevents stalled S3 connections from piling up and
+  // blocking the event loop. Without this, a slow S3 response holds the
+  // Node socket open for the full 30-second server timeout, causing a
+  // cascade where concurrent requests queue up and the server appears hung.
+  const abort = new AbortController();
+  const abortTimer = setTimeout(() => {
+    logger.warn(`[media] TIMEOUT key="${key}" after 20s`);
+    abort.abort();
+  }, 20_000);
 
+  let upstream;
+  try {
+    upstream = await fetch(signedUrl, { headers: upstreamHeaders, signal: abort.signal });
+  } catch (err) {
+    clearTimeout(abortTimer);
+    logger.error(`[media] fetch FAILED key="${key}" err=${err.message} dt=${Date.now() - t0}ms`);
+    return res.status(504).json({ message: 'Media gateway timeout' });
+  }
+  clearTimeout(abortTimer);
+
+  const dt = Date.now() - t0;
   if (!upstream.ok && upstream.status !== 206) {
+    logger.error(`[media] S3 error key="${key}" status=${upstream.status} dt=${dt}ms`);
     return res.status(upstream.status).json({ message: 'Media unavailable' });
   }
+
+  const ct = upstream.headers.get('content-type') || '?';
+  const cl = upstream.headers.get('content-length') || '?';
+  logger.info(`[media] S3 ok key="${key}" status=${upstream.status} type=${ct} size=${cl}B dt=${dt}ms`);
 
   for (const h of ['content-type', 'content-length', 'content-range', 'accept-ranges']) {
     const val = upstream.headers.get(h);
@@ -71,7 +106,13 @@ router.get('/*', asyncHandler(async (req, res) => {
   res.status(upstream.status);
 
   if (!upstream.body) return res.end();
-  Readable.fromWeb(upstream.body).pipe(res);
+
+  const stream = Readable.fromWeb(upstream.body);
+  stream.on('error', (err) => {
+    logger.error(`[media] stream error key="${key}" err=${err.message}`);
+    if (!res.headersSent) res.status(502).end(); else res.destroy();
+  });
+  stream.pipe(res);
 }));
 
 module.exports = router;
