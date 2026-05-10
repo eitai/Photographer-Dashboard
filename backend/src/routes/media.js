@@ -17,13 +17,18 @@ const VIDEO_EXT = /\.(mp4|mov|avi|webm)$/i;
  *
  * No authentication required — gallery media must be accessible to clients.
  *
- * Images  → fast 302 redirect to a presigned URL (signing is local HMAC, no S3 call).
- * Videos  → content is proxied so the browser can send Range requests for seeking.
- *           Redirecting to a presigned URL breaks video streaming because each range
- *           request gets a new presigned URL (different signature timestamp), which
- *           confuses browsers trying to buffer/seek.
+ * ALL content is proxied through this server so the browser always receives
+ * responses from OUR domain with controlled headers (CORP: cross-origin,
+ * ACAO: *). Redirecting directly to S3 presigned URLs exposes the raw S3
+ * domain to the browser, and some S3-compatible providers (R2, Wasabi, etc.)
+ * return Cross-Origin-Resource-Policy: same-origin, which browsers enforce on
+ * embedded <img>/<video> tags even though top-level navigation is unaffected —
+ * causing images to appear broken while the direct URL "works fine".
  *
- * The key must start with "admins/" or "face-references/" — prevents path-traversal to other bucket paths.
+ * Videos carry Range request headers so seeking works in <video> tags.
+ * Images are fetched without Range (whole object in one request).
+ *
+ * The key must start with "admins/" or "face-references/" — prevents path-traversal.
  */
 router.get('/*', asyncHandler(async (req, res) => {
   if (!s3.isEnabled()) {
@@ -40,29 +45,21 @@ router.get('/*', asyncHandler(async (req, res) => {
     return res.status(400).json({ message: 'Invalid media key' });
   }
 
-  // Allow cross-origin loads (frontend on :8080 loading from API on :5000)
+  // Controlled headers — browser always sees our domain, not the raw S3 URL.
   res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
   res.setHeader('Access-Control-Allow-Origin', '*');
 
   const signedUrl = await s3.generatePresignedUrl(key);
 
-  // Images → 302 redirect to the presigned URL.
-  // The browser follows the redirect directly to S3 — no proxying overhead,
-  // works with all Node.js versions, and scales without saturating the backend.
-  if (!VIDEO_EXT.test(key)) {
-    res.setHeader('Cache-Control', 'private, max-age=3600');
-    return res.redirect(302, signedUrl);
-  }
-
-  // Videos → proxy so the browser can send Range requests for seeking.
-  // Redirecting breaks video streaming because each Range request arrives with
-  // a different timestamp, producing a different presigned signature that S3 rejects.
+  // Forward Range header for video seeking; images don't need it.
   const upstreamHeaders = {};
-  if (req.headers.range) upstreamHeaders['Range'] = req.headers.range;
+  if (VIDEO_EXT.test(key) && req.headers.range) {
+    upstreamHeaders['Range'] = req.headers.range;
+  }
 
   const upstream = await fetch(signedUrl, { headers: upstreamHeaders });
 
-  if (!upstream.ok) {
+  if (!upstream.ok && upstream.status !== 206) {
     return res.status(upstream.status).json({ message: 'Media unavailable' });
   }
 
