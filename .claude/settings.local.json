@@ -23,7 +23,16 @@
       "Bash(node -e \"require\\(''''./src/app''''\\)\")",
       "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\(list\\(d.get\\(''''dependencies'''',{}\\).keys\\(\\)\\) + list\\(d.get\\(''''devDependencies'''',{}\\).keys\\(\\)\\)\\)\")",
       "Bash(find \"c:\\\\Users\\\\eitai\\\\Desktop\\\\codevalue\\\\store test\\\\frontend\\\\src/components/admin\" -name \"*.tsx\" -exec wc -l {} +)",
-      "Bash(grep -rn '$gt\\\\|$ne\\\\|$in\\\\|$regex' 'c:\\\\Users\\\\eitai\\\\Desktop\\\\codevalue\\\\store test\\\\backend\\\\src' '--include=*.js')"
+      "Bash(grep -rn '$gt\\\\|$ne\\\\|$in\\\\|$regex' 'c:\\\\Users\\\\eitai\\\\Desktop\\\\codevalue\\\\store test\\\\backend\\\\src' '--include=*.js')",
+      "Bash(powershell -Command \"cd 'c:\\\\Users\\\\eitai\\\\Desktop\\\\codevalue\\\\store test'; docker compose up postgres -d\")",
+      "Bash(powershell -Command \"Get-Item 'C:\\\\Program Files\\\\PostgreSQL\\\\16\\\\data\\\\pg_hba.conf' | Select-Object -ExpandProperty FullName\")",
+      "Read(//c/Program Files/PostgreSQL/16/data/**)",
+      "Bash(powershell -ExecutionPolicy Bypass -File \"c:\\\\Users\\\\eitai\\\\Desktop\\\\codevalue\\\\store test\\\\setup_pg.ps1\")",
+      "Bash(powershell -Command \"Remove-Item 'c:\\\\Users\\\\eitai\\\\Desktop\\\\codevalue\\\\store test\\\\setup_pg.ps1' -Force\")",
+      "Bash(powershell -ExecutionPolicy Bypass -File \"c:\\\\Users\\\\eitai\\\\Desktop\\\\codevalue\\\\store test\\\\fix_pg.ps1\")",
+      "Bash(powershell -Command \"Remove-Item 'c:\\\\Users\\\\eitai\\\\Desktop\\\\codevalue\\\\store test\\\\fix_pg.ps1' -Force\")",
+      "Bash(powershell -ExecutionPolicy Bypass -File \"c:\\\\Users\\\\eitai\\\\Desktop\\\\codevalue\\\\store test\\\\fix_pg2.ps1\")",
+      "Bash(powershell -Command \"Remove-Item 'c:\\\\Users\\\\eitai\\\\Desktop\\\\codevalue\\\\store test\\\\fix_pg2.ps1' -Force\")"
     ]
   }
 }

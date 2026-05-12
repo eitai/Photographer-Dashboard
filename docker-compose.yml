@@ -6,6 +6,8 @@ services:
       POSTGRES_USER: koral
       POSTGRES_PASSWORD: koral
       POSTGRES_DB: koral
+    ports:
+      - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
