@@ -138,6 +138,20 @@ async function generatePresignedUrl(key, expiresIn = 604800) {
   return getSignedUrl(_getClient(), command, { expiresIn });
 }
 
+/**
+ * Return a Node.js Readable stream for an S3 object.
+ * Accepts either a raw key ("admins/...") or a full public URL.
+ */
+async function getReadStream(keyOrUrl) {
+  let key = keyOrUrl;
+  const { publicUrl } = cfg();
+  if (keyOrUrl.startsWith('http') && publicUrl && keyOrUrl.startsWith(publicUrl + '/')) {
+    key = keyOrUrl.slice(publicUrl.length + 1);
+  }
+  const response = await _getClient().send(new GetObjectCommand({ Bucket: cfg().bucket, Key: key }));
+  return response.Body;
+}
+
 async function deleteFile(key) {
   try {
     await _getClient().send(new DeleteObjectCommand({ Bucket: cfg().bucket, Key: key }));
@@ -339,6 +353,7 @@ module.exports = {
   // reuse the same S3Client instance instead of constructing its own — keeps a
   // single connection pool / credentials provider in memory.
   getS3Client: _getClient,
+  getReadStream,
   cfg,
   processUpload:        (...a) => { _logStatus(); return _orig.processUpload(...a); },
   processUploadAsWebP:  (...a) => { _logStatus(); return _orig.processUploadAsWebP(...a); },

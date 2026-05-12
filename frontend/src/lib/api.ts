@@ -1,41 +1,38 @@
 import axios from 'axios';
 
 export const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+const S3_PUBLIC_URL = (import.meta.env.VITE_S3_PUBLIC_URL || '').replace(/\/$/, '');
 
 /**
  * Resolve a stored image/video path to a fully-qualified URL.
  *
- * Four formats are handled:
+ * If VITE_S3_PUBLIC_URL is set (public bucket), raw S3 keys and full S3 URLs
+ * are served directly from the bucket — faster, no backend proxy hop.
+ * Without it, all S3 paths go through /api/media/ (private bucket proxy).
  *
- *  1. S3 key  (new format)  — "admins/<id>/file.jpg" or "face-references/..."
- *     → routed through /api/media/<key> which generates a presigned URL
- *       and redirects 302. Transparent to <img>, <video>, fetch, etc.
- *
+ * Handled formats:
+ *  1. Raw S3 key  — "admins/<id>/file.jpg" or "face-references/..."
  *  2. Full S3 URL — any provider (AWS, Wasabi, R2, MinIO, …)
- *     → key is extracted by finding the first known prefix in the path, then
- *       routed through /api/media/ the same way as format 1.
- *
- *  3. Local /uploads/... path (dev with S3 disabled)
- *     → backend URL is prepended; served directly as a static file.
- *
- *  4. Unrecognised https:// URL (should not occur in practice)
- *     → returned as-is so the browser can attempt to load it directly.
+ *  3. Local /uploads/... path (dev, S3 disabled) — prepend backend base URL
+ *  4. Unrecognised https:// — returned as-is
  */
 export const getImageUrl = (path: string): string => {
   if (!path) return '';
   // Local static file (dev, S3 not configured)
   if (path.startsWith('/')) return `${API_BASE}${path}`;
-  // Full S3 URL from any provider — extract the S3 key by finding the first
-  // known key prefix. Both "admins/" and "face-references/" are valid prefixes.
+  // Full S3 URL — extract the raw key then re-resolve
   if (path.startsWith('https://')) {
     for (const prefix of ['/admins/', '/face-references/']) {
       const idx = path.indexOf(prefix);
-      if (idx !== -1) return `${API_BASE}/api/media/${path.slice(idx + 1)}`;
+      if (idx !== -1) {
+        const key = path.slice(idx + 1);
+        return S3_PUBLIC_URL ? `${S3_PUBLIC_URL}/${key}` : `${API_BASE}/api/media/${key}`;
+      }
     }
     return path; // unrecognised full URL — serve directly
   }
   // Raw S3 key (e.g. "admins/<id>/file.jpg" or "face-references/...")
-  return `${API_BASE}/api/media/${path}`;
+  return S3_PUBLIC_URL ? `${S3_PUBLIC_URL}/${path}` : `${API_BASE}/api/media/${path}`;
 };
 
 const api = axios.create({
