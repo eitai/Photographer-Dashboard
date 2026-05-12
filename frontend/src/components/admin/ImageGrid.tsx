@@ -31,6 +31,7 @@ export const ImageGrid = ({ images, selectedIds, onToggleSelect, onOpenLightbox,
               alt={img.originalName}
               className='w-full h-full object-cover'
               loading='lazy'
+              onError={(e) => console.error('[ImageGrid] load failed', { src: (e.target as HTMLImageElement).src, thumbnailPath: img.thumbnailPath, path: img.path })}
             />
 
             <button

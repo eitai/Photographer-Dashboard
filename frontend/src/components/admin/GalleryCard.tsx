@@ -163,6 +163,7 @@ export const GalleryCard = ({
                 src={getImageUrl(img.thumbnailPath || img.path)}
                 alt=''
                 className='w-16 h-16 rounded-lg object-cover border border-border shrink-0'
+                onError={(e) => console.error('[GalleryCard] load failed', { src: (e.target as HTMLImageElement).src, thumbnailPath: img.thumbnailPath, path: img.path })}
               />
             ))
           ) : (
