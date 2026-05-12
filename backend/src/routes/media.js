@@ -80,18 +80,11 @@ router.get('/*', asyncHandler(async (req, res) => {
 
   if (!s3Response.Body) return res.end();
 
-  s3Response.Body.transformToWebStream().then((webStream) => {
-    const { Readable } = require('stream');
-    const nodeStream = Readable.fromWeb(webStream);
-    nodeStream.on('error', (err) => {
-      logger.error(`[media] stream error key="${key}" err=${err.message}`);
-      if (!res.headersSent) res.status(502).end(); else res.destroy();
-    });
-    nodeStream.pipe(res);
-  }).catch((err) => {
-    logger.error(`[media] body transform error key="${key}" err=${err.message}`);
-    if (!res.headersSent) res.status(502).end();
+  s3Response.Body.on('error', (err) => {
+    logger.error(`[media] stream error key="${key}" err=${err.message}`);
+    if (!res.headersSent) res.status(502).end(); else res.destroy();
   });
+  s3Response.Body.pipe(res);
 }));
 
 module.exports = router;

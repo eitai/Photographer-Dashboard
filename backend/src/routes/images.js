@@ -1,6 +1,7 @@
 const express = require('express');
 const path = require('path');
 const fs = require('fs');
+const pLimit = require('p-limit');
 const sharp = require('sharp');
 const GalleryImage = require('../models/GalleryImage');
 const Gallery = require('../models/Gallery');
@@ -71,8 +72,9 @@ router.post('/', protect, checkQuota, upload.array('images', 5000), validateImag
     selectedImageMap = Object.fromEntries(originalImages.map((img) => [path.parse(img.filename).name, img]));
   }
 
+  const limit = pLimit(5);
   const imageDocs = await Promise.all(
-    req.files.map(async (file, i) => {
+    req.files.map((file, i) => limit(async () => {
       const thumbFilename = `thumb_${path.parse(file.filename).name}.jpg`;
 
       // Generate thumbnail and preview buffers from the local temp file before
@@ -125,7 +127,7 @@ router.post('/', protect, checkQuota, upload.array('images', 5000), validateImag
         size: file.size,
         folderIds: folderId ? [folderId] : [],
       };
-    })
+    }))
   );
 
   const created = await GalleryImage.insertMany(imageDocs);

@@ -439,7 +439,9 @@ async function start() {
     logger.info(`Koral API running on port ${PORT} [${process.env.NODE_ENV || 'development'}]`);
   });
 
-  server.setTimeout(30000);
+  server.setTimeout(0); // nginx manages the ceiling; 30s killed large uploads
+  server.requestTimeout = 0;
+  server.headersTimeout = 65000;
 
   const gracefulShutdown = async (signal) => {
     logger.info(`${signal} received — shutting down gracefully`);
