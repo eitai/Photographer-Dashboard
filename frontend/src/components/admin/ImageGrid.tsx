@@ -1,6 +1,6 @@
 import { Check, Maximize2, Trash2 } from 'lucide-react';
 import { useI18n } from '@/lib/i18n';
-import { getImageUrl } from '@/lib/api';
+import { getImageUrl, API_BASE } from '@/lib/api';
 import { GalleryImage } from '@/types/admin';
 
 interface Props {
@@ -31,7 +31,14 @@ export const ImageGrid = ({ images, selectedIds, onToggleSelect, onOpenLightbox,
               alt={img.originalName}
               className='w-full h-full object-cover'
               loading='lazy'
-              onError={(e) => console.error('[ImageGrid] load failed', { src: (e.target as HTMLImageElement).src, thumbnailPath: img.thumbnailPath, path: img.path })}
+              onError={(e) => {
+                const el = e.target as HTMLImageElement;
+                if (!el.dataset.fallback) {
+                  el.dataset.fallback = '1';
+                  const rawPath = img.thumbnailPath || img.path;
+                  el.src = `${API_BASE}/api/media/${rawPath}`;
+                }
+              }}
             />
 
             <button

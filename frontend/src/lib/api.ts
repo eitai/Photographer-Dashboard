@@ -26,18 +26,13 @@ export const getImageUrl = (path: string): string => {
       const idx = path.indexOf(prefix);
       if (idx !== -1) {
         const key = path.slice(idx + 1);
-        const result = S3_PUBLIC_URL ? `${S3_PUBLIC_URL}/${key}` : `${API_BASE}/api/media/${key}`;
-        console.log('[getImageUrl] full-url path →', { in: path, key, out: result });
-        return result;
+        return S3_PUBLIC_URL ? `${S3_PUBLIC_URL}/${key}` : `${API_BASE}/api/media/${key}`;
       }
     }
-    console.warn('[getImageUrl] unrecognised https url →', path);
     return path;
   }
   // Raw S3 key (e.g. "admins/<id>/file.jpg" or "face-references/...")
-  const result = S3_PUBLIC_URL ? `${S3_PUBLIC_URL}/${path}` : `${API_BASE}/api/media/${path}`;
-  console.log('[getImageUrl] raw-key →', { in: path, out: result });
-  return result;
+  return S3_PUBLIC_URL ? `${S3_PUBLIC_URL}/${path}` : `${API_BASE}/api/media/${path}`;
 };
 
 const api = axios.create({
