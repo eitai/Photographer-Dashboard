@@ -13,23 +13,10 @@ router.use(helmet.crossOriginResourcePolicy({ policy: 'cross-origin' }));
 
 const VIDEO_EXT = /\.(mp4|mov|avi|webm)$/i;
 
-/**
- * GET /api/media/<s3-key>
- *
- * No authentication required — gallery media must be accessible to clients.
- *
- * Streams objects directly from S3 using the SDK's GetObjectCommand (same auth
- * as uploads) instead of presigned URLs + fetch. This avoids Wasabi's presigned
- * URL restrictions and uses the same credential path that uploads use.
- *
- * The key must start with "admins/" or "face-references/" — prevents path-traversal.
- */
-router.get('/*', asyncHandler(async (req, res) => {
+async function serveS3Key(key, req, res) {
   if (!s3.isEnabled()) {
     return res.status(503).json({ message: 'Object storage not configured' });
   }
-
-  const key = req.params[0];
 
   const ALLOWED_PREFIXES = ['admins/', 'face-references/'];
   if (!key || !ALLOWED_PREFIXES.some((p) => key.startsWith(p))) {
@@ -85,6 +72,19 @@ router.get('/*', asyncHandler(async (req, res) => {
     if (!res.headersSent) res.status(502).end(); else res.destroy();
   });
   s3Response.Body.pipe(res);
+}
+
+// Query-param route: GET /api/media?k=admins/...
+// No file extension in URL — bypasses Cloudflare Hotlink Protection.
+router.get('/', asyncHandler(async (req, res) => {
+  const key = req.query.k;
+  return serveS3Key(key, req, res);
+}));
+
+// Path-style route: GET /api/media/admins/... (backward compat)
+router.get('/*', asyncHandler(async (req, res) => {
+  const key = req.params[0];
+  return serveS3Key(key, req, res);
 }));
 
 module.exports = router;

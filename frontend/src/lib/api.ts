@@ -26,13 +26,13 @@ export const getImageUrl = (path: string): string => {
       const idx = path.indexOf(prefix);
       if (idx !== -1) {
         const key = path.slice(idx + 1);
-        return S3_PUBLIC_URL ? `${S3_PUBLIC_URL}/${key}` : `${API_BASE}/api/media/${key}`;
+        return S3_PUBLIC_URL ? `${S3_PUBLIC_URL}/${key}` : `${API_BASE}/api/media?k=${encodeURIComponent(key)}`;
       }
     }
     return path;
   }
   // Raw S3 key (e.g. "admins/<id>/file.jpg" or "face-references/...")
-  return S3_PUBLIC_URL ? `${S3_PUBLIC_URL}/${path}` : `${API_BASE}/api/media/${path}`;
+  return S3_PUBLIC_URL ? `${S3_PUBLIC_URL}/${path}` : `${API_BASE}/api/media?k=${encodeURIComponent(path)}`;
 };
 
 const api = axios.create({

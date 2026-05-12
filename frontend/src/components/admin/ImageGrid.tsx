@@ -36,7 +36,7 @@ export const ImageGrid = ({ images, selectedIds, onToggleSelect, onOpenLightbox,
                 if (!el.dataset.fallback) {
                   el.dataset.fallback = '1';
                   const rawPath = img.thumbnailPath || img.path;
-                  el.src = `${API_BASE}/api/media/${rawPath}`;
+                  el.src = `${API_BASE}/api/media?k=${encodeURIComponent(rawPath)}`;
                 }
               }}
             />
