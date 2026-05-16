@@ -22,6 +22,8 @@ export interface AdminRecord {
   createdAt: string;
   storageQuotaBytes: number;
   storageUsedBytes: number;
+  ssoEnabled?: boolean;
+  googleEmail?: string | null;
 }
 
 export interface StorageStats {

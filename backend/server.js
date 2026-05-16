@@ -326,6 +326,22 @@ async function start() {
     logger.warn('[startup] face recognition job reset skipped:', err.message);
   }
 
+  // Add 'cancelled' to face_recognition_jobs status constraint (idempotent migration).
+  try {
+    await pool.query(`
+      ALTER TABLE face_recognition_jobs
+        DROP CONSTRAINT IF EXISTS face_recognition_jobs_status_check
+    `);
+    await pool.query(`
+      ALTER TABLE face_recognition_jobs
+        ADD CONSTRAINT face_recognition_jobs_status_check
+        CHECK (status IN ('queued','running','done','failed','cancelled'))
+    `);
+    logger.info('[migrate] face_recognition_jobs status constraint updated with cancelled');
+  } catch (err) {
+    logger.warn('[migrate] face_recognition_jobs status constraint migration skipped:', err.message);
+  }
+
   // ── In-process face recognition worker ───────────────────────────────────
   // Runs in the API process so `npm run dev` is enough in development.
   // The separate `npm run workers` process also handles this queue in production.

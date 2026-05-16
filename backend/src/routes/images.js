@@ -217,6 +217,97 @@ router.delete('/:imageId', protect, asyncHandler(async (req, res) => {
   ]);
 
   await GalleryImage.findByIdAndDelete(req.params.imageId);
+
+  // Fire-and-forget: clean up face tags and re-trigger recognition if it was previously run.
+  // Never blocks the response.
+  const deletedImageId = req.params.imageId;
+  const galleryId = req.params.galleryId;
+  const adminId = req.admin.id;
+  ;(async () => {
+    try {
+      // Remove face tags for the deleted image
+      await pool.query(
+        `DELETE FROM gallery_image_face_tags WHERE gallery_image_id = $1`,
+        [deletedImageId]
+      );
+
+      // Check if recognition has ever run for this gallery
+      const { rows: jobRows } = await pool.query(
+        `SELECT status FROM face_recognition_jobs WHERE gallery_id = $1`,
+        [galleryId]
+      );
+      if (!jobRows[0]) return; // Recognition never ran — nothing to do
+
+      // Remaining images after deletion (deleted image already removed from DB)
+      const { rows: imgRows } = await pool.query(
+        `SELECT id FROM gallery_images WHERE gallery_id = $1 ORDER BY sort_order ASC`,
+        [galleryId]
+      );
+      const remainingImageIds = imgRows.map(r => r.id);
+
+      // Clear ALL gallery face tags so the re-run starts with a clean slate
+      // (required for correct cluster recomputation across the full gallery)
+      await pool.query(
+        `DELETE FROM gallery_image_face_tags
+         WHERE gallery_image_id = ANY(SELECT id FROM gallery_images WHERE gallery_id = $1)`,
+        [galleryId]
+      );
+
+      if (!remainingImageIds.length) {
+        // No images left — mark as done with zeroed counters
+        await pool.query(
+          `UPDATE face_recognition_jobs
+           SET status = 'done', total_images = 0, processed = 0, matched = 0, finished_at = NOW()
+           WHERE gallery_id = $1`,
+          [galleryId]
+        );
+        return;
+      }
+
+      // Atomically update the job row and determine which singletonKey to use.
+      // Running/queued → 'cancelled' (active job must stop first, re-run uses face-rerun: key).
+      // Done/failed/cancelled → 'queued' (no active job, re-run uses face: key directly).
+      const { rows: updatedRows } = await pool.query(
+        `UPDATE face_recognition_jobs
+         SET status        = CASE WHEN status IN ('running','queued') THEN 'cancelled' ELSE 'queued' END,
+             total_images  = $2,
+             processed     = 0,
+             matched       = 0,
+             error_message = NULL,
+             started_at    = NULL,
+             finished_at   = NULL
+         WHERE gallery_id = $1
+         RETURNING status`,
+        [galleryId, remainingImageIds.length]
+      );
+
+      const newStatus = updatedRows[0]?.status;
+      const boss = await getQueue();
+
+      if (newStatus === 'cancelled') {
+        // Active job was just cancelled; schedule re-run with a different singletonKey
+        // so pg-boss's dedup lock on the active job doesn't block the new enqueue.
+        // startAfter:10 gives the running worker time to detect 'cancelled' and exit.
+        await boss.send(
+          JOB_NAMES.FACE_RECOGNITION,
+          { galleryId, adminId, imageIds: remainingImageIds },
+          { singletonKey: `face-rerun:${galleryId}`, startAfter: 10, retryLimit: 2, retryDelay: 60, expireInSeconds: 7200 }
+        );
+        logger.info(`[images] gallery ${galleryId}: active face job cancelled, re-run scheduled`);
+      } else if (newStatus === 'queued') {
+        // No active job — re-run immediately with the standard singletonKey
+        await boss.send(
+          JOB_NAMES.FACE_RECOGNITION,
+          { galleryId, adminId, imageIds: remainingImageIds },
+          { singletonKey: `face:${galleryId}`, retryLimit: 2, retryDelay: 60, expireInSeconds: 7200 }
+        );
+        logger.info(`[images] gallery ${galleryId}: face re-run enqueued after image delete`);
+      }
+    } catch (err) {
+      logger.warn(`[images] face re-run after delete failed for gallery ${galleryId}: ${err.message}`);
+    }
+  })();
+
   res.json({ message: 'Image deleted' });
 }));
 

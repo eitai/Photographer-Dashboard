@@ -1,7 +1,8 @@
-import { Check, Maximize2, Trash2 } from 'lucide-react';
+import { Maximize2, Trash2 } from 'lucide-react';
 import { useI18n } from '@/lib/i18n';
 import { getImageUrl, API_BASE } from '@/lib/api';
 import { GalleryImage } from '@/types/admin';
+import { UploadSkeletonGrid } from '@/components/admin/UploadSkeletonGrid';
 
 interface Props {
   images: GalleryImage[];
@@ -9,9 +10,10 @@ interface Props {
   onToggleSelect: (id: string) => void;
   onOpenLightbox: (index: number) => void;
   onRequestDelete: (id: string) => void;
+  skeletonCount?: number;
 }
 
-export const ImageGrid = ({ images, selectedIds, onToggleSelect, onOpenLightbox, onRequestDelete }: Props) => {
+export const ImageGrid = ({ images, selectedIds, onToggleSelect, onOpenLightbox, onRequestDelete, skeletonCount = 0 }: Props) => {
   const { t } = useI18n();
 
   return (
@@ -65,6 +67,7 @@ export const ImageGrid = ({ images, selectedIds, onToggleSelect, onOpenLightbox,
           </div>
         );
       })}
+      <UploadSkeletonGrid count={skeletonCount} />
     </div>
   );
 };

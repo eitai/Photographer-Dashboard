@@ -192,6 +192,7 @@ const translations: Record<string, Record<Lang, string>> = {
 
   // ── Admin: Common ───────────────────────────────────────────────────────────
   'admin.common.loading': { he: 'טוען…', en: 'Loading…' },
+  'admin.common.close': { he: 'סגור', en: 'Close' },
   'admin.common.saving': { he: 'שומר…', en: 'Saving…' },
   'admin.common.deleting': { he: 'מוחק…', en: 'Deleting…' },
   'admin.common.save': { he: 'שמור', en: 'Save' },
@@ -366,6 +367,11 @@ const translations: Record<string, Record<Lang, string>> = {
     en: '{count} failed',
   },
   'admin.upload.overall': { he: 'התקדמות כוללת', en: 'Overall progress' },
+  'admin.upload.toast_uploading': { he: 'מעלה {count} פריטים', en: 'Uploading {count} items' },
+  'admin.upload.cancel_confirm_title': { he: 'לבטל את ההעלאה?', en: 'Cancel upload?' },
+  'admin.upload.cancel_confirm_body': { he: 'הפריטים שעלו כבר יישמרו. הנותרים לא יועלו.', en: 'Items already uploaded will be saved. The rest will not upload.' },
+  'admin.upload.cancel_confirm_ok': { he: 'עצור העלאה', en: 'Stop upload' },
+  'admin.upload.cancel_confirm_keep': { he: 'המשך להעלות', en: 'Keep uploading' },
 
   // ── Admin: Selections ───────────────────────────────────────────────────────
   'admin.selections.title': { he: 'בחירות לקוחות', en: 'Client Selections' },

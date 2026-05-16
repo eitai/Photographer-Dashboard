@@ -601,14 +601,12 @@ async function processGalleryBatch(galleryId, adminId, imageIds) {
   logger.info(`[faceService] gallery ${galleryId}: ${clientDescriptors.size} client reference(s) loaded for matching`);
 
   // Flip job to 'running'.
-  // Accept both 'queued' and 'running' so that a job reset mid-flight
-  // (e.g. server restart) still picks up correctly. Using status = 'queued'
-  // alone would cause the UPDATE to silently no-op when the row is already
-  // 'running', leaving the UI stuck.
+  // Accept 'queued' AND 'cancelled' so that a re-run scheduled after an
+  // image deletion (which sets status='cancelled') picks up correctly.
   await pool.query(
     `UPDATE face_recognition_jobs
      SET status = 'running', started_at = NOW()
-     WHERE gallery_id = $1 AND status = 'queued'`,
+     WHERE gallery_id = $1 AND status IN ('queued', 'cancelled')`,
     [galleryId]
   );
 
@@ -616,6 +614,19 @@ async function processGalleryBatch(galleryId, adminId, imageIds) {
   let totalFacesFound = 0;
 
   for (let i = 0; i < imageIds.length; i++) {
+    // Check for cancellation every 5 images. The DELETE route sets status='cancelled'
+    // when an image is removed mid-run; this lets the job exit cleanly.
+    if (i % 5 === 0) {
+      const { rows: statusRows } = await pool.query(
+        `SELECT status FROM face_recognition_jobs WHERE gallery_id = $1`,
+        [galleryId]
+      );
+      if (statusRows[0] && statusRows[0].status === 'cancelled') {
+        logger.info(`[faceService] gallery ${galleryId}: job cancelled at image ${i}/${imageIds.length} — stopping early`);
+        return 0;
+      }
+    }
+
     try {
       const matched = await processImageForRecognition(imageIds[i], adminId, clientDescriptors);
       totalMatched += matched;

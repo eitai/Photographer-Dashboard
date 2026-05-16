@@ -32,7 +32,15 @@
       "Bash(powershell -ExecutionPolicy Bypass -File \"c:\\\\Users\\\\eitai\\\\Desktop\\\\codevalue\\\\store test\\\\fix_pg.ps1\")",
       "Bash(powershell -Command \"Remove-Item 'c:\\\\Users\\\\eitai\\\\Desktop\\\\codevalue\\\\store test\\\\fix_pg.ps1' -Force\")",
       "Bash(powershell -ExecutionPolicy Bypass -File \"c:\\\\Users\\\\eitai\\\\Desktop\\\\codevalue\\\\store test\\\\fix_pg2.ps1\")",
-      "Bash(powershell -Command \"Remove-Item 'c:\\\\Users\\\\eitai\\\\Desktop\\\\codevalue\\\\store test\\\\fix_pg2.ps1' -Force\")"
+      "Bash(powershell -Command \"Remove-Item 'c:\\\\Users\\\\eitai\\\\Desktop\\\\codevalue\\\\store test\\\\fix_pg2.ps1' -Force\")",
+      "Bash(git commit -m ' *)",
+      "Bash(git push *)",
+      "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\eitai\\\\Desktop\\\\codevalue\\\\store test\\\\frontend\" -Filter \".env*\" -Force)",
+      "Bash(Select-Object Name)",
+      "Bash(findstr sonner *)",
+      "Bash(Remove-Item \"d:\\\\codevalue\\\\store test\\\\frontend\\\\src\\\\components\\\\admin\\\\UploadQueue.tsx\")",
+      "Bash(powershell.exe -Command \"Remove-Item 'd:\\\\codevalue\\\\store test\\\\frontend\\\\src\\\\components\\\\admin\\\\UploadQueue.tsx'\")",
+      "Bash(powershell -Command \"Write-Host 'Default quota in bytes:' \\(10737418240\\); Write-Host 'Default quota in GB:' \\([math]::Round\\(10737418240 / [math]::Pow\\(1024, 3\\), 2\\)\\); Write-Host '0.7 GB in bytes:' \\([math]::Round\\(0.7 * [math]::Pow\\(1024, 3\\)\\)\\)\")"
     ]
   }
 }

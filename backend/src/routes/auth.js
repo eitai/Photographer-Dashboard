@@ -217,15 +217,17 @@ router.get(
 
     // ── Link flow: attach Google identity to an already-authenticated admin ──
     if (stateData.flow === 'link') {
+      const returnBase = stateData.returnTo ?? '/admin/settings?tab=security';
+      const sep = returnBase.includes('?') ? '&' : '?';
       if (!stateData.adminId) {
-        return res.redirect(`${FRONTEND_URL()}/admin/settings?sso=error`);
+        return res.redirect(`${FRONTEND_URL()}${returnBase}${sep}sso=error`);
       }
       const existing = await Admin.findByGoogleId(googleId);
       if (existing && existing.id !== stateData.adminId) {
-        return res.redirect(`${FRONTEND_URL()}/admin/settings?sso=error&reason=already_linked`);
+        return res.redirect(`${FRONTEND_URL()}${returnBase}${sep}sso=error&reason=already_linked`);
       }
       await Admin.findByIdAndUpdate(stateData.adminId, { googleId, googleEmail, ssoEnabled: true });
-      return res.redirect(`${FRONTEND_URL()}/admin/settings?tab=security&sso=linked`);
+      return res.redirect(`${FRONTEND_URL()}${returnBase}${sep}sso=linked`);
     }
 
     // ── Login flow: sign in via Google ────────────────────────────────────────

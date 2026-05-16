@@ -5,9 +5,10 @@ import { AdminLayout } from '@/components/admin/AdminLayout';
 import { AdminGalleryLightbox } from '@/components/admin/AdminGalleryLightbox';
 import { StatusBadge } from '@/components/admin/StatusBadge';
 import { DeleteConfirmModal } from '@/components/admin/DeleteConfirmModal';
+import { Modal } from '@/components/ui/Modal';
 import { ImageGrid } from '@/components/admin/ImageGrid';
 import { BulkActionBar } from '@/components/admin/BulkActionBar';
-import { UploadQueue } from '@/components/admin/UploadQueue';
+import { UploadProgressToast } from '@/components/admin/UploadProgressToast';
 import { FolderSidebar } from '@/components/admin/FolderSidebar';
 import { FaceFilterStrip } from '@/components/gallery/FaceFilterStrip';
 import { useGalleryUpload } from '@/hooks/useGalleryUpload';
@@ -36,14 +37,14 @@ type Tab = 'images' | 'videos';
 
 export const AdminGalleryUpload = () => {
   const { id } = useParams();
-  const { t } = useI18n();
+  const { t, dir } = useI18n();
 
   const { gallery, setGallery, loadError, images, loadImages } = useGalleryData(id);
   const [activeFolderId, setActiveFolderId] = useState<string | null>(null);
   const [activeFaceGroupKey, setActiveFaceGroupKey] = useState<string | null>(null);
   const [faceFilteredIds, setFaceFilteredIds] = useState<Set<string> | null>(null);
   const { folders, create: createFolder, rename: renameFolder, remove: removeFolder } = useFolders(id);
-  const { queue, dragging, setDragging, inputRef, handleFiles, cancelUpload: cancelImageUpload, isUploading } = useGalleryUpload(id, loadImages);
+  const { queue, dragging, setDragging, inputRef, handleFiles, cancelUpload: cancelImageUpload, isUploading, uploadStats } = useGalleryUpload(id, loadImages);
   const { toDelete, setToDelete, bulkDeleting, deleteProgress, confirmDelete } = useImageDeletion(id, () => {
     setSelectedIds(new Set());
     loadImages();
@@ -60,6 +61,7 @@ export const AdminGalleryUpload = () => {
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const [activeTab, setActiveTab] = useState<Tab>('images');
   const [expiresAtInput, setExpiresAtInput] = useState<string>('');
+  const [showCancelUploadModal, setShowCancelUploadModal] = useState(false);
 
   // Seed the expiry input once when gallery data first arrives
   useEffect(() => {
@@ -89,6 +91,28 @@ export const AdminGalleryUpload = () => {
     return () => clearTimeout(t);
   }, [isUploading, id, queryClient]);
 
+  const UPLOAD_TOAST_ID = 'gallery-upload-progress';
+  useEffect(() => {
+    if (uploadStats) {
+      toast.custom(
+        () => (
+          <UploadProgressToast
+            totalFiles={uploadStats.totalFiles}
+            uploadedBytes={uploadStats.uploadedBytes}
+            totalBytes={uploadStats.totalBytes}
+            speedBps={uploadStats.speedBps}
+            dir={dir}
+            t={t}
+            onRequestCancel={() => setShowCancelUploadModal(true)}
+          />
+        ),
+        { id: UPLOAD_TOAST_ID, duration: Infinity, position: 'bottom-right' },
+      );
+    } else {
+      toast.dismiss(UPLOAD_TOAST_ID);
+    }
+  }, [uploadStats, dir, t]);
+
   const visibleImages = (() => {
     let imgs = activeFolderId
       ? images.filter((img) => img.folderIds?.includes(activeFolderId))
@@ -98,6 +122,10 @@ export const AdminGalleryUpload = () => {
     }
     return imgs;
   })();
+
+  const skeletonCount = queue.filter(
+    (item) => !item.done && !item.error && !item.cancelled,
+  ).length;
 
   useEffect(() => {
     setActiveFaceGroupKey(null);
@@ -406,9 +434,8 @@ export const AdminGalleryUpload = () => {
                   </div>
                 )}
 
-                {/* Upload queue + face strip + bulk bar — fixed */}
+                {/* Face strip + bulk bar — fixed */}
                 <div className='shrink-0 px-4 md:px-6 pt-3'>
-                  <UploadQueue queue={queue} isUploading={isUploading} onCancel={cancelImageUpload} />
                   {id && (
                     <FaceFilterStrip
                       galleryId={id}
@@ -435,16 +462,17 @@ export const AdminGalleryUpload = () => {
 
                 {/* Image grid — only scrollable area */}
                 <div className='min-h-[55vh] md:min-h-0 md:flex-1 md:overflow-y-auto py-4 px-4 md:px-6 pb-6'>
-                  {visibleImages.length > 0 && (
+                  {(visibleImages.length > 0 || skeletonCount > 0) && (
                     <ImageGrid
                       images={visibleImages}
                       selectedIds={selectedIds}
                       onToggleSelect={toggleSelect}
                       onOpenLightbox={(idx) => setLightboxIndex(images.indexOf(visibleImages[idx]))}
                       onRequestDelete={(imgId) => setToDelete([imgId])}
+                      skeletonCount={skeletonCount}
                     />
                   )}
-                  {visibleImages.length === 0 && queue.length === 0 && (
+                  {visibleImages.length === 0 && skeletonCount === 0 && (
                     <p className='text-sm text-warm-gray text-center py-16'>{t('admin.upload.no_images')}</p>
                   )}
                 </div>
@@ -577,6 +605,31 @@ export const AdminGalleryUpload = () => {
           onConfirm={confirmDelete}
           onCancel={() => setToDelete([])}
         />
+      )}
+
+      {showCancelUploadModal && (
+        <Modal isOpen onClose={() => setShowCancelUploadModal(false)}>
+          <h3 className='text-lg text-charcoal mb-1'>{t('admin.upload.cancel_confirm_title')}</h3>
+          <p className='text-sm text-warm-gray mb-6'>{t('admin.upload.cancel_confirm_body')}</p>
+          <div className='flex gap-3'>
+            <button
+              onClick={() => {
+                cancelImageUpload();
+                setShowCancelUploadModal(false);
+                toast.dismiss(UPLOAD_TOAST_ID);
+              }}
+              className='flex-1 bg-rose-500 text-white py-3 min-h-[44px] rounded-xl text-sm font-medium hover:bg-rose-600 transition-colors'
+            >
+              {t('admin.upload.cancel_confirm_ok')}
+            </button>
+            <button
+              onClick={() => setShowCancelUploadModal(false)}
+              className='flex-1 py-3 min-h-[44px] rounded-xl text-sm text-warm-gray border border-beige hover:bg-ivory transition-colors'
+            >
+              {t('admin.upload.cancel_confirm_keep')}
+            </button>
+          </div>
+        </Modal>
       )}
 
       {lightboxIndex !== null && (

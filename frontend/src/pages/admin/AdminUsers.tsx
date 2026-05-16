@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { AdminLayout } from '@/components/admin/AdminLayout';
 import { useAuth } from '@/hooks/useAuth';
 import { useI18n } from '@/lib/i18n';
-import api, { getImageUrl } from '@/lib/api';
+import api, { getImageUrl, API_BASE } from '@/lib/api';
 import { toast } from 'sonner';
 import { Trash2, Plus, Shield, User, Pencil, ExternalLink, X, Check, Search } from 'lucide-react';
 import type { AdminRecord, AdminSettings } from '@/types/admin';
@@ -71,6 +72,21 @@ export const AdminUsers = () => {
     if (adminsError) toast.error(t('admin.users.load_failed'));
   }, [adminsError, t]);
 
+  useEffect(() => {
+    const sso = searchParams.get('sso');
+    if (!sso) return;
+    if (sso === 'linked') toast.success(t('admin.settings.sso.linked_success'));
+    else if (sso === 'error') {
+      const reason = searchParams.get('reason');
+      if (reason === 'already_linked') toast.error(t('admin.login.sso_error'));
+      else toast.error(t('admin.login.sso_error'));
+    }
+    const next = new URLSearchParams(searchParams);
+    next.delete('sso');
+    next.delete('reason');
+    setSearchParams(next, { replace: true });
+  }, []);
+
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.name || !form.email || !form.password) return;
@@ -97,6 +113,35 @@ export const AdminUsers = () => {
         toast.error(message || t('admin.users.delete_error'));
       },
     });
+  };
+
+  const handleConnectGoogle = (adminId: string) => {
+    window.location.href = `${API_BASE}/api/admins/${adminId}/sso-link`;
+  };
+
+  const handleDisconnectSSO = async (adminId: string) => {
+    setDisconnectingSSO(true);
+    try {
+      await api.delete(`/admins/${adminId}/sso-link`);
+      queryClient.invalidateQueries({ queryKey: queryKeys.admins });
+      toast.success(t('admin.settings.sso.unlink_success'));
+    } catch {
+      toast.error(t('admin.settings.sso.toggle_failed'));
+    } finally {
+      setDisconnectingSSO(false);
+    }
+  };
+
+  const handleToggleSSO = async (adminId: string) => {
+    setTogglingSSO(true);
+    try {
+      await api.patch(`/admins/${adminId}/sso`);
+      queryClient.invalidateQueries({ queryKey: queryKeys.admins });
+    } catch {
+      toast.error(t('admin.settings.sso.toggle_failed'));
+    } finally {
+      setTogglingSSO(false);
+    }
   };
 
   const openEdit = async (a: AdminRecord) => {
@@ -197,6 +242,9 @@ export const AdminUsers = () => {
   const [quotaInputGB, setQuotaInputGB] = useState<number | null>(10);
   const setAdminQuotaMutation = useSetAdminQuota();
   const { data: editingAdminStorage } = useAdminStorage(editingId ?? '');
+  const [disconnectingSSO, setDisconnectingSSO] = useState(false);
+  const [togglingSSO, setTogglingSSO] = useState(false);
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const creating = createAdminMutation.isPending;
   const deletingId = deleteAdminMutation.isPending ? deleteAdminMutation.variables ?? null : null;
@@ -495,6 +543,62 @@ export const AdminUsers = () => {
                         <Check size={13} />
                         {setAdminQuotaMutation.isPending ? t('admin.common.saving') : t('admin.showcase.save')}
                       </Button>
+                    </div>
+
+                    <div className='border-t border-beige' />
+
+                    {/* SSO section */}
+                    <div className='space-y-3'>
+                      <h4 className='text-xs font-semibold text-warm-gray uppercase tracking-wide'>
+                        {t('admin.settings.sso.title')}
+                      </h4>
+                      <div className='flex items-center gap-2'>
+                        {editingAdmin.googleEmail ? (
+                          <span className='text-xs px-2 py-0.5 rounded-full bg-green-50 text-green-700 border border-green-200'>
+                            {t('admin.settings.sso.connected')} — <span className='font-mono'>{editingAdmin.googleEmail}</span>
+                          </span>
+                        ) : (
+                          <span className='text-xs text-warm-gray'>{t('admin.settings.sso.not_connected')}</span>
+                        )}
+                      </div>
+                      <div className='flex flex-wrap items-center gap-2'>
+                        {editingAdmin.googleEmail ? (
+                          <Button
+                            variant='ghost'
+                            size='sm'
+                            onClick={() => handleDisconnectSSO(editingAdmin.id)}
+                            disabled={disconnectingSSO}
+                          >
+                            {disconnectingSSO ? t('admin.settings.sso.disconnecting') : t('admin.settings.sso.disconnect')}
+                          </Button>
+                        ) : (
+                          <Button
+                            variant='ghost'
+                            size='sm'
+                            onClick={() => handleConnectGoogle(editingAdmin.id)}
+                          >
+                            <svg width='14' height='14' viewBox='0 0 24 24' aria-hidden='true' className='shrink-0'>
+                              <path d='M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z' fill='#4285F4' />
+                              <path d='M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z' fill='#34A853' />
+                              <path d='M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z' fill='#FBBC05' />
+                              <path d='M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z' fill='#EA4335' />
+                            </svg>
+                            {t('admin.settings.sso.connect')}
+                          </Button>
+                        )}
+                        {editingAdmin.googleEmail && (
+                          <label className='flex items-center gap-2 cursor-pointer select-none'>
+                            <input
+                              type='checkbox'
+                              checked={editingAdmin.ssoEnabled ?? false}
+                              disabled={togglingSSO}
+                              onChange={() => handleToggleSSO(editingAdmin.id)}
+                              className='accent-blush w-3.5 h-3.5'
+                            />
+                            <span className='text-xs text-charcoal'>{t('admin.settings.sso.enabled_label')}</span>
+                          </label>
+                        )}
+                      </div>
                     </div>
 
                     <div className='border-t border-beige' />
