@@ -14,6 +14,7 @@ const path = require('path');
 const logger = require('./utils/logger');
 
 const app = express();
+app.set('trust proxy', 1);
 
 // ── HTTPS redirect (production only, before all other middleware) ─────────────
 if (process.env.NODE_ENV === 'production') {
