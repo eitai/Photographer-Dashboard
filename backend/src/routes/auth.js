@@ -198,18 +198,21 @@ router.get(
     const callbackUrl = googleCallbackUrl();
 
     if (error || !code) {
+      console.error('[SSO] Google returned error or no code:', { error, hasCode: !!code });
       return res.redirect(`${FRONTEND_URL()}/admin?sso=error`);
     }
 
     const stateData = decodeState(state);
     if (!stateData || !['login', 'link'].includes(stateData.flow)) {
+      console.error('[SSO] State decode failed:', { hasState: !!state, stateData });
       return res.redirect(`${FRONTEND_URL()}/admin?sso=error`);
     }
 
     let googleProfile;
     try {
       googleProfile = await exchangeCodeForProfile(code, callbackUrl);
-    } catch {
+    } catch (err) {
+      console.error('[SSO] exchangeCodeForProfile failed:', err.message);
       return res.redirect(`${FRONTEND_URL()}/admin?sso=error`);
     }
 
@@ -329,6 +332,8 @@ async function exchangeCodeForProfile(code, redirectUri) {
   });
 
   if (!tokenRes.ok) {
+    const body = await tokenRes.text();
+    console.error('[SSO] Token exchange failed:', tokenRes.status, body);
     throw new Error(`Token exchange failed: ${tokenRes.status}`);
   }
 
