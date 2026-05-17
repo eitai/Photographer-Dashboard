@@ -199,13 +199,13 @@ router.get(
 
     if (error || !code) {
       console.error('[SSO] Google returned error or no code:', { error, hasCode: !!code });
-      return res.redirect(`${FRONTEND_URL()}/admin?sso=error`);
+      return res.redirect(`${FRONTEND_URL()}/admin?sso=error&reason=no_code&detail=${encodeURIComponent(error || 'missing_code')}`);
     }
 
     const stateData = decodeState(state);
     if (!stateData || !['login', 'link'].includes(stateData.flow)) {
       console.error('[SSO] State decode failed:', { hasState: !!state, stateData });
-      return res.redirect(`${FRONTEND_URL()}/admin?sso=error`);
+      return res.redirect(`${FRONTEND_URL()}/admin?sso=error&reason=state_failed`);
     }
 
     let googleProfile;
@@ -213,7 +213,7 @@ router.get(
       googleProfile = await exchangeCodeForProfile(code, callbackUrl);
     } catch (err) {
       console.error('[SSO] exchangeCodeForProfile failed:', err.message);
-      return res.redirect(`${FRONTEND_URL()}/admin?sso=error`);
+      return res.redirect(`${FRONTEND_URL()}/admin?sso=error&reason=exchange_failed&detail=${encodeURIComponent(err.message)}`);
     }
 
     const { googleId, googleEmail } = googleProfile;

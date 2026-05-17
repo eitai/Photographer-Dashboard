@@ -23,7 +23,10 @@ export const AdminLogin = () => {
   useEffect(() => {
     const sso = searchParams.get('sso');
     const reason = searchParams.get('reason');
+    const detail = searchParams.get('detail');
+    console.log('[SSO] Redirect params:', { sso, reason, detail, all: Object.fromEntries(searchParams) });
     if (sso !== 'error') return;
+    console.error('[SSO] Login failed — reason:', reason, '| detail:', detail);
     const msg =
       reason === 'no_account' ? t('admin.login.sso_error_no_account') :
       reason === 'sso_disabled' ? t('admin.login.sso_error_disabled') :
@@ -54,7 +57,9 @@ export const AdminLogin = () => {
   };
 
   const handleGoogleSignIn = () => {
-    window.location.href = `${API_BASE}/api/auth/google`;
+    const url = `${API_BASE}/api/auth/google`;
+    console.log('[SSO] Redirecting to:', url);
+    window.location.href = url;
   };
 
   return (
