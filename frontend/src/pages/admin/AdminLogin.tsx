@@ -24,7 +24,7 @@ export const AdminLogin = () => {
     const sso = searchParams.get('sso');
     const reason = searchParams.get('reason');
     const detail = searchParams.get('detail');
-    console.log('[SSO] Redirect params:', { sso, reason, detail, all: Object.fromEntries(searchParams) });
+    console.log('[SSO] Redirect params:', { sso, reason, detail });
     if (sso !== 'error') return;
     console.error('[SSO] Login failed — reason:', reason, '| detail:', detail);
     const msg =
