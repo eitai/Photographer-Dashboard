@@ -46,8 +46,8 @@ export const ClientRow = ({ client, galleries, onAddGallery }: ClientRowProps) =
         <div className='flex-1 min-w-0 text-start'>
           <p className='text-sm font-sans font-medium text-charcoal truncate'>{client.name}</p>
           <p className='text-xs text-warm-gray truncate'>
-            {t(`admin.session.${client.sessionType}`)}
-            {client.createdAt ? ` · ${new Date(client.createdAt).toLocaleDateString()}` : ''}
+            {client.sessionType ? t(`admin.session.${client.sessionType}`) : ''}
+            {client.createdAt ? `${client.sessionType ? ' · ' : ''}${new Date(client.createdAt).toLocaleDateString()}` : ''}
           </p>
         </div>
         <span className='text-xs text-warm-gray font-sans shrink-0'>{galleryCountLabel}</span>

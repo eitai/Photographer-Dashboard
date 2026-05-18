@@ -15,7 +15,13 @@ router.get('/me', protect, asyncHandler(async (req, res) => {
   if (s3.isEnabled()) {
     // S3 is the source of truth — list all objects under admins/<adminId>/
     // This counts gallery images, thumbnails, videos, blog images, hero/profile images — everything.
-    used = await s3.listAdminStorageBytes(req.admin.id);
+    try {
+      used = await s3.listAdminStorageBytes(req.admin.id);
+    } catch (s3Err) {
+      const logger = require('../utils/logger');
+      logger.error('[storage/me] S3 listAdminStorageBytes failed:', s3Err.message);
+      return res.status(503).json({ error: 'Storage service temporarily unavailable', detail: s3Err.message });
+    }
   } else {
     // Fallback: sum sizes from DB (gallery images + video sizes only)
     const usageQuery = `

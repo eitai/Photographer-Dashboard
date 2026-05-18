@@ -98,6 +98,7 @@ export const FaceFilterStrip = ({
       return status !== 404 && failureCount < 1;
     },
     refetchInterval: (query) => {
+      if (query.state.status === 'error') return false;
       const s = query.state.data?.status;
       if (s && ACTIVE_STATUSES.has(s)) return 3_000;
       if (!query.state.data) return 5_000;
