@@ -197,7 +197,12 @@ async function processThumbnail(buffer, thumbFilename, thumbDir, adminId) {
     return `/uploads/thumbnails/${thumbFilename}`;
   }
   const key = thumbnailKey(thumbFilename, adminId);
-  return await uploadBuffer(buffer, key, 'image/jpeg');
+  try {
+    return await uploadBuffer(buffer, key, 'image/jpeg');
+  } catch (err) {
+    require('../utils/logger').error('[S3] processThumbnail failed, thumbnail will be null:', err.message);
+    return null;
+  }
 }
 
 /**

@@ -95,11 +95,16 @@ router.post('/', protect, checkQuota, upload.array('images', 5000), validateImag
       // Buffers are already in memory so processUpload can safely unlink the temp file.
       async function storePreview() {
         if (s3.isEnabled()) {
-          return s3.uploadBuffer(
-            previewBuffer,
-            `admins/${req.admin.id}/previews/${previewFilename}`,
-            'image/webp'
-          );
+          try {
+            return await s3.uploadBuffer(
+              previewBuffer,
+              `admins/${req.admin.id}/previews/${previewFilename}`,
+              'image/webp'
+            );
+          } catch (err) {
+            logger.error('[images] storePreview S3 failed, preview will be null:', err.message);
+            return null;
+          }
         }
         fs.writeFileSync(path.join(PREVIEW_DIR, previewFilename), previewBuffer);
         return `/uploads/previews/${previewFilename}`;

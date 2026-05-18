@@ -61,4 +61,24 @@ router.get('/me', protect, asyncHandler(async (req, res) => {
   });
 }));
 
+// GET /api/storage/s3-ping — quick S3 connectivity check for debugging
+router.get('/s3-ping', protect, asyncHandler(async (req, res) => {
+  if (!s3.isEnabled()) {
+    return res.json({ enabled: false });
+  }
+  const c = s3.cfg();
+  const result = { enabled: true, bucket: c.bucket, region: c.region, endpoint: c.endpoint || 'aws default' };
+  try {
+    const { HeadBucketCommand } = require('@aws-sdk/client-s3');
+    await s3.getS3Client().send(new HeadBucketCommand({ Bucket: c.bucket }));
+    result.status = 'ok';
+  } catch (err) {
+    result.status = 'error';
+    result.error = err.message;
+    result.code = err.name;
+    result.httpStatus = err.$metadata?.httpStatusCode;
+  }
+  res.json(result);
+}));
+
 module.exports = router;
