@@ -37,8 +37,7 @@ export const ImageGrid = ({ images, selectedIds, onToggleSelect, onOpenLightbox,
                 const el = e.target as HTMLImageElement;
                 if (!el.dataset.fallback) {
                   el.dataset.fallback = '1';
-                  const rawPath = img.thumbnailPath || img.path;
-                  el.src = `${API_BASE}/api/media?k=${encodeURIComponent(rawPath)}`;
+                  el.src = getImageUrl(img.path);
                 }
               }}
             />

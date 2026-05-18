@@ -197,13 +197,7 @@ async function processThumbnail(buffer, thumbFilename, thumbDir, adminId) {
     return `/uploads/thumbnails/${thumbFilename}`;
   }
   const key = thumbnailKey(thumbFilename, adminId);
-  try {
-    return await uploadBuffer(buffer, key, 'image/jpeg');
-  } catch (err) {
-    require('../utils/logger').error('[S3] processThumbnail failed, falling back to local disk:', err.message);
-    fs.writeFileSync(path.join(thumbDir, thumbFilename), buffer);
-    return `/uploads/thumbnails/${thumbFilename}`;
-  }
+  return await uploadBuffer(buffer, key, 'image/jpeg');
 }
 
 /**
@@ -278,15 +272,7 @@ async function uploadPreview(localPath, previewBasename, adminId) {
   }
 
   const key = previewKey(previewBasename, adminId);
-  try {
-    return await uploadBuffer(buffer, key, 'image/webp');
-  } catch (err) {
-    require('../utils/logger').error('[S3] uploadPreview failed, falling back to local disk:', err.message);
-    const previewDir = path.join(path.dirname(path.dirname(localPath)), 'previews');
-    if (!fs.existsSync(previewDir)) fs.mkdirSync(previewDir, { recursive: true });
-    fs.writeFileSync(path.join(previewDir, filename), buffer);
-    return `/uploads/previews/${filename}`;
-  }
+  return await uploadBuffer(buffer, key, 'image/webp');
 }
 
 /**
