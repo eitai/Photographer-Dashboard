@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import api, { getMyStorage, getAdminStorage, setAdminQuota } from '@/lib/api';
+import { useEffect, useRef } from 'react';
+import api, { getMyStorage, getAdminStorage, setAdminQuota, pingS3 } from '@/lib/api';
 import * as clientService from '@/services/clientService';
 import * as galleryService from '@/services/galleryService';
 import { fetchProductOrders, updateProductOrderGalleries, deliverProductOrder } from '@/services/productOrderService';
@@ -150,6 +151,15 @@ export function useAdminProducts() {
 }
 
 export function useMyStorage() {
+  const pinged = useRef(false);
+  useEffect(() => {
+    if (pinged.current) return;
+    pinged.current = true;
+    pingS3()
+      .then((result) => console.info('[S3 PING]', result))
+      .catch((err) => console.error('[S3 PING] failed:', err?.response?.data || err?.message));
+  }, []);
+
   return useQuery({
     queryKey: queryKeys.storageMe,
     queryFn: getMyStorage,

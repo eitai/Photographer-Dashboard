@@ -75,7 +75,14 @@ export const verifyAuth = ({ signal }: { signal: AbortSignal }): Promise<{ admin
 
 // ---- Storage ----
 export const getMyStorage = (): Promise<import('@/types/admin').StorageStats> =>
-  api.get('/storage/me').then((r) => r.data);
+  api.get('/storage/me').then((r) => r.data).catch((err) => {
+    const detail = err?.response?.data?.detail || err?.response?.data?.error || err?.message;
+    console.error('[S3 ERROR] /api/storage/me failed:', detail, err?.response?.data);
+    throw err;
+  });
+
+export const pingS3 = (): Promise<Record<string, unknown>> =>
+  api.get('/storage/s3-ping').then((r) => r.data);
 
 export const getAdminStorage = (adminId: string): Promise<import('@/types/admin').StorageStats> =>
   api.get(`/admins/${adminId}/storage`).then((r) => r.data);
