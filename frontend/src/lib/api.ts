@@ -384,3 +384,136 @@ export const toggleSupplierActive = (id: string): Promise<Supplier> =>
 
 export const setSupplierExclusive = (id: string): Promise<Supplier> =>
   api.patch(`/admin/suppliers/${id}/set-exclusive`).then((r) => r.data);
+
+// ---- Store Orders (types) ----
+
+export interface StoreOrderItem {
+  id: string;
+  orderId: string;
+  productId: string;
+  quantity: number;
+  unitCostPrice: number;
+  unitClientPrice: number | null;
+  selectedImageIds: string[];
+  imageNotes: Record<string, string>;
+  productOptions: Record<string, unknown>;
+  product: {
+    name: string;
+    type: string;
+    sku: string | null;
+    specs: Record<string, unknown>;
+    imagePreviewPath: string | null;
+  };
+}
+
+export interface StoreOrder {
+  id: string;
+  adminId: string;
+  clientId: string;
+  galleryId: string;
+  supplierId: string | null;
+  flow: 'photographer' | 'client';
+  status: 'draft' | 'pending_selection' | 'selection_submitted' | 'approved' | 'sent_to_supplier' | 'in_production' | 'shipped' | 'delivered' | 'cancelled';
+  paymentStatus: 'not_required' | 'pending' | 'paid' | 'refunded';
+  totalAmount: number | null;
+  currency: string;
+  selectionToken: string | null;
+  clientNote: string | null;
+  photographerNote: string | null;
+  supplierNote: string | null;
+  trackingNumber: string | null;
+  trackingCarrier: string | null;
+  shippingAddress: {
+    name?: string;
+    street?: string;
+    apartment?: string;
+    city?: string;
+    zip?: string;
+    country?: string;
+    phone?: string;
+  } | null;
+  sentToSupplierAt: string | null;
+  shippedAt: string | null;
+  deliveredAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  client: { name: string; email: string; phone: string | null; addressStreet?: string; addressCity?: string; addressZip?: string; addressCountry?: string; addressApartment?: string };
+  gallery: { name: string };
+  supplier: { name: string } | null;
+  items: StoreOrderItem[];
+  itemsCount?: number;
+}
+
+export interface StoreOrdersResponse {
+  orders: StoreOrder[];
+  total: number;
+  page: number;
+  limit: number;
+}
+
+export interface GalleryImageForSelection {
+  id: string;
+  filename: string;
+  path: string;
+  thumbnailPath: string;
+  sortOrder: number;
+}
+
+export interface OrderSelectionData {
+  order: StoreOrder;
+  galleryImages: GalleryImageForSelection[];
+}
+
+// ---- Store Orders — Photographer API ----
+
+export const getOrders = (params?: { clientId?: string; galleryId?: string; status?: string; flow?: string; page?: number; limit?: number }) =>
+  api.get<StoreOrdersResponse>('/orders', { params }).then((r) => r.data);
+
+export const getOrder = (id: string) =>
+  api.get<StoreOrder>(`/orders/${id}`).then((r) => r.data);
+
+export const createOrder = (data: { clientId: string; galleryId: string; items: { productId: string; quantity: number; productOptions?: Record<string, unknown> }[]; photographerNote?: string }) =>
+  api.post<StoreOrder>('/orders', data).then((r) => r.data);
+
+export const updateOrderDraft = (id: string, data: { photographerNote?: string; items?: { productId: string; quantity: number; productOptions?: Record<string, unknown> }[] }) =>
+  api.put<StoreOrder>(`/orders/${id}`, data).then((r) => r.data);
+
+export const deleteOrder = (id: string) =>
+  api.delete(`/orders/${id}`).then((r) => r.data);
+
+export const sendOrderToClient = (id: string) =>
+  api.post<StoreOrder>(`/orders/${id}/send-to-client`).then((r) => r.data);
+
+export const approveOrder = (id: string) =>
+  api.post<StoreOrder>(`/orders/${id}/approve`).then((r) => r.data);
+
+export const sendOrderToSupplier = (id: string) =>
+  api.post<StoreOrder>(`/orders/${id}/send-to-supplier`).then((r) => r.data);
+
+export const cancelOrder = (id: string) =>
+  api.post(`/orders/${id}/cancel`).then((r) => r.data);
+
+// ---- Store Orders — Public client selection ----
+
+export const getOrderSelection = (token: string) =>
+  api.get<OrderSelectionData>(`/orders/selection/${token}`).then((r) => r.data);
+
+export const submitOrderSelection = (token: string, data: {
+  items: { orderItemId: string; selectedImageIds: string[]; imageNotes?: Record<string, string> }[];
+  shippingAddress: { name: string; street: string; apartment?: string; city: string; zip?: string; country?: string; phone?: string };
+  clientNote?: string;
+}) => api.post(`/orders/selection/${token}`, data).then((r) => r.data);
+
+// ---- Store Orders — Supplier API ----
+
+export const getSupplierOrders = (params?: { status?: string; page?: number; limit?: number }) =>
+  api.get<StoreOrdersResponse>('/supplier/orders', { params }).then((r) => r.data);
+
+export const getSupplierOrder = (id: string) =>
+  api.get<StoreOrder>(`/supplier/orders/${id}`).then((r) => r.data);
+
+export const updateSupplierOrderStatus = (id: string, data: { status: string; trackingNumber?: string; trackingCarrier?: string; supplierNote?: string }) =>
+  api.put<StoreOrder>(`/supplier/orders/${id}/status`, data).then((r) => r.data);
+
+export const getSupplierOrderDownloadUrls = (id: string) =>
+  api.get<{ urls: string[] }>(`/supplier/orders/${id}/images/download`).then((r) => r.data);

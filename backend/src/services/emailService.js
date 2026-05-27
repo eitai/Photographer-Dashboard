@@ -420,4 +420,394 @@ async function sendProductOrderLinks({ clientName, clientEmail, studioName, link
   return true;
 }
 
-module.exports = { sendGalleryLink, sendProductOrderLinks };
+// ─── 3. Order selection link (to client) ────────────────────────────────────
+
+/**
+ * Send the client a link to complete their image selection for a store order.
+ *
+ * @param {object} opts
+ * @param {string} opts.clientName
+ * @param {string} opts.clientEmail
+ * @param {string} opts.studioName
+ * @param {string} opts.selectionUrl    Full URL to the order selection page
+ * @param {Array}  opts.orderItems      [{ productName, quantity }]
+ * @param {string} [opts.lang='he']
+ */
+async function sendOrderSelectionLink({
+  clientName,
+  clientEmail,
+  studioName,
+  selectionUrl,
+  orderItems = [],
+  lang = 'he',
+}) {
+  const transporter = createTransporter();
+  if (!transporter) {
+    console.warn('[email] SMTP not configured — skipping order selection email');
+    return false;
+  }
+
+  const isHe = lang === 'he';
+  const dir = isHe ? 'rtl' : 'ltr';
+  const align = isHe ? 'right' : 'left';
+  const studio = esc(studioName || 'LightStudio');
+
+  const subject = isHe
+    ? `${studio} · ממתינים לבחירתך`
+    : `${studio} · Waiting for your selection`;
+
+  const heading     = isHe ? 'ממתינים לבחירתך'          : 'Waiting for your selection';
+  const eyebrow     = isHe ? 'הזמנת הדפסה'              : 'Print Order';
+  const greeting    = isHe ? `שלום ${esc(clientName)},`  : `Hi ${esc(clientName)},`;
+  const intro       = isHe
+    ? 'הצלם שלך הכין עבורך הזמנה מיוחדת. אנא בחר תמונות לכל מוצר על ידי לחיצה על הכפתור:'
+    : 'Your photographer has prepared a special order for you. Please select images for each product by clicking the button below:';
+  const ctaLabel    = isHe ? 'בחר תמונות ←' : 'Select Images →';
+  const fallback    = isHe ? 'אם הכפתור לא נפתח, העתיק את הקישור:' : "If the button doesn't work, copy the link:";
+  const itemsHeader = isHe ? 'פריטים בהזמנה:' : 'Order items:';
+
+  const itemsHtml = orderItems.length
+    ? `
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+           style="margin-bottom:24px;">
+      <tr>
+        <td dir="${dir}" style="text-align:${align};">
+          <p style="margin:0 0 10px;
+                    font-family:'Inter',Arial,sans-serif;
+                    font-size:11px;font-weight:600;
+                    letter-spacing:2px;color:#888888;
+                    text-transform:uppercase;">
+            ${itemsHeader}
+          </p>
+          ${orderItems
+            .map(
+              (it) => `
+          <p style="margin:0 0 6px;
+                    font-family:'Inter',Arial,sans-serif;
+                    font-size:14px;color:#444444;line-height:1.6;">
+            &bull; ${esc(it.productName)} &times; ${Number(it.quantity) || 1}
+          </p>`
+            )
+            .join('')}
+        </td>
+      </tr>
+    </table>`
+    : '';
+
+  const body = `
+    <!-- Header -->
+    <tr>
+      <td align="center" style="padding:40px 40px 24px;background-color:#ffffff;">
+        <p style="margin:0 0 20px;
+                  font-family:'Inter',Arial,sans-serif;
+                  font-size:10px;font-weight:600;
+                  letter-spacing:5px;color:#888888;
+                  text-transform:uppercase;">
+          ${studio}
+        </p>
+        <p style="margin:0 0 10px;
+                  font-family:'Inter',Arial,sans-serif;
+                  font-size:11px;font-weight:500;
+                  letter-spacing:3px;color:#888888;
+                  text-transform:uppercase;">
+          ${eyebrow}
+        </p>
+        <h1 style="margin:0 0 20px;
+                   font-family:'Playfair Display',Georgia,serif;
+                   font-size:30px;font-weight:400;
+                   color:#111111;line-height:1.2;letter-spacing:-0.3px;">
+          ${heading}
+        </h1>
+        <table role="presentation" cellpadding="0" cellspacing="0" border="0"
+               style="margin:0 auto;">
+          <tr>
+            <td style="width:40px;height:1px;background-color:#111111;font-size:0;"></td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+
+    <!-- Body -->
+    <tr>
+      <td dir="${dir}" style="padding:0 40px 40px;">
+        <p style="margin:0 0 12px;
+                  font-family:'Inter',Arial,sans-serif;
+                  font-size:16px;font-weight:500;color:#111111;
+                  line-height:1.5;text-align:${align};">
+          ${greeting}
+        </p>
+        <p style="margin:0 0 24px;
+                  font-family:'Inter',Arial,sans-serif;
+                  font-size:14px;color:#555555;line-height:1.85;
+                  text-align:${align};">
+          ${intro}
+        </p>
+
+        ${itemsHtml}
+
+        <!-- CTA Button -->
+        <table role="presentation" class="cta-btn" width="100%" cellpadding="0" cellspacing="0" border="0"
+               style="margin-bottom:32px;">
+          <tr>
+            <td align="center">
+              <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td style="background-color:#111111;border-radius:50px;">
+                    <a href="${selectionUrl}"
+                       style="display:inline-block;
+                              padding:17px 52px;
+                              font-family:'Inter',Arial,sans-serif;
+                              font-size:15px;font-weight:600;
+                              color:#ffffff;text-decoration:none;
+                              letter-spacing:0.5px;white-space:nowrap;">
+                      ${ctaLabel}
+                    </a>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+
+        <!-- Divider -->
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+               style="margin-bottom:20px;">
+          <tr>
+            <td style="border-top:1px solid #E8E8E8;font-size:0;line-height:0;">&nbsp;</td>
+          </tr>
+        </table>
+
+        <!-- Fallback URL -->
+        <p style="margin:0;
+                  font-family:'Inter',Arial,sans-serif;
+                  font-size:12px;color:#999999;line-height:1.7;
+                  text-align:center;">
+          ${fallback}<br/>
+          <a href="${selectionUrl}"
+             style="color:#555555;word-break:break-all;text-decoration:none;
+                    border-bottom:1px solid #CCCCCC;">
+            ${selectionUrl}
+          </a>
+        </p>
+      </td>
+    </tr>
+
+    ${emailFooter(studio, isHe)}
+  `;
+
+  const html = emailWrapper(dir, isHe ? 'he' : 'en', body);
+
+  await transporter.sendMail({
+    from: process.env.SMTP_FROM || `"${studioName || 'LightStudio'}" <${process.env.SMTP_USER}>`,
+    to:   clientEmail,
+    subject,
+    html,
+  });
+
+  return true;
+}
+
+// ─── 4. Order to supplier email ──────────────────────────────────────────────
+
+/**
+ * Send a new order notification to the supplier with full order details.
+ *
+ * @param {object} opts
+ * @param {string} opts.supplierEmail
+ * @param {string} opts.supplierName
+ * @param {string} opts.studioName
+ * @param {string} opts.orderId
+ * @param {Array}  opts.orderItems       [{ productName, quantity, specs }]
+ * @param {object} [opts.shippingAddress]
+ * @param {string} [opts.notes]
+ */
+async function sendOrderToSupplier({
+  supplierEmail,
+  supplierName,
+  studioName,
+  orderId,
+  orderItems = [],
+  shippingAddress,
+  notes,
+}) {
+  const transporter = createTransporter();
+  if (!transporter) {
+    console.warn('[email] SMTP not configured — skipping supplier order email');
+    return false;
+  }
+
+  const studio = esc(studioName || 'LightStudio');
+  const orderRef = orderId ? orderId.slice(0, 8).toUpperCase() : '';
+
+  const itemsHtml = orderItems
+    .map((it) => {
+      const specsText =
+        it.specs && typeof it.specs === 'object' && Object.keys(it.specs).length
+          ? Object.entries(it.specs)
+              .map(([k, v]) => `${esc(String(k))}: ${esc(String(v))}`)
+              .join(', ')
+          : '';
+      return `
+      <tr>
+        <td style="padding:10px 0;border-bottom:1px solid #E8E8E8;
+                   font-family:'Inter',Arial,sans-serif;font-size:14px;color:#333333;">
+          ${esc(it.productName)}${specsText ? ` <span style="color:#888;font-size:12px;">(${specsText})</span>` : ''}
+        </td>
+        <td style="padding:10px 0;border-bottom:1px solid #E8E8E8;text-align:center;
+                   font-family:'Inter',Arial,sans-serif;font-size:14px;color:#333333;">
+          ${Number(it.quantity) || 1}
+        </td>
+      </tr>`;
+    })
+    .join('');
+
+  const shippingHtml = shippingAddress
+    ? `
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+           style="margin-top:24px;margin-bottom:8px;">
+      <tr>
+        <td style="background-color:#F9F9F9;border-radius:8px;padding:16px 20px;
+                   border-left:3px solid #111111;">
+          <p style="margin:0 0 6px;
+                     font-family:'Inter',Arial,sans-serif;
+                     font-size:10px;font-weight:600;
+                     letter-spacing:2px;color:#888888;
+                     text-transform:uppercase;">
+            Shipping Address
+          </p>
+          <p style="margin:0;
+                     font-family:'Inter',Arial,sans-serif;
+                     font-size:14px;color:#444444;line-height:1.7;">
+            ${esc(shippingAddress.name || '')}<br/>
+            ${esc(shippingAddress.street || '')}${shippingAddress.apartment ? ', ' + esc(shippingAddress.apartment) : ''}<br/>
+            ${esc(shippingAddress.city || '')}${shippingAddress.zip ? ' ' + esc(shippingAddress.zip) : ''}<br/>
+            ${shippingAddress.country ? esc(shippingAddress.country) : ''}
+          </p>
+        </td>
+      </tr>
+    </table>`
+    : '';
+
+  const notesHtml = notes
+    ? `
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+           style="margin-top:16px;">
+      <tr>
+        <td style="background-color:#FFFBF0;border-radius:8px;padding:14px 20px;
+                   border-left:3px solid #E8C840;">
+          <p style="margin:0 0 4px;
+                     font-family:'Inter',Arial,sans-serif;
+                     font-size:10px;font-weight:600;
+                     letter-spacing:2px;color:#888888;
+                     text-transform:uppercase;">
+            Notes
+          </p>
+          <p style="margin:0;
+                     font-family:'Playfair Display',Georgia,serif;
+                     font-size:14px;font-style:italic;
+                     color:#444444;line-height:1.75;">
+            ${esc(notes)}
+          </p>
+        </td>
+      </tr>
+    </table>`
+    : '';
+
+  const body = `
+    <!-- Header -->
+    <tr>
+      <td align="center" style="padding:40px 40px 24px;background-color:#ffffff;">
+        <p style="margin:0 0 20px;
+                  font-family:'Inter',Arial,sans-serif;
+                  font-size:10px;font-weight:600;
+                  letter-spacing:5px;color:#888888;
+                  text-transform:uppercase;">
+          ${studio}
+        </p>
+        <p style="margin:0 0 10px;
+                  font-family:'Inter',Arial,sans-serif;
+                  font-size:11px;font-weight:500;
+                  letter-spacing:3px;color:#888888;
+                  text-transform:uppercase;">
+          New Order
+        </p>
+        <h1 style="margin:0 0 8px;
+                   font-family:'Playfair Display',Georgia,serif;
+                   font-size:28px;font-weight:400;
+                   color:#111111;line-height:1.2;letter-spacing:-0.3px;">
+          Order #${orderRef}
+        </h1>
+        <table role="presentation" cellpadding="0" cellspacing="0" border="0"
+               style="margin:16px auto 0;">
+          <tr>
+            <td style="width:40px;height:1px;background-color:#111111;font-size:0;"></td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+
+    <!-- Body -->
+    <tr>
+      <td style="padding:0 40px 40px;">
+        <p style="margin:0 0 20px;
+                  font-family:'Inter',Arial,sans-serif;
+                  font-size:15px;color:#444444;line-height:1.7;">
+          Hi ${esc(supplierName || 'Supplier')}, you have received a new order from
+          <strong style="color:#111111;">${studio}</strong>.
+          Please review the details below and begin production.
+        </p>
+
+        <!-- Items table -->
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+          <thead>
+            <tr>
+              <th style="padding:8px 0;border-bottom:2px solid #111111;text-align:left;
+                         font-family:'Inter',Arial,sans-serif;font-size:11px;font-weight:600;
+                         letter-spacing:1.5px;color:#888888;text-transform:uppercase;">
+                Product
+              </th>
+              <th style="padding:8px 0;border-bottom:2px solid #111111;text-align:center;
+                         font-family:'Inter',Arial,sans-serif;font-size:11px;font-weight:600;
+                         letter-spacing:1.5px;color:#888888;text-transform:uppercase;width:80px;">
+                Qty
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            ${itemsHtml || `
+            <tr>
+              <td colspan="2" style="padding:14px 0;
+                                     font-family:'Inter',Arial,sans-serif;
+                                     font-size:14px;color:#888888;">
+                No items
+              </td>
+            </tr>`}
+          </tbody>
+        </table>
+
+        ${shippingHtml}
+        ${notesHtml}
+      </td>
+    </tr>
+
+    ${emailFooter(studio, false)}
+  `;
+
+  const html = emailWrapper('ltr', 'en', body);
+
+  await transporter.sendMail({
+    from:    process.env.SMTP_FROM || `"${studioName || 'LightStudio'}" <${process.env.SMTP_USER}>`,
+    to:      supplierEmail,
+    subject: `New Order #${orderRef} from ${studio}`,
+    html,
+  });
+
+  return true;
+}
+
+module.exports = {
+  sendGalleryLink,
+  sendProductOrderLinks,
+  sendOrderSelectionLink,
+  sendOrderToSupplier,
+};

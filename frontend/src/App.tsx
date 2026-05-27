@@ -61,6 +61,17 @@ const SupplierProducts = lazy(() => import('./pages/supplier/SupplierProducts').
 // Admin: suppliers management
 const AdminSuppliersPage = lazy(() => import('./pages/admin/AdminSuppliersPage').then((m) => ({ default: m.AdminSuppliersPage })));
 
+// Admin: store orders
+const AdminOrders = lazy(() => import('./pages/admin/AdminOrders').then((m) => ({ default: m.AdminOrders })));
+const AdminOrderDetail = lazy(() => import('./pages/admin/AdminOrderDetail').then((m) => ({ default: m.AdminOrderDetail })));
+
+// Public: client order selection
+const ClientOrderSelection = lazy(() => import('./pages/ClientOrderSelection').then((m) => ({ default: m.ClientOrderSelection })));
+
+// Supplier: orders
+const SupplierOrders = lazy(() => import('./pages/supplier/SupplierOrders').then((m) => ({ default: m.SupplierOrders })));
+const SupplierOrderDetail = lazy(() => import('./pages/supplier/SupplierOrderDetail').then((m) => ({ default: m.SupplierOrderDetail })));
+
 // Layout wrapper for public pages (shows Navbar/Footer/WhatsApp)
 const PublicLayout = ({ children }: { children: React.ReactNode }) => (
   <>
@@ -124,6 +135,7 @@ export const App = () => (
                   }
                 />
                 <Route path='/gallery/:token' element={<ClientGallery />} />
+                <Route path='/order-selection/:token' element={<ClientOrderSelection />} />
                 <Route path='/products/order/:orderToken' element={<ClientProductOrderPage />} />
                 <Route path='/products/:token' element={<ClientProductsPage />} />
 
@@ -250,6 +262,22 @@ export const App = () => (
                     </ProtectedRoute>
                   }
                 />
+                <Route
+                  path='/admin/orders'
+                  element={
+                    <ProtectedRoute>
+                      <AdminOrders />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path='/admin/orders/:id'
+                  element={
+                    <ProtectedRoute>
+                      <AdminOrderDetail />
+                    </ProtectedRoute>
+                  }
+                />
                 {/* Dev-only S3 uploader test harness. Reach via /admin/_s3test?s3test=1 */}
                 {import.meta.env.DEV && (
                   <Route
@@ -273,6 +301,8 @@ export const App = () => (
                   }
                 >
                   <Route path='products' element={<SupplierProducts />} />
+                  <Route path='orders' element={<SupplierOrders />} />
+                  <Route path='orders/:id' element={<SupplierOrderDetail />} />
                 </Route>
 
                 {/* Per-photographer public pages — must be last to avoid shadowing other routes */}

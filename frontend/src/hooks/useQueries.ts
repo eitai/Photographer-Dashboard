@@ -26,6 +26,17 @@ import api, {
   deleteAdminSupplier,
   toggleSupplierActive,
   setSupplierExclusive,
+  getOrders,
+  getOrder,
+  createOrder,
+  sendOrderToClient,
+  approveOrder,
+  sendOrderToSupplier,
+  cancelOrder,
+  deleteOrder,
+  getSupplierOrders,
+  getSupplierOrder,
+  updateSupplierOrderStatus,
 } from '@/lib/api';
 import type { Plan, InvoicesResponse, SupplierProduct, Supplier } from '@/lib/api';
 import * as clientService from '@/services/clientService';
@@ -62,6 +73,10 @@ export const queryKeys = {
   customPrice: (gb: number, interval: string) => ['plans', 'custom-price', gb, interval] as const,
   supplierProducts: ['supplier', 'products'] as const,
   adminSuppliers: ['admin', 'suppliers'] as const,
+  orders: ['orders'] as const,
+  orderDetail: (id: string) => ['orders', id] as const,
+  supplierOrders: ['supplier', 'orders'] as const,
+  supplierOrderDetail: (id: string) => ['supplier', 'orders', id] as const,
 };
 
 // ---------------------------------------------------------------------------
@@ -544,6 +559,89 @@ export function useUpdateProductOrderGalleries(clientId: string) {
       updateProductOrderGalleries(orderId, { allowedGalleryIds }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.productOrders(clientId) });
+    },
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Store Order hooks
+// ---------------------------------------------------------------------------
+
+export function useOrders(params?: Parameters<typeof getOrders>[0]) {
+  return useQuery({ queryKey: [...queryKeys.orders, params], queryFn: () => getOrders(params) });
+}
+
+export function useOrder(id: string) {
+  return useQuery({ queryKey: queryKeys.orderDetail(id), queryFn: () => getOrder(id), enabled: !!id });
+}
+
+export function useCreateOrder() {
+  const qc = useQueryClient();
+  return useMutation({ mutationFn: createOrder, onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.orders }) });
+}
+
+export function useSendOrderToClient() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: sendOrderToClient,
+    onSuccess: (_, id) => qc.invalidateQueries({ queryKey: queryKeys.orderDetail(id) }),
+  });
+}
+
+export function useApproveOrder() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: approveOrder,
+    onSuccess: (_, id) => {
+      qc.invalidateQueries({ queryKey: queryKeys.orderDetail(id) });
+      qc.invalidateQueries({ queryKey: queryKeys.orders });
+    },
+  });
+}
+
+export function useSendOrderToSupplier() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: sendOrderToSupplier,
+    onSuccess: (_, id) => {
+      qc.invalidateQueries({ queryKey: queryKeys.orderDetail(id) });
+      qc.invalidateQueries({ queryKey: queryKeys.orders });
+    },
+  });
+}
+
+export function useCancelOrder() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: cancelOrder,
+    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.orders }),
+  });
+}
+
+export function useDeleteOrder() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: deleteOrder,
+    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.orders }),
+  });
+}
+
+export function useSupplierOrders(params?: Parameters<typeof getSupplierOrders>[0]) {
+  return useQuery({ queryKey: [...queryKeys.supplierOrders, params], queryFn: () => getSupplierOrders(params) });
+}
+
+export function useSupplierOrder(id: string) {
+  return useQuery({ queryKey: queryKeys.supplierOrderDetail(id), queryFn: () => getSupplierOrder(id), enabled: !!id });
+}
+
+export function useUpdateSupplierOrderStatus() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Parameters<typeof updateSupplierOrderStatus>[1] }) =>
+      updateSupplierOrderStatus(id, data),
+    onSuccess: (_, { id }) => {
+      qc.invalidateQueries({ queryKey: queryKeys.supplierOrderDetail(id) });
+      qc.invalidateQueries({ queryKey: queryKeys.supplierOrders });
     },
   });
 }
