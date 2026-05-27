@@ -1,0 +1,75 @@
+# photo-worker.service
+#
+# Photographer-Dashboard compression worker (pg-boss consumer). Runs the
+# worker entry at backend/src/workers/index.js. Memory and CPU are capped
+# because cjxl and ffmpeg are happy to use everything in sight.
+#
+# See photo-api.service for the LoadCredential / secrets explanation. The
+# helper at backend/src/utils/loadSystemdCredentials.js must also be wired
+# into backend/src/workers/index.js (one line at the top, before any code
+# reads AWS_*, JWT_SECRET, DATABASE_PASSWORD).
+
+[Unit]
+Description=Photographer Dashboard Worker (compression)
+After=network-online.target postgresql.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=photo
+Group=photo
+WorkingDirectory=/opt/photo/backend
+
+EnvironmentFile=/etc/photo/env
+
+LoadCredential=aws_access_key_id:/etc/photo/secrets/aws_access_key_id
+LoadCredential=aws_secret_access_key:/etc/photo/secrets/aws_secret_access_key
+LoadCredential=jwt_secret:/etc/photo/secrets/jwt_secret
+LoadCredential=database_password:/etc/photo/secrets/database_password
+
+ExecStart=/usr/bin/node src/workers/index.js
+
+Restart=on-failure
+RestartSec=5
+KillSignal=SIGTERM
+# Compression jobs can be long-running; give in-flight work time to finish
+# on shutdown before SIGKILL.
+TimeoutStopSec=300
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=photo-worker
+
+# ----- Resource caps -----
+# cjxl is RAM-hungry on large images. Soft cap pushes back, hard cap kills.
+MemoryHigh=4G
+MemoryMax=6G
+# 4 cores worth of CPU. Adjust to box size.
+CPUQuota=400%
+# Tasks ceiling — protects against runaway fork bombs from a misbehaving worker.
+TasksMax=512
+
+# ----- Hardening -----
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ReadWritePaths=/var/lib/photo /var/log/photo
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+RestrictNamespaces=true
+LockPersonality=true
+# MemoryDenyWriteExecute disabled by default — Node V8 JIT and native addons (sharp, libvips, libjxl bindings)
+# often fail when enabled. After staging burn-in confirms no startup errors, set to true for hardening.
+MemoryDenyWriteExecute=false
+RestrictRealtime=true
+SystemCallArchitectures=native
+SystemCallFilter=@system-service
+# @resources is intentionally NOT denied on the worker — cjxl/ffmpeg may call setrlimit/setpriority/sched_setaffinity.
+# API service can keep both denials since it doesn't spawn heavy children.
+SystemCallFilter=~@privileged
+
+[Install]
+WantedBy=multi-user.target

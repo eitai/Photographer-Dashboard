@@ -100,12 +100,12 @@ export const translations: Record<string, Record<SupportedLocale, string>> = {
   'gallery.select_photo': { he: 'בחרי תמונה', en: 'Select photo' },
   'gallery.photo_selected': { he: 'נבחרה', en: 'Selected' },
   'gallery.choose_more': { he: 'בחרי עוד', en: 'Choose more' },
-  'gallery.close_window': { he: 'סגרי חלון', en: 'Close window' },
+  'gallery.close_window': { he: 'סגור חלון', en: 'Close window' },
   'gallery.max_reached': { he: 'הגעת למקסימום הבחירות', en: 'Maximum selections reached' },
   'gallery.select_of': { he: 'מתוך', en: 'of' },
   // Delivery gallery (download-only)
-  'gallery.delivery_title': { he: 'התמונות המעובדות שלך', en: 'Your Edited Photos' },
-  'gallery.download_all': { he: 'הורדת הכל (ZIP)', en: 'Download All (ZIP)' },
+  'gallery.delivery_title': { he: 'התמונות שלכם מוכנות', en: 'Your Edited Photos' },
+  'gallery.download_all': { he: 'הורד הכל (ZIP)', en: 'Download All (ZIP)' },
   'gallery.download_photo': { he: 'הורדה', en: 'Download' },
   'gallery.preparing_zip': { he: 'מכין ZIP…', en: 'Preparing ZIP…' },
 
@@ -182,7 +182,7 @@ export const translations: Record<string, Record<SupportedLocale, string>> = {
   'admin.client.create_delivery': { he: 'צור גלריית מסירה', en: 'Create Delivery Gallery' },
   'admin.client.delivery_badge': { he: 'מסירה', en: 'Delivery' },
   'admin.client.delivery_header_ph': {
-    he: 'הודעה ללקוחה (למשל: "התמונות המעובדות שלך מוכנות 🤍")',
+    he: 'הודעה ללקוחה (למשל: "התמונות שלכם מוכנות מוכנות 🤍")',
     en: 'Message to client (e.g. "Your edited photos are ready 🤍")',
   },
   'admin.client.creating_delivery': { he: 'יוצר…', en: 'Creating…' },
@@ -246,7 +246,7 @@ export const translations: Record<string, Record<SupportedLocale, string>> = {
   'admin.selections.images_selected': { he: 'תמונות נבחרו', en: 'images selected' },
   'admin.selections.submitted': { he: 'נשלח', en: 'Submitted' },
   'admin.selections.preparing': { he: 'מכין…', en: 'Preparing…' },
-  'admin.selections.download': { he: 'הורדת ZIP', en: 'Download ZIP' },
+  'admin.selections.download': { he: 'הורד ZIP', en: 'Download ZIP' },
   'admin.selections.delete_submission': { he: 'מחק בחירה', en: 'Delete selection' },
   'admin.selections.delete_sub_confirm': { he: 'מחיקת כל הבחירות', en: 'Delete all selected photos' },
   'admin.selections.delete_sub_body': {

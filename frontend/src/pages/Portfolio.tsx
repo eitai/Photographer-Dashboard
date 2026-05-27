@@ -3,10 +3,8 @@ import { useI18n } from '@/lib/i18n';
 import { FadeIn } from '@/components/FadeIn';
 import Masonry from 'react-masonry-css';
 import { Lightbox, type LightboxImage } from '@/components/gallery/Lightbox';
-import api from '@/lib/api';
+import api, { getImageUrl } from '@/lib/api';
 import { Helmet } from 'react-helmet-async';
-
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
 export const Portfolio = () => {
   const { t } = useI18n();
@@ -22,14 +20,13 @@ export const Portfolio = () => {
       .finally(() => setLoading(false));
   }, []);
 
-  const getImageUrl = (path: string) => `${API_BASE}${path}`;
 
   return (
     <main className='pt-16'>
       <Helmet>
-        <title>{t('portfolio.title')} | Koral Photography</title>
-        <meta name='description' content='צפו בגלריית הצילומים של קורל — משפחות, הריון, ניו בורן ומיתוג אישי בצפון הארץ.' />
-        <meta property='og:title' content={`${t('portfolio.title')} | Koral Photography`} />
+        <title>{t('portfolio.title')} | LIGHT STUDIO</title>
+        <meta name='description' content='צפו בגלריית הצילומים של הסטודיו — משפחות, הריון, ניו בורן ומיתוג אישי בצפון הארץ.' />
+        <meta property='og:title' content={`${t('portfolio.title')} | LIGHT STUDIO`} />
         <meta property='og:url' content={window.location.href} />
         <link rel='canonical' href={window.location.href} />
       </Helmet>

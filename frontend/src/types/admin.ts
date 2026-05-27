@@ -1,16 +1,19 @@
 export interface Client {
   _id: string;
+  id?: string;
   name: string;
   email?: string;
   phone?: string;
   sessionType: 'family' | 'maternity' | 'newborn' | 'branding' | 'landscape';
   status: string;
   notes?: string;
+  eventDate?: string;
   createdAt?: string;
+  faceRecognitionEnabled?: boolean;
 }
 
 export interface AdminRecord {
-  _id: string;
+  id: string;
   name: string;
   email: string;
   role: 'admin' | 'superadmin';
@@ -19,6 +22,8 @@ export interface AdminRecord {
   createdAt: string;
   storageQuotaBytes: number;
   storageUsedBytes: number;
+  ssoEnabled?: boolean;
+  googleEmail?: string | null;
 }
 
 export interface StorageStats {
@@ -52,8 +57,18 @@ export interface GalleryDetail {
   _id: string;
   name: string;
   clientName: string;
-  clientId: string | { _id: string };
+  clientId: string | { _id: string; name?: string; email?: string; phone?: string };
+  adminId?: string;
+  token?: string;
   status: string;
+  isActive?: boolean;
+  isDelivery?: boolean;
+  deliveryOf?: string;
+  maxSelections?: number;
+  headerMessage?: string;
+  expiresAt?: string | null;
+  sessionType?: string;
+  selectionEnabled?: boolean;
   videos?: GalleryVideo[];
 }
 
@@ -61,6 +76,9 @@ export interface GalleryImage {
   _id: string;
   path: string;
   thumbnailPath?: string;
+  previewPath?: string;
   originalName: string;
   beforePath?: string;
+  sortOrder?: number;
+  folderIds?: string[];
 }

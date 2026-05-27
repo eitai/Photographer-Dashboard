@@ -41,7 +41,7 @@ export const QuickAddClient = ({ onSuccess }: { onSuccess?: () => void }) => {
   };
 
   return (
-    <div className='bg-white rounded-xl shadow p-5'>
+    <div className='bg-card rounded-xl shadow p-5'>
       <h3 className=' text-base text-charcoal mb-4'>{t('admin.dashboard.quick_add_title')}</h3>
       <form onSubmit={handleSubmit} className='flex flex-col gap-3'>
         <InputField

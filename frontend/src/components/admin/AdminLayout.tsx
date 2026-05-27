@@ -19,12 +19,13 @@ interface AdminLayoutProps {
 export const AdminLayout = ({ children, title, actions }: AdminLayoutProps) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const theme = useAuthStore((s) => s.theme);
+  const darkMode = useAuthStore((s) => s.darkMode);
   const { dir } = useI18n();
   const { admin } = useAuth();
   const { data: storage, isLoading: storageLoading } = useMyStorage();
 
   return (
-    <div dir={dir} data-theme={theme} className='admin-layout flex h-screen overflow-hidden bg-white'>
+    <div dir={dir} data-theme={theme} className={`admin-layout flex h-screen overflow-hidden bg-background${darkMode ? ' dark' : ''}`}>
       {/* Mobile overlay */}
       {sidebarOpen && <div className='fixed inset-0 z-20 bg-black/40 md:hidden' onClick={() => setSidebarOpen(false)} />}
 
@@ -32,7 +33,7 @@ export const AdminLayout = ({ children, title, actions }: AdminLayoutProps) => {
 
       <main className='flex-1 overflow-hidden min-w-0 flex flex-col'>
         {/* Top bar — visually extends the sidebar logo section */}
-        <div className='h-16 flex items-center gap-4 px-6 bg-white border-b border-gray-100 shrink-0'>
+        <div className='h-16 flex items-center gap-4 px-6 bg-background border-b border-border shrink-0'>
           {/* Hamburger — mobile only */}
           <button
             className='md:hidden p-2 rounded-xl text-warm-gray hover:bg-beige/30 transition-colors shrink-0'
@@ -66,7 +67,7 @@ export const AdminLayout = ({ children, title, actions }: AdminLayoutProps) => {
           {/* Notification bell */}
           <NotificationBell />
         </div>
-        <div className='px-4 md:px-8 pt-3 flex-1 bg-gray-50 overflow-y-auto'>
+        <div className='px-4 md:px-8 pt-3 flex-1 bg-muted/30 overflow-y-auto'>
           <ErrorBoundary label={title || 'page content'}>{children}</ErrorBoundary>
         </div>
       </main>

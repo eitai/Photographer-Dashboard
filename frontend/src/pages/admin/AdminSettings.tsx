@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { AdminLayout } from '@/components/admin/AdminLayout';
 import { useAuth } from '@/hooks/useAuth';
 import { useAuthStore } from '@/store/authStore';
 import { useI18n } from '@/lib/i18n';
-import api, { API_BASE } from '@/lib/api';
+import api, { getImageUrl, API_BASE } from '@/lib/api';
 import { toast } from 'sonner';
 import {
   Trash2,
@@ -21,10 +22,15 @@ import {
   Pencil,
   Check,
   X,
+  Aperture,
+  Clock,
+  Smile,
+  Award,
 } from 'lucide-react';
 import { InputField, TextareaField } from '@/components/admin/InputField';
 import { Button } from '@/components/admin/Button';
 import { useSettings, useAdminProducts, queryKeys, type AdminProduct } from '@/hooks/useQueries';
+import { Modal } from '@/components/ui/Modal';
 import { useQueryClient } from '@tanstack/react-query';
 
 // ---------------------------------------------------------------------------
@@ -32,6 +38,26 @@ import { useQueryClient } from '@tanstack/react-query';
 // ---------------------------------------------------------------------------
 
 type HeroOverlayOpacity = 'light' | 'medium' | 'dark';
+
+interface StatItem {
+  id: string;
+  value: number;
+  suffix: string;
+  label: string;
+}
+
+interface PromiseItem {
+  id: string;
+  icon: string;
+  title: string;
+  description: string;
+}
+
+interface FaqItem {
+  id: string;
+  q: string;
+  a: string;
+}
 
 interface ServiceItem {
   id: string;
@@ -59,7 +85,7 @@ interface PackageItem {
   ctaLabel: string;
 }
 
-type SettingsTab = 'identity' | 'hero' | 'about' | 'sections' | 'system';
+type SettingsTab = 'identity' | 'hero' | 'about' | 'sections' | 'system' | 'security';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -80,6 +106,10 @@ const SERVICE_ICONS = [
   { name: 'mountain', Icon: Mountain },
   { name: 'users', Icon: Users },
   { name: 'star', Icon: Star },
+  { name: 'aperture', Icon: Aperture },
+  { name: 'clock', Icon: Clock },
+  { name: 'smile', Icon: Smile },
+  { name: 'award', Icon: Award },
 ];
 
 const SESSION_TYPE_OPTIONS = ['family', 'maternity', 'newborn', 'branding', 'landscape', 'other'] as const;
@@ -251,9 +281,14 @@ export const AdminSettings = () => {
   const { t } = useI18n();
   const queryClient = useQueryClient();
   const { data: settingsData } = useSettings();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   // ── Active tab ──────────────────────────────────────────────────────────────
-  const [activeTab, setActiveTab] = useState<SettingsTab>('identity');
+  const [activeTab, setActiveTab] = useState<SettingsTab>(() => {
+    const tab = searchParams.get('tab');
+    if (tab === 'security') return 'security';
+    return 'identity';
+  });
 
   // ── Identity tab state ──────────────────────────────────────────────────────
 
@@ -279,6 +314,12 @@ export const AdminSettings = () => {
   const [heroPreview, setHeroPreview] = useState('');
   const [uploadingHero, setUploadingHero] = useState(false);
   const heroInputRef = useRef<HTMLInputElement>(null);
+
+  // ── Logo state ──────────────────────────────────────────────────────────────
+  const [logoPreview, setLogoPreview] = useState('');
+  const [uploadingLogo, setUploadingLogo] = useState(false);
+  const [removingLogo, setRemovingLogo] = useState(false);
+  const logoInputRef = useRef<HTMLInputElement>(null);
 
   // ── About tab state ─────────────────────────────────────────────────────────
   const [about, setAbout] = useState({
@@ -337,6 +378,15 @@ export const AdminSettings = () => {
   const [ctaEnabled, setCtaEnabled] = useState(false);
   const [cta, setCta] = useState({ heading: '', subtext: '', buttonLabel: '' });
   const [savingCta, setSavingCta] = useState(false);
+  const [ctaBannerImagePreview, setCtaBannerImagePreview] = useState('');
+  const [uploadingCtaBannerImage, setUploadingCtaBannerImage] = useState(false);
+  const [removingCtaBannerImage, setRemovingCtaBannerImage] = useState(false);
+  const ctaBannerImageRef = useRef<HTMLInputElement>(null);
+
+  // Contact Section
+  const [contactSectionEnabled, setContactSectionEnabled] = useState(true);
+  const [contactSection, setContactSection] = useState({ heading: '', subheading: '' });
+  const [savingContactSection, setSavingContactSection] = useState(false);
 
   // Instagram Feed
   const [igFeedEnabled, setIgFeedEnabled] = useState(false);
@@ -345,9 +395,44 @@ export const AdminSettings = () => {
   const [uploadingIgImage, setUploadingIgImage] = useState(false);
   const igFeedInputRef = useRef<HTMLInputElement>(null);
 
+  // Stats
+  const [statsEnabled, setStatsEnabled] = useState(true);
+  const [stats, setStats] = useState<StatItem[]>([]);
+  const [savingStats, setSavingStats] = useState(false);
+  const [showStatForm, setShowStatForm] = useState(false);
+  const [editingStatId, setEditingStatId] = useState<string | null>(null);
+  const [statForm, setStatForm] = useState({ value: 0, suffix: '+', label: '' });
+
+  // Promises
+  const [promisesEnabled, setPromisesEnabled] = useState(true);
+  const [promises, setPromises] = useState<PromiseItem[]>([]);
+  const [savingPromises, setSavingPromises] = useState(false);
+  const [showPromiseForm, setShowPromiseForm] = useState(false);
+  const [editingPromiseId, setEditingPromiseId] = useState<string | null>(null);
+  const [promiseForm, setPromiseForm] = useState({ icon: 'camera', title: '', description: '' });
+
+  // FAQ
+  const [faqEnabled, setFaqEnabled] = useState(true);
+  const [faqItems, setFaqItems] = useState<FaqItem[]>([]);
+  const [savingFaq, setSavingFaq] = useState(false);
+  const [showFaqForm, setShowFaqForm] = useState(false);
+  const [editingFaqId, setEditingFaqId] = useState<string | null>(null);
+  const [faqForm, setFaqForm] = useState({ q: '', a: '' });
+
+  // Hero tagline and Final CTA
+  const [heroTagline, setHeroTagline] = useState('');
+  const [finalCta, setFinalCta] = useState({ heading: '', subtext: '', buttonLabel: '' });
+  const [savingFinalCta, setSavingFinalCta] = useState(false);
+
+  // ── Security tab state ──────────────────────────────────────────────────────
+  const [disconnectingSSO, setDisconnectingSSO] = useState(false);
+
   // ── System tab state ────────────────────────────────────────────────────────
   const [systemTheme, setSystemTheme] = useState('soft');
   const [savingTheme, setSavingTheme] = useState(false);
+  const [autoSendEmail, setAutoSendEmail] = useState(true);
+  const [autoSendSms, setAutoSendSms] = useState(false);
+  const [savingNotifications, setSavingNotifications] = useState(false);
 
   // ── Populate from settings cache ────────────────────────────────────────────
   useEffect(() => {
@@ -374,8 +459,10 @@ export const AdminSettings = () => {
       tiktokUrl: s.tiktokUrl || '',
     });
 
-    if (s.heroImagePath) setHeroPreview(`${API_BASE}${s.heroImagePath}`);
-    if (s.profileImagePath) setProfilePreview(`${API_BASE}${s.profileImagePath}`);
+    if (s.heroImagePath) setHeroPreview(getImageUrl(s.heroImagePath));
+    if (s.profileImagePath) setProfilePreview(getImageUrl(s.profileImagePath));
+    if (s.logoImagePath) setLogoPreview(getImageUrl(s.logoImagePath));
+    else setLogoPreview('');
 
     setServicesEnabled(s.servicesEnabled ?? false);
     setServices(s.services ?? []);
@@ -388,9 +475,58 @@ export const AdminSettings = () => {
     setVideo({ url: s.videoUrl || '', heading: s.videoSectionHeading || '', subheading: s.videoSectionSubheading || '' });
     setCtaEnabled(s.ctaBannerEnabled ?? false);
     setCta({ heading: s.ctaBannerHeading || '', subtext: s.ctaBannerSubtext || '', buttonLabel: s.ctaBannerButtonLabel || '' });
+    if (s.ctaBannerImagePath) setCtaBannerImagePreview(getImageUrl(s.ctaBannerImagePath));
+    else setCtaBannerImagePreview('');
+    setContactSectionEnabled(s.contactSectionEnabled ?? true);
+    setContactSection({ heading: s.contactSectionHeading || '', subheading: s.contactSectionSubheading || '' });
     setIgFeedEnabled(s.instagramFeedEnabled ?? false);
     setIgFeedImages(s.instagramFeedImages ?? []);
+    setAutoSendEmail(s.autoSendGalleryEmail ?? true);
+    setAutoSendSms(s.autoSendGallerySms ?? false);
+    setHeroTagline(s.heroTagline || '');
+    setFinalCta({ heading: s.finalCtaHeading || '', subtext: s.finalCtaSubtext || '', buttonLabel: s.finalCtaButtonLabel || '' });
+    setStatsEnabled(s.statsEnabled ?? true);
+    setStats(s.stats ?? []);
+    setPromisesEnabled(s.promisesEnabled ?? true);
+    setPromises(s.promises ?? []);
+    setFaqEnabled(s.faqEnabled ?? true);
+    setFaqItems(s.faqItems ?? []);
   }, [settingsData]);
+
+  // ── SSO linked toast on redirect ─────────────────────────────────────────
+  useEffect(() => {
+    const sso = searchParams.get('sso');
+    if (sso === 'linked') {
+      toast.success(t('admin.settings.sso.linked_success'));
+      // Refresh admin in store so the connected Google email appears immediately
+      api.get('/auth/me').then((res) => setAdmin(res.data.admin)).catch(() => {});
+      setSearchParams((prev) => {
+        const next = new URLSearchParams(prev);
+        next.delete('sso');
+        return next;
+      }, { replace: true });
+    }
+  }, [searchParams, setSearchParams, t, setAdmin]);
+
+  // ── Handlers: Security ──────────────────────────────────────────────────────
+  const handleDisconnectSSO = async () => {
+    setDisconnectingSSO(true);
+    try {
+      const res = await api.delete('/auth/google/link');
+      if (res.status === 200 && admin) {
+        setAdmin({ ...admin, ssoEnabled: false, googleEmail: null });
+        toast.success(t('admin.settings.sso.unlink_success'));
+      }
+    } catch {
+      toast.error(t('admin.common.error'));
+    } finally {
+      setDisconnectingSSO(false);
+    }
+  };
+
+  const handleConnectGoogle = () => {
+    window.location.href = `${API_BASE}/api/auth/google/link`;
+  };
 
   // ── Handlers: Identity ──────────────────────────────────────────────────────
   const handleProfile = async (e: React.FormEvent) => {
@@ -439,6 +575,38 @@ export const AdminSettings = () => {
     }
   };
 
+  // ── Handlers: Logo ──────────────────────────────────────────────────────────
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingLogo(true);
+    try {
+      const form = new FormData();
+      form.append('image', file);
+      const res = await api.post('/settings/logo-image', form, { headers: { 'Content-Type': undefined } });
+      setLogoPreview(getImageUrl(res.data.logoImagePath));
+      queryClient.invalidateQueries({ queryKey: queryKeys.settings });
+    } catch {
+      toast.error(t('admin.settings.logo_upload_failed'));
+    } finally {
+      setUploadingLogo(false);
+      if (logoInputRef.current) logoInputRef.current.value = '';
+    }
+  };
+
+  const handleLogoRemove = async () => {
+    setRemovingLogo(true);
+    try {
+      await api.delete('/settings/logo-image');
+      setLogoPreview('');
+      queryClient.invalidateQueries({ queryKey: queryKeys.settings });
+    } catch {
+      toast.error(t('admin.common.error'));
+    } finally {
+      setRemovingLogo(false);
+    }
+  };
+
   // ── Handlers: Hero ──────────────────────────────────────────────────────────
   const handleHeroUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -447,12 +615,14 @@ export const AdminSettings = () => {
     try {
       const form = new FormData();
       form.append('image', file);
-      const res = await api.post('/settings/hero-image', form, { headers: { 'Content-Type': 'multipart/form-data' } });
-      setHeroPreview(`${API_BASE}${res.data.heroImagePath}`);
+      const res = await api.post('/settings/hero-image', form, { headers: { 'Content-Type': undefined } });
+      setHeroPreview(getImageUrl(res.data.heroImagePath));
+      queryClient.invalidateQueries({ queryKey: queryKeys.settings });
     } catch {
       toast.error(t('admin.settings.hero_upload_failed'));
     } finally {
       setUploadingHero(false);
+      if (heroInputRef.current) heroInputRef.current.value = '';
     }
   };
 
@@ -460,6 +630,7 @@ export const AdminSettings = () => {
     setSavingHero(true);
     try {
       await api.put('/settings/landing', {
+        heroTagline: heroTagline,
         heroSubtitle: hero.heroSubtitle,
         heroOverlayOpacity: hero.heroOverlayOpacity,
         heroCtaPrimaryLabel: hero.heroCtaPrimaryLabel,
@@ -489,6 +660,19 @@ export const AdminSettings = () => {
     }
   };
 
+  const handleSaveNotifications = async () => {
+    setSavingNotifications(true);
+    try {
+      await api.put('/settings/notifications', { autoSendGalleryEmail: autoSendEmail, autoSendGallerySms: autoSendSms });
+      toast.success(t('admin.settings.landing_saved'));
+      queryClient.invalidateQueries({ queryKey: queryKeys.settings });
+    } catch {
+      toast.error(t('admin.settings.landing_failed'));
+    } finally {
+      setSavingNotifications(false);
+    }
+  };
+
   // ── Handlers: About ─────────────────────────────────────────────────────────
   const handleProfileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -497,12 +681,14 @@ export const AdminSettings = () => {
     try {
       const form = new FormData();
       form.append('image', file);
-      const res = await api.post('/settings/profile-image', form, { headers: { 'Content-Type': 'multipart/form-data' } });
-      setProfilePreview(`${API_BASE}${res.data.profileImagePath}`);
+      const res = await api.post('/settings/profile-image', form, { headers: { 'Content-Type': undefined } });
+      setProfilePreview(getImageUrl(res.data.profileImagePath));
+      queryClient.invalidateQueries({ queryKey: queryKeys.settings });
     } catch {
       toast.error(t('admin.settings.profile_upload_failed'));
     } finally {
       setUploadingProfile(false);
+      if (profileInputRef.current) profileInputRef.current.value = '';
     }
   };
 
@@ -539,7 +725,7 @@ export const AdminSettings = () => {
     if (editingServiceId) {
       setServices((prev) => prev.map((s) => s.id === editingServiceId ? { ...serviceForm, id: editingServiceId } : s));
     } else {
-      if (services.length >= 8) { toast.error('Maximum 8 services'); return; }
+      if (services.length >= 8) { toast.error(t('admin.settings.max_services')); return; }
       setServices((prev) => [...prev, { ...serviceForm, id: newId() }]);
     }
     resetServiceForm();
@@ -586,7 +772,7 @@ export const AdminSettings = () => {
     if (editingTestimonialId) {
       setTestimonials((prev) => prev.map((t) => t.id === editingTestimonialId ? { ...testimonialForm, id: editingTestimonialId } : t));
     } else {
-      if (testimonials.length >= 12) { toast.error('Maximum 12 testimonials'); return; }
+      if (testimonials.length >= 12) { toast.error(t('admin.settings.max_testimonials')); return; }
       setTestimonials((prev) => [...prev, { ...testimonialForm, id: newId() }]);
     }
     resetTestimonialForm();
@@ -642,7 +828,7 @@ export const AdminSettings = () => {
     if (editingPackageId) {
       setPackages((prev) => prev.map((p) => p.id === editingPackageId ? item : p));
     } else {
-      if (packages.length >= 4) { toast.error('Maximum 4 packages'); return; }
+      if (packages.length >= 4) { toast.error(t('admin.settings.max_packages')); return; }
       setPackages((prev) => [...prev, item]);
     }
     resetPackageForm();
@@ -697,6 +883,55 @@ export const AdminSettings = () => {
     }
   };
 
+  const handleCtaBannerImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingCtaBannerImage(true);
+    try {
+      const form = new FormData();
+      form.append('image', file);
+      const res = await api.post('/settings/cta-banner-image', form, { headers: { 'Content-Type': undefined } });
+      setCtaBannerImagePreview(getImageUrl(res.data.ctaBannerImagePath));
+      queryClient.invalidateQueries({ queryKey: queryKeys.settings });
+    } catch {
+      toast.error(t('admin.common.error'));
+    } finally {
+      setUploadingCtaBannerImage(false);
+      if (ctaBannerImageRef.current) ctaBannerImageRef.current.value = '';
+    }
+  };
+
+  const handleCtaBannerImageRemove = async () => {
+    setRemovingCtaBannerImage(true);
+    try {
+      await api.delete('/settings/cta-banner-image');
+      setCtaBannerImagePreview('');
+      queryClient.invalidateQueries({ queryKey: queryKeys.settings });
+    } catch {
+      toast.error(t('admin.common.error'));
+    } finally {
+      setRemovingCtaBannerImage(false);
+    }
+  };
+
+  // ── Handlers: Contact Section ───────────────────────────────────────────────
+  const handleSaveContactSection = async () => {
+    setSavingContactSection(true);
+    try {
+      await api.put('/settings/contact-section', {
+        enabled: contactSectionEnabled,
+        heading: contactSection.heading,
+        subheading: contactSection.subheading,
+      });
+      toast.success(t('admin.settings.landing_saved'));
+      queryClient.invalidateQueries({ queryKey: queryKeys.settings });
+    } catch {
+      toast.error(t('admin.settings.landing_failed'));
+    } finally {
+      setSavingContactSection(false);
+    }
+  };
+
   // ── Handlers: Instagram Feed ────────────────────────────────────────────────
   const handleSaveIgFeed = async () => {
     setSavingIgFeed(true);
@@ -722,7 +957,7 @@ export const AdminSettings = () => {
     try {
       const form = new FormData();
       form.append('image', file);
-      const res = await api.post('/settings/instagram-feed-image', form, { headers: { 'Content-Type': 'multipart/form-data' } });
+      const res = await api.post('/settings/instagram-feed-image', form, { headers: { 'Content-Type': undefined } });
       setIgFeedImages(res.data.instagramFeedImages);
       queryClient.invalidateQueries({ queryKey: queryKeys.settings });
     } catch {
@@ -743,6 +978,89 @@ export const AdminSettings = () => {
     }
   };
 
+  // ── Handlers: Stats ────────────────────────────────────────────────────────
+  const resetStatForm = () => { setStatForm({ value: 0, suffix: '+', label: '' }); setEditingStatId(null); setShowStatForm(false); };
+  const handleStatSubmit = () => {
+    if (!statForm.label.trim()) return;
+    if (editingStatId) {
+      setStats((prev) => prev.map((s) => s.id === editingStatId ? { ...statForm, id: editingStatId } : s));
+    } else {
+      if (stats.length >= 4) { toast.error(t('admin.settings.max_stats')); return; }
+      setStats((prev) => [...prev, { ...statForm, id: newId() }]);
+    }
+    resetStatForm();
+  };
+  const handleStatEdit = (item: StatItem) => { setStatForm({ value: item.value, suffix: item.suffix, label: item.label }); setEditingStatId(item.id); setShowStatForm(true); };
+  const handleStatDelete = (id: string) => setStats((prev) => prev.filter((s) => s.id !== id));
+  const handleSaveStats = async () => {
+    setSavingStats(true);
+    try {
+      await api.put('/settings/stats', { enabled: statsEnabled, items: stats });
+      toast.success(t('admin.settings.landing_saved'));
+      queryClient.invalidateQueries({ queryKey: queryKeys.settings });
+    } catch { toast.error(t('admin.settings.landing_failed')); }
+    finally { setSavingStats(false); }
+  };
+
+  // ── Handlers: Promises ──────────────────────────────────────────────────────
+  const resetPromiseForm = () => { setPromiseForm({ icon: 'camera', title: '', description: '' }); setEditingPromiseId(null); setShowPromiseForm(false); };
+  const handlePromiseSubmit = () => {
+    if (!promiseForm.title.trim()) return;
+    if (editingPromiseId) {
+      setPromises((prev) => prev.map((p) => p.id === editingPromiseId ? { ...promiseForm, id: editingPromiseId } : p));
+    } else {
+      if (promises.length >= 4) { toast.error(t('admin.settings.max_promises')); return; }
+      setPromises((prev) => [...prev, { ...promiseForm, id: newId() }]);
+    }
+    resetPromiseForm();
+  };
+  const handlePromiseEdit = (item: PromiseItem) => { setPromiseForm({ icon: item.icon, title: item.title, description: item.description }); setEditingPromiseId(item.id); setShowPromiseForm(true); };
+  const handlePromiseDelete = (id: string) => setPromises((prev) => prev.filter((p) => p.id !== id));
+  const handleSavePromises = async () => {
+    setSavingPromises(true);
+    try {
+      await api.put('/settings/promises', { enabled: promisesEnabled, items: promises });
+      toast.success(t('admin.settings.landing_saved'));
+      queryClient.invalidateQueries({ queryKey: queryKeys.settings });
+    } catch { toast.error(t('admin.settings.landing_failed')); }
+    finally { setSavingPromises(false); }
+  };
+
+  // ── Handlers: FAQ ───────────────────────────────────────────────────────────
+  const resetFaqForm = () => { setFaqForm({ q: '', a: '' }); setEditingFaqId(null); setShowFaqForm(false); };
+  const handleFaqSubmit = () => {
+    if (!faqForm.q.trim() || !faqForm.a.trim()) return;
+    if (editingFaqId) {
+      setFaqItems((prev) => prev.map((f) => f.id === editingFaqId ? { ...faqForm, id: editingFaqId } : f));
+    } else {
+      if (faqItems.length >= 10) { toast.error(t('admin.settings.max_faq')); return; }
+      setFaqItems((prev) => [...prev, { ...faqForm, id: newId() }]);
+    }
+    resetFaqForm();
+  };
+  const handleFaqEdit = (item: FaqItem) => { setFaqForm({ q: item.q, a: item.a }); setEditingFaqId(item.id); setShowFaqForm(true); };
+  const handleFaqDelete = (id: string) => setFaqItems((prev) => prev.filter((f) => f.id !== id));
+  const handleSaveFaq = async () => {
+    setSavingFaq(true);
+    try {
+      await api.put('/settings/faq', { enabled: faqEnabled, items: faqItems });
+      toast.success(t('admin.settings.landing_saved'));
+      queryClient.invalidateQueries({ queryKey: queryKeys.settings });
+    } catch { toast.error(t('admin.settings.landing_failed')); }
+    finally { setSavingFaq(false); }
+  };
+
+  // ── Handlers: Final CTA ─────────────────────────────────────────────────────
+  const handleSaveFinalCta = async () => {
+    setSavingFinalCta(true);
+    try {
+      await api.put('/settings/landing', { finalCtaHeading: finalCta.heading, finalCtaSubtext: finalCta.subtext, finalCtaButtonLabel: finalCta.buttonLabel });
+      toast.success(t('admin.settings.landing_saved'));
+      queryClient.invalidateQueries({ queryKey: queryKeys.settings });
+    } catch { toast.error(t('admin.settings.landing_failed')); }
+    finally { setSavingFinalCta(false); }
+  };
+
   // ── Tab bar ─────────────────────────────────────────────────────────────────
   const tabs: { id: SettingsTab; label: string }[] = [
     { id: 'identity', label: t('admin.settings.tab.identity') },
@@ -750,6 +1068,7 @@ export const AdminSettings = () => {
     { id: 'about', label: t('admin.settings.tab.about') },
     { id: 'sections', label: t('admin.settings.tab.sections') },
     { id: 'system', label: t('admin.settings.tab.system') },
+    { id: 'security', label: t('admin.settings.tab.security') },
   ];
 
   // ── Render ──────────────────────────────────────────────────────────────────
@@ -810,6 +1129,34 @@ export const AdminSettings = () => {
             </form>
           </div>
 
+          {/* Studio Logo */}
+          <div className='bg-card rounded-xl border border-beige p-6'>
+            <h2 className='font-semibold text-charcoal mb-1'>{t('admin.settings.logo_image')}</h2>
+            <p className='text-xs text-warm-gray mb-4'>{t('admin.settings.logo_image')}</p>
+            <div className='flex items-center gap-4'>
+              {logoPreview ? (
+                <div className='h-12 flex items-center rounded-lg overflow-hidden border border-beige bg-ivory px-3'>
+                  <img src={logoPreview} alt='Studio logo' className='h-8 w-auto object-contain' />
+                </div>
+              ) : (
+                <div className='h-12 w-24 rounded-lg border border-dashed border-beige bg-ivory flex items-center justify-center text-xs text-warm-gray'>
+                  No logo
+                </div>
+              )}
+              <div className='flex items-center gap-2'>
+                <input ref={logoInputRef} type='file' accept='image/*' className='hidden' onChange={handleLogoUpload} />
+                <Button type='button' variant='ghost' size='sm' onClick={() => logoInputRef.current?.click()} disabled={uploadingLogo || removingLogo}>
+                  {uploadingLogo ? t('admin.common.uploading') : logoPreview ? t('admin.settings.logo_replace') : t('admin.settings.logo_upload')}
+                </Button>
+                {logoPreview && (
+                  <Button type='button' variant='ghost' size='sm' onClick={handleLogoRemove} disabled={removingLogo || uploadingLogo}>
+                    {removingLogo ? '...' : t('admin.settings.logo_remove')}
+                  </Button>
+                )}
+              </div>
+            </div>
+          </div>
+
           {/* Public page URL */}
           {admin?.id && (
             <div className='bg-card rounded-xl border border-beige p-6'>
@@ -827,7 +1174,7 @@ export const AdminSettings = () => {
               <h2 className='font-semibold text-charcoal'>{t('admin.products.catalog_title')}</h2>
               <button
                 type='button'
-                onClick={() => setShowCatalogForm((v) => !v)}
+                onClick={() => setShowCatalogForm(true)}
                 className='flex items-center gap-1 text-xs text-blush hover:text-charcoal transition-colors'
               >
                 <Plus size={13} />
@@ -836,8 +1183,13 @@ export const AdminSettings = () => {
             </div>
             <p className='text-xs text-warm-gray mb-4'>{t('admin.products.catalog_subtitle')}</p>
 
-            {showCatalogForm && (
-              <form onSubmit={handleCatalogCreate} className='border border-beige rounded-xl p-3 space-y-3 bg-ivory mb-3'>
+            <Modal
+              isOpen={showCatalogForm}
+              onClose={() => { setShowCatalogForm(false); setCatalogForm({ name: '', type: 'album', maxPhotos: 20 }); }}
+              maxWidth='max-w-sm'
+            >
+              <h3 className='font-semibold text-charcoal mb-4'>{t('admin.products.catalog_add')}</h3>
+              <form onSubmit={handleCatalogCreate} className='space-y-4'>
                 <div>
                   <label className='block text-xs text-warm-gray mb-1'>{t('admin.products.name_label')}</label>
                   <input
@@ -847,6 +1199,7 @@ export const AdminSettings = () => {
                     placeholder={t('admin.products.name_ph')}
                     className={fieldClass}
                     required
+                    autoFocus
                   />
                 </div>
                 <div className='flex gap-4'>
@@ -874,16 +1227,16 @@ export const AdminSettings = () => {
                     className='w-24 border border-beige rounded-lg px-3 py-2 text-sm text-charcoal focus:outline-none focus:border-blush'
                   />
                 </div>
-                <div className='flex gap-2'>
+                <div className='flex gap-2 pt-2 border-t border-beige'>
                   <button type='submit' disabled={savingCatalog} className='px-3 py-1.5 bg-blush text-white text-xs rounded-xl hover:opacity-90 disabled:opacity-60'>
                     {savingCatalog ? t('admin.common.saving') : t('admin.products.catalog_save')}
                   </button>
-                  <button type='button' onClick={() => setShowCatalogForm(false)} className='px-3 py-1.5 text-xs text-warm-gray hover:text-charcoal'>
+                  <button type='button' onClick={() => { setShowCatalogForm(false); setCatalogForm({ name: '', type: 'album', maxPhotos: 20 }); }} className='px-3 py-1.5 text-xs text-warm-gray hover:text-charcoal'>
                     {t('admin.common.cancel')}
                   </button>
                 </div>
               </form>
-            )}
+            </Modal>
 
             {catalogProducts.length === 0 ? (
               <p className='text-xs text-warm-gray'>{t('admin.products.catalog_empty')}</p>
@@ -922,15 +1275,48 @@ export const AdminSettings = () => {
             {/* Hero image upload */}
             <div>
               <label className='block text-xs text-warm-gray mb-2'>{t('admin.settings.hero_image')}</label>
-              {heroPreview && (
-                <div className='mb-2 rounded-lg overflow-hidden h-32 bg-beige'>
-                  <img src={heroPreview} alt='Hero preview' className='w-full h-full object-cover' />
-                </div>
-              )}
               <input ref={heroInputRef} type='file' accept='image/*' className='hidden' onChange={handleHeroUpload} />
-              <Button type='button' variant='ghost' size='sm' onClick={() => heroInputRef.current?.click()} disabled={uploadingHero}>
-                {uploadingHero ? t('admin.common.uploading') : heroPreview ? t('admin.settings.hero_image_replace') : t('admin.settings.hero_image_upload')}
-              </Button>
+              <div
+                onClick={() => !uploadingHero && heroInputRef.current?.click()}
+                className='relative w-full rounded-xl overflow-hidden bg-beige border-2 border-dashed border-beige hover:border-blush/50 transition-colors group cursor-pointer'
+                style={{ aspectRatio: '16/7' }}
+              >
+                {heroPreview ? (
+                  <>
+                    <img src={heroPreview} alt='Hero preview' className='absolute inset-0 w-full h-full object-cover' />
+                    <div className={`absolute inset-0 transition-colors ${
+                      hero.heroOverlayOpacity === 'light' ? 'bg-black/10' :
+                      hero.heroOverlayOpacity === 'dark'  ? 'bg-black/60' :
+                                                            'bg-black/30'
+                    }`} />
+                    <div className='absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-2 text-white'>
+                      <Camera size={24} />
+                      <span className='text-sm font-medium'>{t('admin.settings.hero_image_replace')}</span>
+                    </div>
+                  </>
+                ) : (
+                  <div className='absolute inset-0 flex flex-col items-center justify-center gap-2 text-warm-gray'>
+                    <Camera size={28} />
+                    <span className='text-sm'>{t('admin.settings.hero_image_upload')}</span>
+                  </div>
+                )}
+                {uploadingHero && (
+                  <div className='absolute inset-0 bg-black/50 flex items-center justify-center text-white text-sm'>
+                    {t('admin.common.uploading')}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Hero tagline */}
+            <div>
+              <label className='block text-xs text-warm-gray mb-1'>{t('admin.settings.hero_tagline_label')}</label>
+              <InputField
+                type='text'
+                value={heroTagline}
+                onChange={(e) => setHeroTagline(e.target.value)}
+                placeholder='צלם מקצועי · אירועים ומשפחות'
+              />
             </div>
 
             {/* Hero subtitle */}
@@ -991,6 +1377,26 @@ export const AdminSettings = () => {
               {savingHero ? t('admin.common.saving') : t('admin.settings.save_hero')}
             </Button>
           </div>
+
+          {/* Final CTA Section */}
+          <div className='bg-card rounded-xl border border-beige p-6 space-y-4'>
+            <h2 className='font-semibold text-charcoal'>{t('admin.settings.final_cta_section')}</h2>
+            <div>
+              <label className='block text-xs text-warm-gray mb-1'>{t('admin.settings.final_cta_heading')}</label>
+              <InputField type='text' value={finalCta.heading} onChange={(e) => setFinalCta({ ...finalCta, heading: e.target.value })} placeholder='מוכנים לצלם? / Ready to Shoot?' />
+            </div>
+            <div>
+              <label className='block text-xs text-warm-gray mb-1'>{t('admin.settings.final_cta_subtext')}</label>
+              <InputField type='text' value={finalCta.subtext} onChange={(e) => setFinalCta({ ...finalCta, subtext: e.target.value })} placeholder='צרו קשר היום...' />
+            </div>
+            <div>
+              <label className='block text-xs text-warm-gray mb-1'>{t('admin.settings.final_cta_button_label')}</label>
+              <InputField type='text' value={finalCta.buttonLabel} onChange={(e) => setFinalCta({ ...finalCta, buttonLabel: e.target.value })} placeholder='שלח הודעה / Send a Message' />
+            </div>
+            <Button type='button' variant='primary' onClick={handleSaveFinalCta} disabled={savingFinalCta}>
+              {savingFinalCta ? t('admin.common.saving') : t('admin.settings.save_hero')}
+            </Button>
+          </div>
         </div>
       )}
 
@@ -1030,10 +1436,14 @@ export const AdminSettings = () => {
               <label className='block text-xs text-warm-gray mb-1'>{t('admin.settings.bio')}</label>
               <TextareaField
                 rows={4}
+                maxLength={800}
                 value={about.bio}
                 onChange={(e) => setAbout({ ...about, bio: e.target.value })}
                 placeholder={t('admin.settings.bio_placeholder')}
               />
+              <p className={`text-xs mt-1 text-right ${about.bio.length >= 800 ? 'text-red-400' : 'text-warm-gray'}`}>
+                {about.bio.length} / 800
+              </p>
             </div>
 
             {/* Contact fields */}
@@ -1127,7 +1537,7 @@ export const AdminSettings = () => {
                 </div>
                 <div className='flex gap-2 pt-1'>
                   <button type='button' onClick={handleServiceSubmit} className='flex items-center gap-1 px-3 py-1.5 bg-blush text-white text-xs rounded-lg hover:opacity-90'>
-                    <Check size={13} /> {t('admin.common.save') || 'Save'}
+                    <Check size={13} /> {t('admin.common.save')}
                   </button>
                   <button type='button' onClick={resetServiceForm} className='flex items-center gap-1 px-3 py-1.5 text-xs text-warm-gray hover:text-charcoal'>
                     <X size={13} /> {t('admin.common.cancel')}
@@ -1208,7 +1618,7 @@ export const AdminSettings = () => {
                 </div>
                 <div className='flex gap-2 pt-1'>
                   <button type='button' onClick={handleTestimonialSubmit} className='flex items-center gap-1 px-3 py-1.5 bg-blush text-white text-xs rounded-lg hover:opacity-90'>
-                    <Check size={13} /> {t('admin.common.save') || 'Save'}
+                    <Check size={13} /> {t('admin.common.save')}
                   </button>
                   <button type='button' onClick={resetTestimonialForm} className='flex items-center gap-1 px-3 py-1.5 text-xs text-warm-gray hover:text-charcoal'>
                     <X size={13} /> {t('admin.common.cancel')}
@@ -1289,7 +1699,7 @@ export const AdminSettings = () => {
                 </label>
                 <div className='flex gap-2 pt-1'>
                   <button type='button' onClick={handlePackageSubmit} className='flex items-center gap-1 px-3 py-1.5 bg-blush text-white text-xs rounded-lg hover:opacity-90'>
-                    <Check size={13} /> {t('admin.common.save') || 'Save'}
+                    <Check size={13} /> {t('admin.common.save')}
                   </button>
                   <button type='button' onClick={resetPackageForm} className='flex items-center gap-1 px-3 py-1.5 text-xs text-warm-gray hover:text-charcoal'>
                     <X size={13} /> {t('admin.common.cancel')}
@@ -1355,6 +1765,45 @@ export const AdminSettings = () => {
           >
             <div className='space-y-3'>
               <div>
+                <label className='block text-xs text-warm-gray mb-1'>{t('admin.settings.sections.banner_image')}</label>
+                <input ref={ctaBannerImageRef} type='file' accept='image/*' className='hidden' onChange={handleCtaBannerImageUpload} />
+                <div
+                  onClick={() => !uploadingCtaBannerImage && !removingCtaBannerImage && ctaBannerImageRef.current?.click()}
+                  className='relative w-full rounded-xl overflow-hidden bg-beige border-2 border-dashed border-beige hover:border-blush/50 transition-colors group cursor-pointer mb-2'
+                  style={{ aspectRatio: '16/5' }}
+                >
+                  {ctaBannerImagePreview ? (
+                    <>
+                      <img src={ctaBannerImagePreview} alt='Banner preview' className='absolute inset-0 w-full h-full object-cover' />
+                      <div className='absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-2 text-white'>
+                        <Camera size={20} />
+                        <span className='text-xs font-medium'>{t('admin.settings.hero_image_replace')}</span>
+                      </div>
+                    </>
+                  ) : (
+                    <div className='absolute inset-0 flex flex-col items-center justify-center gap-2 text-warm-gray'>
+                      <Camera size={22} />
+                      <span className='text-xs'>{uploadingCtaBannerImage ? t('admin.common.uploading') : t('admin.settings.sections.banner_image_upload')}</span>
+                    </div>
+                  )}
+                  {uploadingCtaBannerImage && (
+                    <div className='absolute inset-0 bg-black/50 flex items-center justify-center text-white text-xs'>
+                      {t('admin.common.uploading')}
+                    </div>
+                  )}
+                </div>
+                {ctaBannerImagePreview && (
+                  <button
+                    type='button'
+                    onClick={handleCtaBannerImageRemove}
+                    disabled={removingCtaBannerImage}
+                    className='text-xs text-warm-gray hover:text-red-500 transition-colors disabled:opacity-40'
+                  >
+                    {removingCtaBannerImage ? '...' : t('admin.settings.logo_remove')}
+                  </button>
+                )}
+              </div>
+              <div>
                 <label className='block text-xs text-warm-gray mb-1'>{t('admin.settings.sections.banner_heading')}</label>
                 <input className={fieldClass} value={cta.heading} onChange={(e) => setCta((c) => ({ ...c, heading: e.target.value }))} />
               </div>
@@ -1369,7 +1818,40 @@ export const AdminSettings = () => {
             </div>
           </SectionCard>
 
-          {/* 4f: Instagram Feed */}
+          {/* 4f: Contact Section */}
+          <SectionCard
+            title={t('admin.settings.contact_section')}
+            enabled={contactSectionEnabled}
+            onToggle={() => setContactSectionEnabled((v) => !v)}
+            enabledLabel={t('admin.settings.sections.enabled')}
+            onSave={handleSaveContactSection}
+            saveLabel={t('admin.settings.contact_section_save')}
+            saving={savingContactSection}
+          >
+            <div className='space-y-3'>
+              <div>
+                <label className='block text-xs text-warm-gray mb-1'>{t('admin.settings.contact_section_heading')}</label>
+                <input
+                  className={fieldClass}
+                  maxLength={120}
+                  value={contactSection.heading}
+                  onChange={(e) => setContactSection((c) => ({ ...c, heading: e.target.value }))}
+                />
+              </div>
+              <div>
+                <label className='block text-xs text-warm-gray mb-1'>{t('admin.settings.contact_section_subheading')}</label>
+                <textarea
+                  className={`${fieldClass} resize-none`}
+                  rows={3}
+                  maxLength={300}
+                  value={contactSection.subheading}
+                  onChange={(e) => setContactSection((c) => ({ ...c, subheading: e.target.value }))}
+                />
+              </div>
+            </div>
+          </SectionCard>
+
+          {/* 4g: Instagram Feed */}
           <SectionCard
             title={t('admin.settings.sections.instagram_feed')}
             enabled={igFeedEnabled}
@@ -1385,12 +1867,12 @@ export const AdminSettings = () => {
                 <div className='grid grid-cols-3 gap-2'>
                   {igFeedImages.map((path, idx) => (
                     <div key={idx} className='relative aspect-square rounded-lg overflow-hidden bg-beige group'>
-                      <img src={`${API_BASE}${path}`} alt='' className='w-full h-full object-cover' />
+                      <img src={getImageUrl(path)} alt='' className='w-full h-full object-cover' />
                       <button
                         type='button'
                         onClick={() => handleIgImageDelete(idx)}
                         className='absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white'
-                        aria-label='Remove'
+                        aria-label={t('admin.settings.sections.remove')}
                       >
                         <X size={18} />
                       </button>
@@ -1407,6 +1889,212 @@ export const AdminSettings = () => {
                 </>
               )}
             </div>
+          </SectionCard>
+
+          {/* 4h: Stats */}
+          <SectionCard
+            title={t('admin.settings.sections.stats')}
+            enabled={statsEnabled}
+            onToggle={() => setStatsEnabled((v) => !v)}
+            enabledLabel={t('admin.settings.sections.enabled')}
+            onSave={handleSaveStats}
+            saveLabel={t('admin.settings.sections.save_stats')}
+            saving={savingStats}
+          >
+            <ul className='space-y-2'>
+              {stats.map((item) => (
+                <li key={item.id} className='flex items-center gap-2 border border-beige rounded-lg px-3 py-2'>
+                  <div className='flex-1 min-w-0'>
+                    <p className='text-sm font-medium text-charcoal'>
+                      {item.value}{item.suffix}
+                    </p>
+                    <p className='text-xs text-warm-gray truncate'>{item.label}</p>
+                  </div>
+                  <div className='flex items-center gap-1 shrink-0'>
+                    <button type='button' onClick={() => handleStatEdit(item)} className='p-1 text-warm-gray hover:text-blush'>
+                      <Pencil size={14} />
+                    </button>
+                    <button type='button' onClick={() => handleStatDelete(item.id)} className='p-1 text-warm-gray hover:text-red-500'>
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+
+            {showStatForm ? (
+              <div className='border border-beige rounded-xl p-4 bg-ivory space-y-3'>
+                <div className='grid grid-cols-2 gap-3'>
+                  <div>
+                    <label className='block text-xs text-warm-gray mb-1'>{t('admin.settings.sections.stat_value')}</label>
+                    <input
+                      type='number'
+                      className={fieldClass}
+                      value={statForm.value}
+                      onChange={(e) => setStatForm((f) => ({ ...f, value: Number(e.target.value) }))}
+                    />
+                  </div>
+                  <div>
+                    <label className='block text-xs text-warm-gray mb-1'>{t('admin.settings.sections.stat_suffix')}</label>
+                    <input
+                      className={fieldClass}
+                      value={statForm.suffix}
+                      maxLength={5}
+                      onChange={(e) => setStatForm((f) => ({ ...f, suffix: e.target.value }))}
+                      placeholder='+ or %'
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className='block text-xs text-warm-gray mb-1'>{t('admin.settings.sections.stat_label')}</label>
+                  <input
+                    className={fieldClass}
+                    value={statForm.label}
+                    onChange={(e) => setStatForm((f) => ({ ...f, label: e.target.value }))}
+                    placeholder='Happy Families / משפחות מרוצות'
+                  />
+                </div>
+                <div className='flex gap-2 pt-1'>
+                  <button type='button' onClick={handleStatSubmit} className='flex items-center gap-1 px-3 py-1.5 bg-blush text-white text-xs rounded-lg hover:opacity-90'>
+                    <Check size={13} /> {t('admin.common.save')}
+                  </button>
+                  <button type='button' onClick={resetStatForm} className='flex items-center gap-1 px-3 py-1.5 text-xs text-warm-gray hover:text-charcoal'>
+                    <X size={13} /> {t('admin.common.cancel')}
+                  </button>
+                </div>
+              </div>
+            ) : stats.length < 4 && (
+              <button
+                type='button'
+                onClick={() => { setEditingStatId(null); setShowStatForm(true); }}
+                className='flex items-center gap-1 text-xs text-blush hover:text-charcoal transition-colors'
+              >
+                <Plus size={13} /> {t('admin.settings.sections.add_stat')}
+              </button>
+            )}
+          </SectionCard>
+
+          {/* 4i: Promises */}
+          <SectionCard
+            title={t('admin.settings.sections.promises')}
+            enabled={promisesEnabled}
+            onToggle={() => setPromisesEnabled((v) => !v)}
+            enabledLabel={t('admin.settings.sections.enabled')}
+            onSave={handleSavePromises}
+            saveLabel={t('admin.settings.sections.save_promises')}
+            saving={savingPromises}
+          >
+            <ul className='space-y-2'>
+              {promises.map((item) => {
+                const IconComp = SERVICE_ICONS.find((ic) => ic.name === item.icon)?.Icon ?? Camera;
+                return (
+                  <li key={item.id} className='flex items-start gap-2 border border-beige rounded-lg px-3 py-2'>
+                    <IconComp size={16} className='mt-0.5 text-blush shrink-0' />
+                    <div className='flex-1 min-w-0'>
+                      <p className='text-sm font-medium text-charcoal truncate'>{item.title}</p>
+                      <p className='text-xs text-warm-gray truncate'>{item.description}</p>
+                    </div>
+                    <div className='flex items-center gap-1 shrink-0'>
+                      <button type='button' onClick={() => handlePromiseEdit(item)} className='p-1 text-warm-gray hover:text-blush'>
+                        <Pencil size={14} />
+                      </button>
+                      <button type='button' onClick={() => handlePromiseDelete(item.id)} className='p-1 text-warm-gray hover:text-red-500'>
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+
+            {showPromiseForm ? (
+              <div className='border border-beige rounded-xl p-4 bg-ivory space-y-3'>
+                <ServiceIconPicker value={promiseForm.icon} onChange={(v) => setPromiseForm((f) => ({ ...f, icon: v }))} />
+                <div>
+                  <label className='block text-xs text-warm-gray mb-1'>{t('admin.settings.sections.title')}</label>
+                  <input className={fieldClass} value={promiseForm.title} onChange={(e) => setPromiseForm((f) => ({ ...f, title: e.target.value }))} placeholder='Uncompromising Quality' />
+                </div>
+                <div>
+                  <label className='block text-xs text-warm-gray mb-1'>{t('admin.settings.sections.description')}</label>
+                  <textarea className={`${fieldClass} resize-none`} rows={3} value={promiseForm.description} onChange={(e) => setPromiseForm((f) => ({ ...f, description: e.target.value }))} />
+                </div>
+                <div className='flex gap-2 pt-1'>
+                  <button type='button' onClick={handlePromiseSubmit} className='flex items-center gap-1 px-3 py-1.5 bg-blush text-white text-xs rounded-lg hover:opacity-90'>
+                    <Check size={13} /> {t('admin.common.save')}
+                  </button>
+                  <button type='button' onClick={resetPromiseForm} className='flex items-center gap-1 px-3 py-1.5 text-xs text-warm-gray hover:text-charcoal'>
+                    <X size={13} /> {t('admin.common.cancel')}
+                  </button>
+                </div>
+              </div>
+            ) : promises.length < 4 && (
+              <button
+                type='button'
+                onClick={() => { setEditingPromiseId(null); setShowPromiseForm(true); }}
+                className='flex items-center gap-1 text-xs text-blush hover:text-charcoal transition-colors'
+              >
+                <Plus size={13} /> {t('admin.settings.sections.add_promise')}
+              </button>
+            )}
+          </SectionCard>
+
+          {/* 4j: FAQ */}
+          <SectionCard
+            title={t('admin.settings.sections.faq')}
+            enabled={faqEnabled}
+            onToggle={() => setFaqEnabled((v) => !v)}
+            enabledLabel={t('admin.settings.sections.enabled')}
+            onSave={handleSaveFaq}
+            saveLabel={t('admin.settings.sections.save_faq')}
+            saving={savingFaq}
+          >
+            <ul className='space-y-2'>
+              {faqItems.map((item) => (
+                <li key={item.id} className='flex items-start gap-2 border border-beige rounded-lg px-3 py-2'>
+                  <div className='flex-1 min-w-0'>
+                    <p className='text-sm text-charcoal line-clamp-1'>{item.q}</p>
+                    <p className='text-xs text-warm-gray line-clamp-1 mt-0.5'>{item.a}</p>
+                  </div>
+                  <div className='flex items-center gap-1 shrink-0'>
+                    <button type='button' onClick={() => handleFaqEdit(item)} className='p-1 text-warm-gray hover:text-blush'>
+                      <Pencil size={14} />
+                    </button>
+                    <button type='button' onClick={() => handleFaqDelete(item.id)} className='p-1 text-warm-gray hover:text-red-500'>
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+
+            {showFaqForm ? (
+              <div className='border border-beige rounded-xl p-4 bg-ivory space-y-3'>
+                <div>
+                  <label className='block text-xs text-warm-gray mb-1'>{t('admin.settings.sections.faq_question')}</label>
+                  <input className={fieldClass} value={faqForm.q} onChange={(e) => setFaqForm((f) => ({ ...f, q: e.target.value }))} placeholder='How long does it take...' />
+                </div>
+                <div>
+                  <label className='block text-xs text-warm-gray mb-1'>{t('admin.settings.sections.faq_answer')}</label>
+                  <textarea className={`${fieldClass} resize-none`} rows={4} value={faqForm.a} onChange={(e) => setFaqForm((f) => ({ ...f, a: e.target.value }))} />
+                </div>
+                <div className='flex gap-2 pt-1'>
+                  <button type='button' onClick={handleFaqSubmit} className='flex items-center gap-1 px-3 py-1.5 bg-blush text-white text-xs rounded-lg hover:opacity-90'>
+                    <Check size={13} /> {t('admin.common.save')}
+                  </button>
+                  <button type='button' onClick={resetFaqForm} className='flex items-center gap-1 px-3 py-1.5 text-xs text-warm-gray hover:text-charcoal'>
+                    <X size={13} /> {t('admin.common.cancel')}
+                  </button>
+                </div>
+              </div>
+            ) : faqItems.length < 10 && (
+              <button
+                type='button'
+                onClick={() => { setEditingFaqId(null); setShowFaqForm(true); }}
+                className='flex items-center gap-1 text-xs text-blush hover:text-charcoal transition-colors'
+              >
+                <Plus size={13} /> {t('admin.settings.sections.add_faq')}
+              </button>
+            )}
           </SectionCard>
         </div>
       )}
@@ -1430,6 +2118,40 @@ export const AdminSettings = () => {
             </div>
           </div>
 
+          {/* Notifications */}
+          <div className='bg-card rounded-xl border border-beige p-6 space-y-4'>
+            <h2 className='font-semibold text-charcoal'>{t('admin.settings.notifications')}</h2>
+            <label className='flex items-start gap-3 cursor-pointer'>
+              <input
+                type='checkbox'
+                checked={autoSendEmail}
+                onChange={(e) => setAutoSendEmail(e.target.checked)}
+                className='mt-0.5 h-4 w-4 rounded border-beige accent-blush cursor-pointer'
+              />
+              <div>
+                <span className='text-sm text-charcoal'>{t('admin.settings.auto_send_email')}</span>
+                <p className='text-xs text-warm-gray mt-0.5'>{t('admin.settings.auto_send_email_desc')}</p>
+              </div>
+            </label>
+            <label className='flex items-start gap-3 cursor-pointer'>
+              <input
+                type='checkbox'
+                checked={autoSendSms}
+                onChange={(e) => setAutoSendSms(e.target.checked)}
+                className='mt-0.5 h-4 w-4 rounded border-beige accent-blush cursor-pointer'
+              />
+              <div>
+                <span className='text-sm text-charcoal'>{t('admin.settings.auto_send_sms')}</span>
+                <p className='text-xs text-warm-gray mt-0.5'>{t('admin.settings.auto_send_sms_desc')}</p>
+              </div>
+            </label>
+            <div className='pt-2 border-t border-beige'>
+              <Button type='button' variant='primary' size='sm' onClick={handleSaveNotifications} disabled={savingNotifications}>
+                {savingNotifications ? t('admin.common.saving') : t('admin.common.save')}
+              </Button>
+            </div>
+          </div>
+
           {/* System info */}
           <div className='bg-card rounded-xl border border-beige p-6'>
             <h2 className='font-semibold text-charcoal mb-4'>{t('admin.settings.system')}</h2>
@@ -1439,6 +2161,61 @@ export const AdminSettings = () => {
                 <dd className='text-charcoal font-mono text-xs'>{import.meta.env.VITE_API_URL || 'http://localhost:5000'}</dd>
               </div>
             </dl>
+          </div>
+        </div>
+      )}
+      {/* ── Tab 6: Security ───────────────────────────────────────────────── */}
+      {activeTab === 'security' && (
+        <div className='max-w-md space-y-4'>
+          <div className='bg-card rounded-xl border border-beige p-6 space-y-4'>
+            <h2 className='font-semibold text-charcoal'>{t('admin.settings.sso.title')}</h2>
+            <p className='text-sm text-warm-gray'>{t('admin.settings.sso.description')}</p>
+
+            {/* Connection status */}
+            <div className='flex items-center gap-2 py-2'>
+              {admin?.googleEmail ? (
+                <>
+                  <span className='inline-flex h-2 w-2 rounded-full bg-green-500 shrink-0' />
+                  <span className='text-sm text-charcoal'>
+                    {t('admin.settings.sso.connected')} — <span className='font-mono text-xs'>{admin.googleEmail}</span>
+                  </span>
+                </>
+              ) : (
+                <>
+                  <span className='inline-flex h-2 w-2 rounded-full bg-zinc-300 shrink-0' />
+                  <span className='text-sm text-warm-gray'>{t('admin.settings.sso.not_connected')}</span>
+                </>
+              )}
+            </div>
+
+            {/* Actions */}
+            <div className='pt-2 border-t border-beige flex flex-wrap gap-2'>
+              {admin?.googleEmail ? (
+                <button
+                  type='button'
+                  onClick={handleDisconnectSSO}
+                  disabled={disconnectingSSO}
+                  className='px-4 py-2 text-sm rounded-lg border border-red-200 text-red-500 hover:bg-red-50 transition-colors disabled:opacity-50'
+                >
+                  {disconnectingSSO ? t('admin.settings.sso.disconnecting') : t('admin.settings.sso.disconnect')}
+                </button>
+              ) : (
+                <button
+                  type='button'
+                  onClick={handleConnectGoogle}
+                  className='flex items-center gap-2 px-4 py-2 text-sm rounded-lg border border-zinc-300 bg-white text-zinc-700 hover:bg-zinc-50 transition-colors'
+                >
+                  {/* Google G logo */}
+                  <svg width='16' height='16' viewBox='0 0 24 24' aria-hidden='true'>
+                    <path d='M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z' fill='#4285F4' />
+                    <path d='M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z' fill='#34A853' />
+                    <path d='M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z' fill='#FBBC05' />
+                    <path d='M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z' fill='#EA4335' />
+                  </svg>
+                  {t('admin.settings.sso.connect')}
+                </button>
+              )}
+            </div>
           </div>
         </div>
       )}

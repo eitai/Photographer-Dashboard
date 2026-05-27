@@ -35,6 +35,7 @@ async function upsert(adminId, data, { populate } = {}) {
     bio: 'bio',
     heroImagePath: 'hero_image_path',
     profileImagePath: 'profile_image_path',
+    logoImagePath: 'logo_image_path',
     phone: 'phone',
     instagramHandle: 'instagram_handle',
     facebookUrl: 'facebook_url',
@@ -55,12 +56,25 @@ async function upsert(adminId, data, { populate } = {}) {
     ctaBannerSubtext: 'cta_banner_subtext',
     ctaBannerButtonLabel: 'cta_banner_button_label',
     ctaBannerEnabled: 'cta_banner_enabled',
+    ctaBannerImagePath: 'cta_banner_image_path',
     servicesEnabled: 'services_enabled',
     testimonialsEnabled: 'testimonials_enabled',
     packagesEnabled: 'packages_enabled',
     packagesDisclaimer: 'packages_disclaimer',
     instagramFeedEnabled: 'instagram_feed_enabled',
     instagramFeedImages: 'instagram_feed_images',
+    autoSendGalleryEmail: 'auto_send_gallery_email',
+    autoSendGallerySms: 'auto_send_gallery_sms',
+    contactSectionEnabled: 'contact_section_enabled',
+    contactSectionHeading: 'contact_section_heading',
+    contactSectionSubheading: 'contact_section_subheading',
+    heroTagline: 'hero_tagline',
+    statsEnabled: 'stats_enabled',
+    promisesEnabled: 'promises_enabled',
+    faqEnabled: 'faq_enabled',
+    finalCtaHeading: 'final_cta_heading',
+    finalCtaSubtext: 'final_cta_subtext',
+    finalCtaButtonLabel: 'final_cta_button_label',
   };
 
   // JSONB columns: camelCase key → snake_case DB column
@@ -68,6 +82,9 @@ async function upsert(adminId, data, { populate } = {}) {
     services: 'services',
     testimonials: 'testimonials',
     packages: 'packages',
+    stats: 'stats',
+    promises: 'promises',
+    faqItems: 'faq_items',
   };
 
   const sets = [];

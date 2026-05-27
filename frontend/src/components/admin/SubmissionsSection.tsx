@@ -1,12 +1,12 @@
-import { CheckSquare, Download, Trash2, Star, MessageCircle } from 'lucide-react';
+import { CheckSquare, Download, Trash2, Star, MessageCircle, ExternalLink } from 'lucide-react';
 import { useI18n } from '@/lib/i18n';
+import { getImageUrl } from '@/lib/api';
 import type { GalleryData, GallerySubmission } from '@/types/gallery';
 
 interface SubmissionsSectionProps {
   galleries: GalleryData[];
   submissions: Record<string, GallerySubmission[]>;
   downloading: boolean;
-  API_BASE: string;
   downloadAsZip: (submission: GallerySubmission) => void;
   setDeleteSubTarget: (target: { galleryId: string; submissionId: string } | null) => void;
   setDeleteImageTarget: (target: { galleryId: string; submissionId: string; imageId: string } | null) => void;
@@ -16,13 +16,12 @@ export const SubmissionsSection = ({
   galleries,
   submissions,
   downloading,
-  API_BASE,
   downloadAsZip,
   setDeleteSubTarget,
   setDeleteImageTarget,
 }: SubmissionsSectionProps) => {
   const { t } = useI18n();
-  const galleriesWithSubs = galleries.filter((g) => ['selection_submitted', 'in_editing', 'delivered'].includes(g.status) && submissions[g._id]?.length > 0);
+  const galleriesWithSubs = galleries.filter((g) => submissions[g._id]?.length > 0);
 
   if (galleriesWithSubs.length === 0) return null;
 
@@ -76,7 +75,7 @@ export const SubmissionsSection = ({
                     return (
                       <div key={img._id} className='relative group aspect-square rounded-md overflow-hidden bg-beige'>
                         <img
-                          src={`${API_BASE}${img.thumbnailPath || img.path}`}
+                          src={getImageUrl(img.thumbnailPath || img.path)}
                           alt={img.filename}
                           className='w-full h-full object-cover'
                           loading='lazy'
@@ -88,19 +87,33 @@ export const SubmissionsSection = ({
                         )}
                         {comment && (
                           <div
-                            className='absolute bottom-1 right-1 w-5 h-5 rounded-full bg-blush flex items-center justify-center shadow pointer-events-none'
+                            className='absolute top-1 right-1 w-5 h-5 rounded-full bg-blush flex items-center justify-center shadow pointer-events-none'
                             title={comment}
                           >
                             <MessageCircle size={10} className='text-charcoal' />
                           </div>
                         )}
-                        <button
-                          onClick={() => setDeleteImageTarget({ galleryId: g._id, submissionId: sub._id, imageId: img._id })}
-                          className='absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity'
-                          title={t('admin.selections.delete_image')}
-                        >
-                          <Trash2 size={14} className='text-white' />
-                        </button>
+                        {/* Hover overlay — download + delete */}
+                        <div className='absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2'>
+                          <a
+                            href={getImageUrl(img.path)}
+                            download={img.filename}
+                            target='_blank'
+                            rel='noreferrer'
+                            onClick={(e) => e.stopPropagation()}
+                            className='w-8 h-8 rounded-full bg-white/20 hover:bg-white/40 flex items-center justify-center text-white transition-colors'
+                            title={t('admin.selections.download_image')}
+                          >
+                            <ExternalLink size={13} />
+                          </a>
+                          <button
+                            onClick={() => setDeleteImageTarget({ galleryId: g._id, submissionId: sub._id, imageId: img._id })}
+                            className='w-8 h-8 rounded-full bg-white/20 hover:bg-rose-500/80 flex items-center justify-center text-white transition-colors'
+                            title={t('admin.selections.delete_image')}
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        </div>
                       </div>
                     );
                   })}

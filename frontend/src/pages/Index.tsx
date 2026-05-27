@@ -1,13 +1,6 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import {
-  motion,
-  useScroll,
-  useTransform,
-  useSpring,
-  useMotionValue,
-  useInView,
-} from 'framer-motion';
+import { motion, AnimatePresence, useScroll, useTransform, useSpring, useMotionValue, useInView } from 'framer-motion';
 import { useI18n } from '../lib/i18n';
 
 // ---------------------------------------------------------------------------
@@ -42,16 +35,8 @@ function TiltCard({
   }
 
   return (
-    <div
-      ref={ref}
-      style={{ perspective: 800 }}
-      onMouseMove={handleMouse}
-      onMouseLeave={handleLeave}
-      className={className}
-    >
-      <motion.div style={{ rotateX: springX, rotateY: springY, transformStyle: 'preserve-3d' }}>
-        {children}
-      </motion.div>
+    <div ref={ref} style={{ perspective: 800 }} onMouseMove={handleMouse} onMouseLeave={handleLeave} className={className}>
+      <motion.div style={{ rotateX: springX, rotateY: springY, transformStyle: 'preserve-3d' }}>{children}</motion.div>
     </div>
   );
 }
@@ -72,15 +57,7 @@ function Orb({ className, delay = 0 }: { className: string; delay?: number }) {
 // ---------------------------------------------------------------------------
 // Scroll-reveal (in-view) wrapper
 // ---------------------------------------------------------------------------
-function Reveal({
-  children,
-  className = '',
-  delay = 0,
-}: {
-  children: React.ReactNode;
-  className?: string;
-  delay?: number;
-}) {
+function Reveal({ children, className = '', delay = 0 }: { children: React.ReactNode; className?: string; delay?: number }) {
   const ref = useRef<HTMLDivElement>(null);
   const inView = useInView(ref, { once: true, margin: '-60px' });
   return (
@@ -98,6 +75,72 @@ function Reveal({
 }
 
 // ---------------------------------------------------------------------------
+// Auto-cycling specialty text (fades through items)
+// ---------------------------------------------------------------------------
+function SpecialtySlider({ items }: { items: string[] }) {
+  const [index, setIndex] = useState(0);
+  useEffect(() => {
+    const t = setInterval(() => setIndex((i) => (i + 1) % items.length), 2600);
+    return () => clearInterval(t);
+  }, [items.length]);
+  return (
+    <div className='relative h-14 md:h-16 flex items-center justify-center overflow-hidden'>
+      <AnimatePresence mode='wait'>
+        <motion.span
+          key={index}
+          initial={{ opacity: 0, y: 22 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -22 }}
+          transition={{ duration: 0.45, ease: [0.25, 0.46, 0.45, 0.94] }}
+          className='absolute text-3xl md:text-5xl font-light tracking-tight'
+          style={{
+            background: 'linear-gradient(135deg, #E7B8B5 0%, #d4a0a0 40%, #c8b8e8 100%)',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            backgroundClip: 'text',
+          }}
+        >
+          {items[index]}
+        </motion.span>
+      </AnimatePresence>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Animated number counter (counts up on scroll-into-view)
+// ---------------------------------------------------------------------------
+function AnimatedCounter({
+  target,
+  format = (n: number) => n.toLocaleString(),
+  delay = 0,
+}: {
+  target: number;
+  format?: (n: number) => string;
+  delay?: number;
+}) {
+  const ref = useRef<HTMLSpanElement>(null);
+  const inView = useInView(ref, { once: true });
+  const [count, setCount] = useState(0);
+
+  useEffect(() => {
+    if (!inView) return;
+    const duration = 1400;
+    const startAt = Date.now() + delay * 1000;
+    const timer = setInterval(() => {
+      const elapsed = Math.max(0, Date.now() - startAt);
+      const progress = Math.min(elapsed / duration, 1);
+      const eased = 1 - Math.pow(1 - progress, 3);
+      setCount(Math.round(eased * target));
+      if (progress >= 1) clearInterval(timer);
+    }, 16);
+    return () => clearInterval(timer);
+  }, [inView, target, delay]);
+
+  return <span ref={ref}>{format(count)}</span>;
+}
+
+// ---------------------------------------------------------------------------
 // useScrollParallax — reusable scroll-driven transform hook
 // ---------------------------------------------------------------------------
 function useScrollParallax(
@@ -112,39 +155,39 @@ function useScrollParallax(
 // ---------------------------------------------------------------------------
 // Static data (non-translatable parts)
 // ---------------------------------------------------------------------------
-const PHOTO_GRADIENTS = [
-  'bg-gradient-to-br from-[#e8ddd0] to-[#d4c5b2]',
-  'bg-gradient-to-br from-[#d0dae8] to-[#b2c1d4]',
-  'bg-gradient-to-br from-[#dde8d0] to-[#c5d4b2]',
-  'bg-gradient-to-br from-[#e8d0d8] to-[#d4b2bf]',
-  'bg-gradient-to-br from-[#d8d0e8] to-[#bfb2d4]',
-  'bg-gradient-to-br from-[#e8e0d0] to-[#d4ccb2]',
-  'bg-gradient-to-br from-[#d0e4e8] to-[#b2cfd4]',
-  'bg-gradient-to-br from-[#e2d0e8] to-[#ccb2d4]',
-];
+const PICSUM_BASE = 'https://picsum.photos/seed';
+const PHOTO_SEEDS = ['wedding', 'portrait', 'couple', 'ceremony', 'celebration', 'romance', 'bride', 'nature'];
 const SELECTED_ITEMS = new Set([1, 3, 6, 8]);
 
 const STAT_KEYS = [
-  { value: '2,400+', labelKey: 'landing.stats.galleries' },
-  { value: '98%',    labelKey: 'landing.stats.satisfaction' },
-  { value: '4.9★',  labelKey: 'landing.stats.rating' },
+  { target: 2400, format: (n: number) => `${n.toLocaleString()}+`, labelKey: 'landing.stats.galleries' },
+  { target: 98, format: (n: number) => `${n}%`, labelKey: 'landing.stats.satisfaction' },
+  { target: 49, format: (n: number) => `${(n / 10).toFixed(1)}★`, labelKey: 'landing.stats.rating' },
 ];
 
 const TAG_KEYS = [
-  'landing.tags.wedding', 'landing.tags.portrait', 'landing.tags.family',
-  'landing.tags.newborn', 'landing.tags.events',   'landing.tags.commercial',
-  'landing.tags.boudoir', 'landing.tags.maternity', 'landing.tags.realestate',
-  'landing.tags.fashion', 'landing.tags.editorial', 'landing.tags.brand',
+  'landing.tags.wedding',
+  'landing.tags.portrait',
+  'landing.tags.family',
+  'landing.tags.newborn',
+  'landing.tags.events',
+  'landing.tags.commercial',
+  'landing.tags.boudoir',
+  'landing.tags.maternity',
+  'landing.tags.realestate',
+  'landing.tags.fashion',
+  'landing.tags.editorial',
+  'landing.tags.brand',
 ];
 // doubled for seamless marquee loop
 const MARQUEE_TAG_KEYS = [...TAG_KEYS, ...TAG_KEYS];
 
 const FEATURE_KEYS = [
-  { icon: '📁', titleKey: 'landing.feature.upload.title',    descKey: 'landing.feature.upload.desc' },
-  { icon: '🔔', titleKey: 'landing.feature.alerts.title',    descKey: 'landing.feature.alerts.desc' },
-  { icon: '📋', titleKey: 'landing.feature.pipeline.title',  descKey: 'landing.feature.pipeline.desc' },
-  { icon: '🛍️', titleKey: 'landing.feature.store.title',     descKey: 'landing.feature.store.desc' },
-  { icon: '🎨', titleKey: 'landing.feature.themes.title',    descKey: 'landing.feature.themes.desc' },
+  { icon: '🖼️', titleKey: 'landing.feature.upload.title', descKey: 'landing.feature.upload.desc' },
+  { icon: '🔗', titleKey: 'landing.feature.alerts.title', descKey: 'landing.feature.alerts.desc' },
+  { icon: '📊', titleKey: 'landing.feature.pipeline.title', descKey: 'landing.feature.pipeline.desc' },
+  { icon: '☑️', titleKey: 'landing.feature.store.title', descKey: 'landing.feature.store.desc' },
+  { icon: '🛍️', titleKey: 'landing.feature.themes.title', descKey: 'landing.feature.themes.desc' },
   { icon: '🌐', titleKey: 'landing.feature.bilingual.title', descKey: 'landing.feature.bilingual.desc' },
 ];
 
@@ -156,35 +199,122 @@ const STEP_KEYS = [
 ];
 
 const NOTIFICATION_KEYS = [
-  { dot: 'bg-green-400',  titleKey: 'landing.notif.1.title', subKey: 'landing.notif.1.sub' },
-  { dot: 'bg-blue-400',   titleKey: 'landing.notif.2.title', subKey: 'landing.notif.2.sub' },
+  { dot: 'bg-green-400', titleKey: 'landing.notif.1.title', subKey: 'landing.notif.1.sub' },
+  { dot: 'bg-blue-400', titleKey: 'landing.notif.2.title', subKey: 'landing.notif.2.sub' },
   { dot: 'bg-orange-400', titleKey: 'landing.notif.3.title', subKey: 'landing.notif.3.sub' },
   { dot: 'bg-purple-400', titleKey: 'landing.notif.4.title', subKey: 'landing.notif.4.sub' },
 ];
 
 const THEMES = [
-  { nameKey: 'Luxury',   color: '#1a1410', accent: '#c9a96e' },
-  { nameKey: 'Soft',     color: '#FAF8F4', accent: '#E7B8B5' },
+  { nameKey: 'Luxury', color: '#1a1410', accent: '#c9a96e' },
+  { nameKey: 'Soft', color: '#FAF8F4', accent: '#E7B8B5' },
   { nameKey: 'Midnight', color: '#0d1117', accent: '#6eb5ff' },
 ];
 
 const TESTIMONIAL_KEYS = [
-  { quoteKey: 'landing.testimonial.1.quote', nameKey: 'landing.testimonial.1.name', roleKey: 'landing.testimonial.1.role', grad: 'from-[#E7B8B5] to-[#d4a0a0]' },
-  { quoteKey: 'landing.testimonial.2.quote', nameKey: 'landing.testimonial.2.name', roleKey: 'landing.testimonial.2.role', grad: 'from-[#a0b4e8] to-[#8090c8]' },
-  { quoteKey: 'landing.testimonial.3.quote', nameKey: 'landing.testimonial.3.name', roleKey: 'landing.testimonial.3.role', grad: 'from-[#a8c59a] to-[#88a87a]' },
+  {
+    quoteKey: 'landing.testimonial.1.quote',
+    nameKey: 'landing.testimonial.1.name',
+    roleKey: 'landing.testimonial.1.role',
+    grad: 'from-[#E7B8B5] to-[#d4a0a0]',
+  },
+  {
+    quoteKey: 'landing.testimonial.2.quote',
+    nameKey: 'landing.testimonial.2.name',
+    roleKey: 'landing.testimonial.2.role',
+    grad: 'from-[#a0b4e8] to-[#8090c8]',
+  },
+  {
+    quoteKey: 'landing.testimonial.3.quote',
+    nameKey: 'landing.testimonial.3.name',
+    roleKey: 'landing.testimonial.3.role',
+    grad: 'from-[#a8c59a] to-[#88a87a]',
+  },
 ];
 
 const PRODUCT_KEYS = [
   { labelKey: 'landing.products.albums', price: 'From ₪180', grad: 'from-[#e8ddd0] to-[#c5b49a]', z: 28 },
-  { labelKey: 'landing.products.prints', price: 'From ₪35',  grad: 'from-[#d0dae8] to-[#9aaec5]', z: 4  },
+  { labelKey: 'landing.products.prints', price: 'From ₪35', grad: 'from-[#d0dae8] to-[#9aaec5]', z: 4 },
   { labelKey: 'landing.products.canvas', price: 'From ₪450', grad: 'from-[#dde8d0] to-[#a8c59a]', z: 28 },
 ];
 
 const NAV_LINK_KEYS = [
-  { labelKey: 'landing.nav.features',     href: '#features' },
+  { labelKey: 'landing.nav.features', href: '#features' },
   { labelKey: 'landing.nav.how_it_works', href: '#workflow' },
-  { labelKey: 'landing.nav.galleries',    href: '#galleries' },
-  { labelKey: 'landing.nav.products',     href: '#products' },
+  { labelKey: 'landing.nav.galleries', href: '#galleries' },
+  { labelKey: 'landing.nav.products', href: '#products' },
+];
+
+const SPECIALTY_SLIDER_KEYS = [
+  'landing.slider.family',
+  'landing.slider.maternity',
+  'landing.slider.newborn',
+  'landing.slider.events',
+  'landing.slider.branding',
+  'landing.slider.wedding',
+  'landing.slider.boudoir',
+  'landing.slider.business',
+];
+
+const PRICING_PLANS: {
+  nameKey: string;
+  price: string;
+  periodKey: string;
+  descKey: string;
+  ctaKey: string;
+  badgeKey?: string;
+  features: string[];
+  highlight: boolean;
+}[] = [
+  {
+    nameKey: 'landing.pricing.free.name',
+    price: '₪0',
+    periodKey: 'landing.pricing.period',
+    descKey: 'landing.pricing.free.desc',
+    ctaKey: 'landing.pricing.free.cta',
+    features: ['landing.pricing.free.f1', 'landing.pricing.free.f2', 'landing.pricing.free.f3', 'landing.pricing.free.f4'],
+    highlight: false,
+  },
+  {
+    nameKey: 'landing.pricing.pro.name',
+    price: '₪79',
+    periodKey: 'landing.pricing.period',
+    descKey: 'landing.pricing.pro.desc',
+    ctaKey: 'landing.pricing.pro.cta',
+    badgeKey: 'landing.pricing.pro.badge',
+    features: [
+      'landing.pricing.pro.f1',
+      'landing.pricing.pro.f2',
+      'landing.pricing.pro.f3',
+      'landing.pricing.pro.f4',
+      'landing.pricing.pro.f5',
+      'landing.pricing.pro.f6',
+    ],
+    highlight: true,
+  },
+  {
+    nameKey: 'landing.pricing.studio.name',
+    price: '₪149',
+    periodKey: 'landing.pricing.period',
+    descKey: 'landing.pricing.studio.desc',
+    ctaKey: 'landing.pricing.studio.cta',
+    features: [
+      'landing.pricing.studio.f1',
+      'landing.pricing.studio.f2',
+      'landing.pricing.studio.f3',
+      'landing.pricing.studio.f4',
+      'landing.pricing.studio.f5',
+    ],
+    highlight: false,
+  },
+];
+
+const FAQ_KEYS = [
+  { qKey: 'landing.faq.q1', aKey: 'landing.faq.a1' },
+  { qKey: 'landing.faq.q2', aKey: 'landing.faq.a2' },
+  { qKey: 'landing.faq.q3', aKey: 'landing.faq.a3' },
+  { qKey: 'landing.faq.q4', aKey: 'landing.faq.a4' },
+  { qKey: 'landing.faq.q5', aKey: 'landing.faq.a5' },
 ];
 
 const gradientText = {
@@ -200,24 +330,26 @@ const gradientText = {
 export const Index = () => {
   const { t, lang, toggleLang } = useI18n();
   const [themeHovered, setThemeHovered] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [openFaq, setOpenFaq] = useState<number | null>(null);
 
   // Hero scroll parallax
   const heroRef = useRef<HTMLDivElement>(null);
   const { scrollYProgress: heroScroll } = useScroll({ target: heroRef, offset: ['start start', 'end start'] });
 
   const mockupRotateX = useTransform(heroScroll, [0, 0.6], [14, -4]);
-  const mockupY       = useTransform(heroScroll, [0, 1], [0, 120]);
-  const mockupScale   = useTransform(heroScroll, [0, 0.5], [1, 0.88]);
-  const orbY1         = useTransform(heroScroll, [0, 1], [0, -80]);
-  const orbY2         = useTransform(heroScroll, [0, 1], [0, -140]);
-  const textY         = useTransform(heroScroll, [0, 0.5], [0, -60]);
-  const textOpacity   = useTransform(heroScroll, [0, 0.35], [1, 0]);
+  const mockupY = useTransform(heroScroll, [0, 1], [0, 120]);
+  const mockupScale = useTransform(heroScroll, [0, 0.5], [1, 0.88]);
+  const orbY1 = useTransform(heroScroll, [0, 1], [0, -80]);
+  const orbY2 = useTransform(heroScroll, [0, 1], [0, -140]);
+  const textY = useTransform(heroScroll, [0, 0.5], [0, -60]);
+  const textOpacity = useTransform(heroScroll, [0, 0.35], [1, 0]);
 
   const springRotateX = useSpring(mockupRotateX, { stiffness: 80, damping: 18 });
-  const springScale   = useSpring(mockupScale,   { stiffness: 80, damping: 18 });
+  const springScale = useSpring(mockupScale, { stiffness: 80, damping: 18 });
 
   // Phone mockup scroll rotation
-  const phoneRef    = useRef<HTMLDivElement>(null);
+  const phoneRef = useRef<HTMLDivElement>(null);
   const phoneRotateY = useScrollParallax(phoneRef as React.RefObject<HTMLElement>, [0, 1], [-8, 8]);
   const phoneRotateX = useScrollParallax(phoneRef as React.RefObject<HTMLElement>, [0, 1], [4, -4]);
 
@@ -227,7 +359,6 @@ export const Index = () => {
 
   return (
     <div className='min-h-screen bg-white font-sans text-[#1a1a1a] antialiased overflow-x-hidden'>
-
       {/* Progress bar */}
       <motion.div
         className='fixed top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-[#E7B8B5] via-[#d4a0a0] to-[#E7B8B5] z-[60] origin-left'
@@ -246,7 +377,7 @@ export const Index = () => {
         <div className='mx-4 mt-3 rounded-2xl bg-[#0a0a0a]/80 backdrop-blur-xl border border-white/10 shadow-[0_8px_40px_rgba(0,0,0,0.4)]'>
           <div className='max-w-6xl mx-auto px-6 h-14 flex items-center justify-between'>
             <Link to='/' className='text-white text-lg tracking-tight font-medium'>
-              Koral Light Studio
+              LIGHT STUDIO
             </Link>
             <nav className='hidden md:flex items-center gap-8'>
               {NAV_LINK_KEYS.map((l) => (
@@ -271,10 +402,73 @@ export const Index = () => {
               >
                 {t('landing.nav.get_started')}
               </Link>
+              <button
+                className='md:hidden p-1.5 text-white/60 hover:text-white transition-colors'
+                onClick={() => setMenuOpen(true)}
+                aria-label='Open menu'
+              >
+                <svg className='w-5 h-5' fill='none' stroke='currentColor' strokeWidth='2' viewBox='0 0 24 24'>
+                  <path strokeLinecap='round' strokeLinejoin='round' d='M4 6h16M4 12h16M4 18h16' />
+                </svg>
+              </button>
             </div>
           </div>
         </div>
       </motion.header>
+
+      {/* Mobile menu overlay */}
+      <AnimatePresence>
+        {menuOpen && (
+          <motion.div
+            className='fixed inset-0 z-[70] bg-[#0a0a0a] flex flex-col px-6 py-8 md:hidden'
+            initial={{ opacity: 0, x: '100%' }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: '100%' }}
+            transition={{ duration: 0.3, ease: [0.25, 0.46, 0.45, 0.94] }}
+          >
+            <div className='flex items-center justify-between mb-12'>
+              <span className='text-white text-lg font-medium'>LIGHT STUDIO</span>
+              <button
+                onClick={() => setMenuOpen(false)}
+                className='text-white/60 hover:text-white transition-colors'
+                aria-label='Close menu'
+              >
+                <svg className='w-6 h-6' fill='none' stroke='currentColor' strokeWidth='2' viewBox='0 0 24 24'>
+                  <path strokeLinecap='round' strokeLinejoin='round' d='M6 18L18 6M6 6l12 12' />
+                </svg>
+              </button>
+            </div>
+            <nav className='flex flex-col gap-6'>
+              {NAV_LINK_KEYS.map((l) => (
+                <a
+                  key={l.labelKey}
+                  href={l.href}
+                  onClick={() => setMenuOpen(false)}
+                  className='text-2xl font-light text-white/80 hover:text-white transition-colors'
+                >
+                  {t(l.labelKey)}
+                </a>
+              ))}
+            </nav>
+            <div className='mt-auto flex flex-col gap-3'>
+              <Link
+                to='/admin'
+                onClick={() => setMenuOpen(false)}
+                className='block text-center py-3.5 rounded-xl bg-white text-[#0a0a0a] font-medium'
+              >
+                {t('landing.nav.get_started')}
+              </Link>
+              <Link
+                to='/admin'
+                onClick={() => setMenuOpen(false)}
+                className='block text-center py-3.5 rounded-xl border border-white/20 text-white/70 font-medium'
+              >
+                {t('landing.nav.login')}
+              </Link>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* ------------------------------------------------------------------ */}
       {/* HERO — dark, 3D scroll-driven                                        */}
@@ -303,10 +497,7 @@ export const Index = () => {
         />
 
         {/* Hero text */}
-        <motion.div
-          style={{ y: textY, opacity: textOpacity }}
-          className='relative z-10 text-center max-w-4xl mx-auto mb-16'
-        >
+        <motion.div style={{ y: textY, opacity: textOpacity }} className='relative z-10 text-center max-w-4xl mx-auto mb-16'>
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -379,7 +570,7 @@ export const Index = () => {
                 <span className='w-3 h-3 rounded-full bg-[#28c840]' />
               </div>
               <div className='flex-1 bg-[#0a0a0a] rounded-md px-3 py-1 text-xs text-white/30 border border-white/8 max-w-sm mx-auto text-center'>
-                koralstudio.app/gallery/sarah-david-wedding
+                lightstudio.com/gallery/sarah-david-wedding
               </div>
             </div>
 
@@ -391,9 +582,9 @@ export const Index = () => {
                 <p className='text-[11px] text-white/30 mb-4'>{t('landing.mockup.session')}</p>
                 <div className='space-y-2.5'>
                   {[
-                    { labelKey: 'landing.mockup.total',    value: '248' },
+                    { labelKey: 'landing.mockup.total', value: '248' },
                     { labelKey: 'landing.mockup.selected', value: '23' },
-                    { labelKey: 'landing.mockup.status',   value: t('landing.mockup.in_editing') },
+                    { labelKey: 'landing.mockup.status', value: t('landing.mockup.in_editing') },
                   ].map((stat) => (
                     <div key={stat.labelKey} className='flex justify-between text-[11px]'>
                       <span className='text-white/35'>{t(stat.labelKey)}</span>
@@ -413,17 +604,24 @@ export const Index = () => {
               {/* Photo grid */}
               <div className='flex-1 p-4'>
                 <div className='grid grid-cols-4 gap-2'>
-                  {PHOTO_GRADIENTS.map((grad, i) => {
+                  {PHOTO_SEEDS.map((seed, i) => {
                     const num = i + 1;
                     const isSelected = SELECTED_ITEMS.has(num);
                     return (
                       <div
                         key={num}
-                        className={`relative aspect-square rounded-lg ${grad} ${isSelected ? 'ring-2 ring-[#E7B8B5]' : 'opacity-60'}`}
+                        className={`relative aspect-square rounded-lg overflow-hidden ${isSelected ? 'ring-2 ring-[#E7B8B5]' : 'opacity-60'}`}
                       >
+                        <img src={`${PICSUM_BASE}/${seed}/200/200`} alt='' className='w-full h-full object-cover' loading='lazy' />
                         {isSelected && (
                           <div className='absolute top-1.5 right-1.5 w-5 h-5 rounded-full bg-[#E7B8B5] flex items-center justify-center'>
-                            <svg className='w-3 h-3 text-white' fill='none' stroke='currentColor' strokeWidth='2.5' viewBox='0 0 24 24'>
+                            <svg
+                              className='w-3 h-3 text-white'
+                              fill='none'
+                              stroke='currentColor'
+                              strokeWidth='2.5'
+                              viewBox='0 0 24 24'
+                            >
                               <path strokeLinecap='round' strokeLinejoin='round' d='M5 13l4 4L19 7' />
                             </svg>
                           </div>
@@ -455,8 +653,8 @@ export const Index = () => {
           <div className='flex flex-col sm:flex-row items-center justify-center gap-10 mb-8'>
             {STAT_KEYS.map((s, i) => (
               <Reveal key={s.labelKey} delay={i * 0.1} className='text-center'>
-                <p className='text-2xl font-semibold text-[#1a1a1a]' style={gradientText}>
-                  {s.value}
+                <p className='text-2xl font-semibold' style={gradientText}>
+                  <AnimatedCounter target={s.target} format={s.format} delay={i * 0.15} />
                 </p>
                 <p className='text-xs text-[#999999] mt-0.5'>{t(s.labelKey)}</p>
               </Reveal>
@@ -486,6 +684,23 @@ export const Index = () => {
       </section>
 
       {/* ------------------------------------------------------------------ */}
+      {/* SPECIALTY SLIDER                                                      */}
+      {/* ------------------------------------------------------------------ */}
+      <section className='py-20 px-6 bg-white border-b border-[#f0eeeb]'>
+        <div className='max-w-3xl mx-auto text-center'>
+          <Reveal>
+            <span className='text-xs font-medium uppercase tracking-widest text-[#999999]'>{t('landing.slider.label')}</span>
+          </Reveal>
+          <div className='mt-6 mb-6'>
+            <SpecialtySlider items={SPECIALTY_SLIDER_KEYS.map((k) => t(k))} />
+          </div>
+          <Reveal delay={0.1}>
+            <p className='text-[#6b6b6b] text-base leading-relaxed'>{t('landing.slider.desc')}</p>
+          </Reveal>
+        </div>
+      </section>
+
+      {/* ------------------------------------------------------------------ */}
       {/* FEATURES — deep 3D tilt cards                                        */}
       {/* ------------------------------------------------------------------ */}
       <section id='features' className='py-28 px-6 bg-white'>
@@ -493,8 +708,7 @@ export const Index = () => {
           <Reveal className='text-center mb-16'>
             <span className='text-xs font-medium uppercase tracking-widest text-[#999999]'>{t('landing.features.label')}</span>
             <h2 className='text-3xl md:text-4xl text-[#1a1a1a] mt-3 leading-snug font-light'>
-              {t('landing.features.heading_pre')}{' '}
-              <em className='italic'>{t('landing.features.heading_accent')}</em>{' '}
+              {t('landing.features.heading_pre')} <em className='italic'>{t('landing.features.heading_accent')}</em>{' '}
               {t('landing.features.heading_post')}
             </h2>
           </Reveal>
@@ -554,8 +768,7 @@ export const Index = () => {
             <h2 className='text-3xl md:text-4xl text-[#1a1a1a] mt-3 leading-snug font-light'>
               {t('landing.workflow.heading_l1')}
               <br />
-              {t('landing.workflow.heading_in')}{' '}
-              <em className='italic'>{t('landing.workflow.heading_num')}</em>{' '}
+              {t('landing.workflow.heading_in')} <em className='italic'>{t('landing.workflow.heading_num')}</em>{' '}
               {t('landing.workflow.heading_end')}
             </h2>
           </Reveal>
@@ -573,7 +786,10 @@ export const Index = () => {
                   <TiltCard intensity={6}>
                     <div className='flex flex-col items-center text-center' style={{ transformStyle: 'preserve-3d' }}>
                       {/* Lens-ring circle */}
-                      <div className='relative w-[88px] h-[88px] flex items-center justify-center mb-6 shrink-0' style={{ transform: 'translateZ(24px)' }}>
+                      <div
+                        className='relative w-[88px] h-[88px] flex items-center justify-center mb-6 shrink-0'
+                        style={{ transform: 'translateZ(24px)' }}
+                      >
                         <div
                           className='absolute inset-0 rounded-full'
                           style={{
@@ -587,9 +803,7 @@ export const Index = () => {
                           className='absolute inset-[5px] rounded-full border border-[#e8e6e3]'
                           style={{ background: 'linear-gradient(145deg, #fff 0%, #f5f0ef 100%)' }}
                         />
-                        <span className='relative z-10 text-lg font-bold text-[#1a1a1a] tracking-tight'>
-                          {step.n}
-                        </span>
+                        <span className='relative z-10 text-lg font-bold text-[#1a1a1a] tracking-tight'>{step.n}</span>
                       </div>
                       <h3 className='font-semibold text-[#1a1a1a] mb-2 text-lg' style={{ transform: 'translateZ(14px)' }}>
                         {t(step.titleKey)}
@@ -620,12 +834,14 @@ export const Index = () => {
               {t('landing.tracking.label')}
             </span>
             <h3 className='text-2xl md:text-3xl text-[#1a1a1a] mb-5 leading-snug font-light'>
-              {t('landing.tracking.heading_pre')}{' '}
-              <em className='italic'>{t('landing.tracking.heading_accent')}</em>
+              {t('landing.tracking.heading_pre')} <em className='italic'>{t('landing.tracking.heading_accent')}</em>
             </h3>
             <p className='text-[#6b6b6b] leading-relaxed mb-4'>{t('landing.tracking.p1')}</p>
             <p className='text-[#6b6b6b] leading-relaxed mb-6'>{t('landing.tracking.p2')}</p>
-            <Link to='/admin' className='inline-flex items-center gap-1.5 text-sm font-medium text-[#1a1a1a] hover:underline underline-offset-4'>
+            <Link
+              to='/admin'
+              className='inline-flex items-center gap-1.5 text-sm font-medium text-[#1a1a1a] hover:underline underline-offset-4'
+            >
               {t('landing.tracking.cta')}
             </Link>
           </Reveal>
@@ -691,15 +907,21 @@ export const Index = () => {
             </span>
             <h3 className='text-2xl md:text-3xl text-white mb-5 leading-snug font-light'>
               {t('landing.client.heading_pre')}{' '}
-              <em className='italic' style={gradientText}>{t('landing.client.heading_accent')}</em>{' '}
+              <em className='italic' style={gradientText}>
+                {t('landing.client.heading_accent')}
+              </em>{' '}
               {t('landing.client.heading_post')}
             </h3>
             <ul className='space-y-3 mb-8'>
-              {(
-                ['landing.client.bullet1', 'landing.client.bullet2', 'landing.client.bullet3'] as const
-              ).map((key) => (
+              {(['landing.client.bullet1', 'landing.client.bullet2', 'landing.client.bullet3'] as const).map((key) => (
                 <li key={key} className='flex items-start gap-3 text-white/60 text-sm'>
-                  <svg className='w-4 h-4 text-[#E7B8B5] mt-0.5 shrink-0' fill='none' stroke='currentColor' strokeWidth='2.5' viewBox='0 0 24 24'>
+                  <svg
+                    className='w-4 h-4 text-[#E7B8B5] mt-0.5 shrink-0'
+                    fill='none'
+                    stroke='currentColor'
+                    strokeWidth='2.5'
+                    viewBox='0 0 24 24'
+                  >
                     <path strokeLinecap='round' strokeLinejoin='round' d='M5 13l4 4L19 7' />
                   </svg>
                   {t(key)}
@@ -733,17 +955,27 @@ export const Index = () => {
                   <div className='px-2 pb-4 bg-[#FAF8F4]'>
                     <div className='grid grid-cols-2 gap-1.5'>
                       {[
-                        { h: 'h-20', g: 'from-[#e8ddd0] to-[#d4c5b2]', sel: true },
-                        { h: 'h-14', g: 'from-[#d0dae8] to-[#b2c1d4]', sel: false },
-                        { h: 'h-14', g: 'from-[#dde8d0] to-[#c5d4b2]', sel: false },
-                        { h: 'h-20', g: 'from-[#e8d0d8] to-[#d4b2bf]', sel: true },
-                        { h: 'h-16', g: 'from-[#d8d0e8] to-[#bfb2d4]', sel: true },
-                        { h: 'h-16', g: 'from-[#e8e0d0] to-[#d4ccb2]', sel: false },
+                        { seed: 'family-a', h: 'h-20', sel: true },
+                        { seed: 'portrait-b', h: 'h-14', sel: false },
+                        { seed: 'newborn-c', h: 'h-14', sel: false },
+                        { seed: 'maternity-d', h: 'h-20', sel: true },
+                        { seed: 'wedding-e', h: 'h-16', sel: true },
+                        { seed: 'couple-f', h: 'h-16', sel: false },
                       ].map((p, i) => (
-                        <div key={i} className={`relative rounded-lg ${p.h} bg-gradient-to-br ${p.g} ${p.sel ? 'ring-1 ring-[#E7B8B5]' : 'opacity-70'}`}>
+                        <div
+                          key={i}
+                          className={`relative rounded-lg overflow-hidden ${p.h} ${p.sel ? 'ring-1 ring-[#E7B8B5]' : 'opacity-70'}`}
+                        >
+                          <img src={`${PICSUM_BASE}/${p.seed}/160/160`} alt='' className='w-full h-full object-cover' loading='lazy' />
                           {p.sel && (
                             <div className='absolute top-1 right-1 w-3.5 h-3.5 rounded-full bg-[#E7B8B5] flex items-center justify-center'>
-                              <svg className='w-2 h-2 text-white' fill='none' stroke='currentColor' strokeWidth='3' viewBox='0 0 24 24'>
+                              <svg
+                                className='w-2 h-2 text-white'
+                                fill='none'
+                                stroke='currentColor'
+                                strokeWidth='3'
+                                viewBox='0 0 24 24'
+                              >
                                 <path strokeLinecap='round' strokeLinejoin='round' d='M5 13l4 4L19 7' />
                               </svg>
                             </div>
@@ -779,20 +1011,20 @@ export const Index = () => {
               onMouseLeave={() => setThemeHovered(false)}
             >
               {THEMES.map((theme, i) => {
-                const baseAngles   = [-15, 0, 15];
+                const baseAngles = [-15, 0, 15];
                 const hoveredAngles = [-28, 0, 28];
-                const baseZ        = [-20, 0, -20];
-                const hoveredZ     = [-30, 20, -30];
+                const baseZ = [-20, 0, -20];
+                const hoveredZ = [-30, 20, -30];
                 return (
                   <motion.div
                     key={theme.nameKey}
                     className='absolute inset-0 rounded-2xl border flex flex-col justify-between p-4'
                     style={{ backgroundColor: theme.color, borderColor: theme.accent + '40', transformStyle: 'preserve-3d' }}
                     animate={{
-                      rotateY:    themeHovered ? hoveredAngles[i] : baseAngles[i],
+                      rotateY: themeHovered ? hoveredAngles[i] : baseAngles[i],
                       translateZ: themeHovered ? hoveredZ[i] : baseZ[i],
-                      opacity:    i === 1 ? 1 : themeHovered ? 0.9 : 0.7,
-                      scale:      i === 1 ? 1 : themeHovered ? 0.95 : 0.9,
+                      opacity: i === 1 ? 1 : themeHovered ? 0.9 : 0.7,
+                      scale: i === 1 ? 1 : themeHovered ? 0.95 : 0.9,
                     }}
                     transition={{ type: 'spring', stiffness: 160, damping: 20 }}
                   >
@@ -818,11 +1050,13 @@ export const Index = () => {
           <Reveal className='order-1 md:order-2'>
             <span className='text-xs font-medium uppercase tracking-widest text-[#999999]'>{t('landing.brand.label')}</span>
             <h3 className='text-2xl md:text-3xl text-[#1a1a1a] mt-3 mb-5 leading-snug font-light'>
-              {t('landing.brand.heading_pre')}{' '}
-              <em className='italic'>{t('landing.brand.heading_accent')}</em>
+              {t('landing.brand.heading_pre')} <em className='italic'>{t('landing.brand.heading_accent')}</em>
             </h3>
             <p className='text-[#6b6b6b] leading-relaxed mb-6'>{t('landing.brand.desc')}</p>
-            <Link to='/admin' className='inline-flex items-center gap-1.5 text-sm font-medium text-[#1a1a1a] hover:underline underline-offset-4'>
+            <Link
+              to='/admin'
+              className='inline-flex items-center gap-1.5 text-sm font-medium text-[#1a1a1a] hover:underline underline-offset-4'
+            >
               {t('landing.brand.cta')}
             </Link>
           </Reveal>
@@ -837,11 +1071,13 @@ export const Index = () => {
           <Reveal>
             <span className='text-xs font-medium uppercase tracking-widest text-[#999999]'>{t('landing.products.label')}</span>
             <h3 className='text-2xl md:text-3xl text-[#1a1a1a] mt-3 mb-5 leading-snug font-light'>
-              {t('landing.products.heading_pre')}{' '}
-              <em className='italic'>{t('landing.products.heading_accent')}</em>
+              {t('landing.products.heading_pre')} <em className='italic'>{t('landing.products.heading_accent')}</em>
             </h3>
             <p className='text-[#6b6b6b] leading-relaxed mb-6'>{t('landing.products.desc')}</p>
-            <Link to='/admin' className='inline-flex items-center gap-1.5 text-sm font-medium text-[#1a1a1a] hover:underline underline-offset-4'>
+            <Link
+              to='/admin'
+              className='inline-flex items-center gap-1.5 text-sm font-medium text-[#1a1a1a] hover:underline underline-offset-4'
+            >
               {t('landing.products.cta')}
             </Link>
           </Reveal>
@@ -917,11 +1153,7 @@ export const Index = () => {
 
         <div className='max-w-6xl mx-auto'>
           <Reveal className='text-center mb-16'>
-            <span className='text-xs font-medium uppercase tracking-widest text-white/30'>{t('landing.testimonials.label')}</span>
-            <h2 className='text-3xl md:text-4xl text-white mt-3 leading-snug font-light'>
-              {t('landing.testimonials.heading_pre')}{' '}
-              <em className='italic' style={gradientText}>Koral</em>
-            </h2>
+            <h2 className='text-3xl md:text-4xl text-white mt-3 leading-snug font-light'>{t('landing.testimonials.heading_pre')}</h2>
           </Reveal>
 
           <div className='grid grid-cols-1 md:grid-cols-3 gap-6'>
@@ -965,6 +1197,111 @@ export const Index = () => {
       </section>
 
       {/* ------------------------------------------------------------------ */}
+      {/* PRICING                                                              */}
+      {/* ------------------------------------------------------------------ */}
+      <section id='pricing' className='py-28 px-6 bg-[#fafaf9]'>
+        <div className='max-w-6xl mx-auto'>
+          <Reveal className='text-center mb-16'>
+            <h2 className='text-3xl md:text-4xl text-[#1a1a1a] mt-3 leading-snug font-light'>
+              {t('landing.pricing.heading_pre')} <em className='italic'>{t('landing.pricing.heading_accent')}</em>
+            </h2>
+          </Reveal>
+
+          <div className='grid grid-cols-1 md:grid-cols-3 gap-6 items-start'>
+            {PRICING_PLANS.map((plan, i) => (
+              <Reveal key={plan.nameKey} delay={i * 0.1}>
+                <div
+                  className={`relative rounded-2xl p-8 border bg-white ${
+                    plan.highlight ? 'border-[#E7B8B5] shadow-[0_20px_60px_rgba(231,184,181,0.25)]' : 'border-[#e8e6e3]'
+                  }`}
+                >
+                  {plan.badgeKey && (
+                    <div className='absolute -top-3.5 left-1/2 -translate-x-1/2'>
+                      <span
+                        className='px-3 py-1 rounded-full text-xs font-semibold text-white whitespace-nowrap'
+                        style={{ background: 'linear-gradient(135deg, #E7B8B5, #d4a0a0)' }}
+                      >
+                        {t(plan.badgeKey)}
+                      </span>
+                    </div>
+                  )}
+                  <p className='text-xs font-medium uppercase tracking-widest text-[#999999] mb-3'>{t(plan.nameKey)}</p>
+                  <div className='flex items-baseline gap-1 mb-1'>
+                    <span className='text-4xl font-light text-[#1a1a1a]'>{plan.price}</span>
+                    <span className='text-sm text-[#999999]'>/{t(plan.periodKey)}</span>
+                  </div>
+                  <p className='text-sm text-[#6b6b6b] mb-6'>{t(plan.descKey)}</p>
+                  <Link
+                    to='/admin'
+                    className={`block w-full text-center py-2.5 rounded-xl text-sm font-medium mb-8 transition-colors ${
+                      plan.highlight
+                        ? 'bg-[#1a1a1a] text-white hover:bg-[#2a2a2a]'
+                        : 'border border-[#e8e6e3] text-[#1a1a1a] hover:bg-[#fafaf9]'
+                    }`}
+                  >
+                    {t(plan.ctaKey)}
+                  </Link>
+                  <ul className='space-y-3'>
+                    {plan.features.map((fKey) => (
+                      <li key={fKey} className='flex items-start gap-2.5 text-sm text-[#6b6b6b]'>
+                        <svg
+                          className='w-4 h-4 text-[#E7B8B5] mt-0.5 shrink-0'
+                          fill='none'
+                          stroke='currentColor'
+                          strokeWidth='2.5'
+                          viewBox='0 0 24 24'
+                        >
+                          <path strokeLinecap='round' strokeLinejoin='round' d='M5 13l4 4L19 7' />
+                        </svg>
+                        {t(fKey)}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </Reveal>
+            ))}
+          </div>
+        </div>
+      </section>
+      <section className='py-24 px-6 bg-white'>
+        <div className='max-w-2xl mx-auto'>
+          <Reveal className='text-center mb-12'>
+            <span className='text-xs font-medium uppercase tracking-widest text-[#999999]'>{t('landing.faq.label')}</span>
+            <h2 className='text-3xl md:text-4xl text-[#1a1a1a] mt-3 font-light'>{t('landing.faq.heading')}</h2>
+          </Reveal>
+          <div className='space-y-2'>
+            {FAQ_KEYS.map((faq, i) => (
+              <Reveal key={faq.qKey} delay={i * 0.04}>
+                <div className='border border-[#e8e6e3] rounded-xl bg-white overflow-hidden'>
+                  <button
+                    className='w-full flex items-center justify-between px-6 py-4 text-left text-sm font-medium text-[#1a1a1a] hover:bg-[#fafaf9] transition-colors'
+                    onClick={() => setOpenFaq(openFaq === i ? null : i)}
+                  >
+                    {t(faq.qKey)}
+                    <motion.span
+                      animate={{ rotate: openFaq === i ? 45 : 0 }}
+                      transition={{ duration: 0.2 }}
+                      className='text-xl text-[#999999] shrink-0 ml-4 leading-none'
+                    >
+                      +
+                    </motion.span>
+                  </button>
+                  <motion.div
+                    initial={false}
+                    animate={{ height: openFaq === i ? 'auto' : 0, opacity: openFaq === i ? 1 : 0 }}
+                    transition={{ duration: 0.25, ease: 'easeInOut' }}
+                    className='overflow-hidden'
+                  >
+                    <p className='px-6 pb-5 text-sm text-[#6b6b6b] leading-relaxed'>{t(faq.aKey)}</p>
+                  </motion.div>
+                </div>
+              </Reveal>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ------------------------------------------------------------------ */}
       {/* CTA — dark 3D                                                        */}
       {/* ------------------------------------------------------------------ */}
       <section className='relative py-36 px-6 bg-[#080808] text-center overflow-hidden'>
@@ -973,7 +1310,8 @@ export const Index = () => {
         <div
           className='absolute inset-0 opacity-[0.04] pointer-events-none'
           style={{
-            backgroundImage: 'linear-gradient(rgba(255,255,255,1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,1) 1px, transparent 1px)',
+            backgroundImage:
+              'linear-gradient(rgba(255,255,255,1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,1) 1px, transparent 1px)',
             backgroundSize: '60px 60px',
           }}
         />
@@ -986,9 +1324,7 @@ export const Index = () => {
               {t('landing.cta.heading_accent')}
             </em>
           </h2>
-          <p className='text-white/50 mb-10 max-w-lg mx-auto leading-relaxed'>
-            {t('landing.cta.desc')}
-          </p>
+          <p className='text-white/50 mb-10 max-w-lg mx-auto leading-relaxed'>{t('landing.cta.desc')}</p>
           <div className='flex flex-col sm:flex-row gap-3 justify-center mb-6'>
             <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
               <Link
@@ -1016,12 +1352,12 @@ export const Index = () => {
       {/* ------------------------------------------------------------------ */}
       <footer className='border-t border-[#e8e6e3] bg-[#fafaf9] py-8 px-6'>
         <div className='max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4'>
-          <span className='text-lg text-[#1a1a1a] font-medium'>Koral Light Studio</span>
+          <span className='text-lg text-[#1a1a1a] font-medium'>LIGHT STUDIO</span>
           <nav className='flex flex-wrap justify-center gap-x-6 gap-y-2'>
             {[
-              { labelKey: 'landing.nav.features',  href: '#features' },
-              { labelKey: 'landing.footer.pricing', href: '#' },
-              { labelKey: 'nav.blog',               href: '/blog' },
+              { labelKey: 'landing.nav.features', href: '#features' },
+              { labelKey: 'landing.footer.pricing', href: '#pricing' },
+              { labelKey: 'nav.blog', href: '/blog' },
               { labelKey: 'landing.footer.support', href: '#' },
               { labelKey: 'landing.footer.privacy', href: '#' },
             ].map((l) =>

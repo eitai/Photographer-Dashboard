@@ -38,9 +38,11 @@ async function find(filter = {}, { populate } = {}) {
 }
 
 async function create(data) {
+  const crypto = require('crypto');
+  const token = crypto.randomBytes(16).toString('hex');
   const { rows } = await pool.query(
-    `INSERT INTO product_orders (admin_id, client_id, name, type, max_photos, allowed_gallery_ids, selected_photo_ids, status)
-     VALUES ($1, $2, $3, $4, $5, $6::uuid[], $7::jsonb, $8) RETURNING *`,
+    `INSERT INTO product_orders (admin_id, client_id, name, type, max_photos, allowed_gallery_ids, selected_photo_ids, status, token, link_enabled)
+     VALUES ($1, $2, $3, $4, $5, $6::uuid[], $7::jsonb, $8, $9, $10) RETURNING *`,
     [
       data.adminId,
       data.clientId,
@@ -50,6 +52,8 @@ async function create(data) {
       data.allowedGalleryIds || [],
       JSON.stringify(data.selectedPhotoIds || []),
       data.status || 'pending',
+      token,
+      false,
     ]
   );
   return rowToCamel(rows[0]);
@@ -67,6 +71,39 @@ async function save(order) {
   return order;
 }
 
+async function updateAllowedGalleries(id, allowedGalleryIds) {
+  const { rows } = await pool.query(
+    `UPDATE product_orders SET allowed_gallery_ids = $1::uuid[], updated_at = NOW()
+     WHERE id = $2 RETURNING *`,
+    [allowedGalleryIds, id]
+  );
+  return rows[0] ? rowToCamel(rows[0]) : null;
+}
+
+async function markDelivered(id) {
+  const { rows } = await pool.query(
+    `UPDATE product_orders SET status = 'delivered', updated_at = NOW() WHERE id = $1 RETURNING *`,
+    [id]
+  );
+  return rows[0] ? rowToCamel(rows[0]) : null;
+}
+
+async function setLinkEnabled(id, enabled) {
+  const { rows } = await pool.query(
+    `UPDATE product_orders SET link_enabled = $1 WHERE id = $2 RETURNING *`,
+    [enabled, id]
+  );
+  return rows[0] ? rowToCamel(rows[0]) : null;
+}
+
+async function findByToken(token) {
+  const { rows } = await pool.query(
+    `SELECT * FROM product_orders WHERE token = $1 LIMIT 1`,
+    [token]
+  );
+  return rows[0] ? rowToCamel(rows[0]) : null;
+}
+
 async function findOneAndDelete(filter) {
   const id = filter._id || filter.id;
   const adminId = filter.adminId || filter.admin_id;
@@ -82,5 +119,9 @@ module.exports = {
   find,
   create,
   save,
+  updateAllowedGalleries,
+  markDelivered,
+  setLinkEnabled,
+  findByToken,
   findOneAndDelete,
 };

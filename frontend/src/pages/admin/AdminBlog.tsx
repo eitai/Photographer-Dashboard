@@ -79,7 +79,7 @@ export const AdminBlog = () => {
                   <td className="px-4 py-3 text-warm-gray">{post.category || '—'}</td>
                   <td className="px-4 py-3">
                     <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
-                      post.published ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'
+                      post.published ? 'bg-green-100 text-green-700' : 'bg-muted text-muted-foreground'
                     }`}>
                       {post.published ? t('admin.blog.published') : t('admin.blog.draft')}
                     </span>
@@ -92,7 +92,7 @@ export const AdminBlog = () => {
                       <button
                         onClick={() => togglePublish.mutate(post)}
                         disabled={togglePublish.isPending}
-                        title={post.published ? 'Unpublish' : 'Publish'}
+                        title={post.published ? t('admin.blog.unpublish') : t('admin.blog.publish')}
                         className="text-warm-gray hover:text-charcoal disabled:opacity-40"
                       >
                         {post.published ? <EyeOff size={14} /> : <Eye size={14} />}

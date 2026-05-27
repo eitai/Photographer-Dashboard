@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { AdminLayout } from '@/components/admin/AdminLayout';
 import { useI18n } from '@/lib/i18n';
-import { API_BASE } from '@/lib/api';
+import { getImageUrl } from '@/lib/api';
 import { toast } from 'sonner';
 import { Download, Star, MessageCircle, Pencil } from 'lucide-react';
 import { useGalleries, useUpdateGallery, useSubmissions, queryKeys } from '@/hooks/useQueries';
@@ -133,7 +133,7 @@ export const AdminSelections = () => {
                       return (
                         <div key={img._id} className='relative aspect-square rounded-md overflow-hidden bg-beige group'>
                           <img
-                            src={`${API_BASE}${img.path}`}
+                            src={getImageUrl(img.path)}
                             alt={img.filename}
                             className='w-full h-full object-cover'
                             loading='lazy'

@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo, useRef, useCallback } from 'react';
 import { AdminLayout } from '@/components/admin/AdminLayout';
-import api, { API_BASE } from '@/lib/api';
+import api, { getImageUrl } from '@/lib/api';
 import { toast } from 'sonner';
 import { X, Check, Search, Maximize2 } from 'lucide-react';
 import { InputField } from '@/components/admin/InputField';
@@ -201,7 +201,7 @@ export const AdminShowcase = () => {
                         onClick={() => toggleFeatured(img)}
                       >
                         <img
-                          src={`${API_BASE}${img.thumbnailPath || img.path}`}
+                          src={getImageUrl(img.thumbnailPath || img.path)}
                           alt=''
                           className='w-full h-full object-cover'
                           loading='lazy'
@@ -259,7 +259,7 @@ export const AdminShowcase = () => {
                   }}
                 >
                   <img
-                    src={`${API_BASE}${img.thumbnailPath || img.path}`}
+                    src={getImageUrl(img.thumbnailPath || img.path)}
                     alt=''
                     className='w-full h-full object-cover'
                     loading='lazy'
@@ -302,7 +302,7 @@ export const AdminShowcase = () => {
               onClose={() => setLightboxIndex(null)}
               onPrev={() => setLightboxIndex((i) => (i! > 0 ? i! - 1 : i!))}
               onNext={() => setLightboxIndex((i) => (i! < sourceImages.length - 1 ? i! + 1 : i!))}
-              getImageUrl={(path) => `${API_BASE}${path}`}
+              getImageUrl={getImageUrl}
               showDownload={false}
               isFeatured={featuredImages.some((f) => f._id === img._id)}
               onToggleFeatured={() => toggleFeatured(img)}

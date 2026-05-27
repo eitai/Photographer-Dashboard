@@ -8,16 +8,23 @@ interface GalleryGridProps {
   copiedId: string | null;
   resendingId: string | null;
   resentId: string | null;
+  sendingSmId: string | null;
+  sentSmsId: string | null;
   showDeliveryFormFor: string | null;
   deliveryHeaderMessage: string;
   creatingDeliveryFor: string | null;
   copyLink: (token: string, galleryId: string) => void;
   whatsAppLink: (token: string) => string;
   resendEmail: (galleryId: string) => void;
+  sendSms: (galleryId: string) => void;
   setDeleteGalleryTarget: (id: string | null) => void;
   setShowDeliveryFormFor: (id: string | null) => void;
   setDeliveryHeaderMessage: (msg: string) => void;
   createDeliveryGallery: (originalGalleryId: string) => void;
+  reactivateGallery: (galleryId: string) => void;
+  reactivatingId: string | null;
+  setDeleteSubTarget: (t: { galleryId: string; submissionId: string } | null) => void;
+  setDeleteImageTarget: (t: { galleryId: string; submissionId: string; imageId: string } | null) => void;
 }
 
 export const GalleryGrid = ({
@@ -26,18 +33,25 @@ export const GalleryGrid = ({
   copiedId,
   resendingId,
   resentId,
+  sendingSmId,
+  sentSmsId,
   showDeliveryFormFor,
   deliveryHeaderMessage,
   creatingDeliveryFor,
   copyLink,
   whatsAppLink,
   resendEmail,
+  sendSms,
   setDeleteGalleryTarget,
   setShowDeliveryFormFor,
   setDeliveryHeaderMessage,
   createDeliveryGallery,
+  reactivateGallery,
+  reactivatingId,
+  setDeleteSubTarget,
+  setDeleteImageTarget,
 }: GalleryGridProps) => {
-  // Build delivery map: originalId → delivery gallery (only for originals in this list)
+  // Build delivery map: originalId → delivery gallery
   const deliveryByOriginalId = new Map<string, GalleryData>();
   galleries.forEach((g) => {
     if (g.isDelivery && g.deliveryOf) {
@@ -47,19 +61,16 @@ export const GalleryGrid = ({
   });
   const pairedDeliveryIds = new Set([...deliveryByOriginalId.values()].map((d) => d._id));
 
-  // Groups: paired originals + their delivery, or standalone
-  const groups = galleries
-    .filter((g) => !pairedDeliveryIds.has(g._id))
-    .map((g) => {
-      const delivery = deliveryByOriginalId.get(g._id);
-      return delivery ? { type: 'pair' as const, original: g, delivery } : { type: 'single' as const, gallery: g };
-    });
+  // Only render originals (and standalone delivery galleries with no original in the list)
+  const visibleGalleries = galleries.filter((g) => !pairedDeliveryIds.has(g._id));
 
   const sharedCardProps = {
     client,
     copiedId,
     resendingId,
     resentId,
+    sendingSmId,
+    sentSmsId,
     showDeliveryFormFor,
     deliveryHeaderMessage,
     creatingDeliveryFor,
@@ -67,33 +78,27 @@ export const GalleryGrid = ({
     copyLink,
     whatsAppLink,
     resendEmail,
+    sendSms,
     setDeleteGalleryTarget,
     setShowDeliveryFormFor,
     setDeliveryHeaderMessage,
     createDeliveryGallery,
+    reactivateGallery,
+    reactivatingId,
+    setDeleteSubTarget,
+    setDeleteImageTarget,
   };
 
   return (
-    <div className='flex flex-wrap gap-3'>
-      {groups.map((group) => {
-        if (group.type === 'single') {
-          return (
-            <div key={group.gallery._id} className='w-[35rem]'>
-              <GalleryCard g={group.gallery} {...sharedCardProps} />
-            </div>
-          );
-        }
-        return (
-          <div key={group.original._id} className='flex gap-3'>
-            <div className='w-[35rem]'>
-              <GalleryCard g={group.original} {...sharedCardProps} />
-            </div>
-            <div className='w-[35rem]'>
-              <GalleryCard g={group.delivery} {...sharedCardProps} />
-            </div>
-          </div>
-        );
-      })}
+    <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3'>
+      {visibleGalleries.map((g) => (
+        <GalleryCard
+          key={g._id}
+          g={g}
+          delivery={deliveryByOriginalId.get(g._id)}
+          {...sharedCardProps}
+        />
+      ))}
     </div>
   );
 };

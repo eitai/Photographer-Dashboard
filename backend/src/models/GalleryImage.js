@@ -16,6 +16,10 @@ async function find(filter = {}, sortOpts = {}) {
     conditions.push(`id = ANY($${i++}::uuid[])`);
     vals.push(filter._id.$in);
   }
+  if (filter.folderId) {
+    conditions.push(`folder_ids @> ARRAY[$${i++}::uuid]`);
+    vals.push(filter.folderId);
+  }
 
   const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
   const { rows } = await pool.query(
@@ -31,6 +35,10 @@ async function findPaginated(filter, sort, skip, limit) {
   let i = 1;
 
   if (filter.galleryId) { conditions.push(`gallery_id = $${i++}`); vals.push(filter.galleryId); }
+  if (filter.folderId) {
+    conditions.push(`folder_ids @> ARRAY[$${i++}::uuid]`);
+    vals.push(filter.folderId);
+  }
 
   const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
 
@@ -71,19 +79,22 @@ async function insertMany(docs) {
   if (!docs.length) return [];
   const results = [];
   for (const doc of docs) {
+    const folderIds = Array.isArray(doc.folderIds) && doc.folderIds.length ? doc.folderIds : [];
     const { rows } = await pool.query(
       `INSERT INTO gallery_images
-         (gallery_id, filename, original_name, path, thumbnail_path, before_path, sort_order, size)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
+         (gallery_id, filename, original_name, path, thumbnail_path, preview_path, before_path, sort_order, size, folder_ids)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10::uuid[]) RETURNING *`,
       [
         doc.galleryId,
         doc.filename,
         doc.originalName || null,
         doc.path,
         doc.thumbnailPath || null,
+        doc.previewPath || null,
         doc.beforePath || null,
         doc.sortOrder || 0,
         doc.size || 0,
+        folderIds,
       ]
     );
     results.push(rowToCamel(rows[0]));
@@ -91,12 +102,26 @@ async function insertMany(docs) {
   return results;
 }
 
+async function updateFolderIds(imageId, folderIds) {
+  const { rows } = await pool.query(
+    'UPDATE gallery_images SET folder_ids = $1::uuid[], updated_at = NOW() WHERE id = $2 RETURNING *',
+    [folderIds, imageId]
+  );
+  return rows[0] ? rowToCamel(rows[0]) : null;
+}
+
 async function save(image) {
   const { rows } = await pool.query(
     `UPDATE gallery_images
-     SET before_path = $1, thumbnail_path = $2, sort_order = $3, updated_at = NOW()
-     WHERE id = $4 RETURNING *`,
-    [image.beforePath || null, image.thumbnailPath || null, image.sortOrder || 0, image.id]
+     SET before_path = $1, thumbnail_path = $2, preview_path = $3, sort_order = $4, updated_at = NOW()
+     WHERE id = $5 RETURNING *`,
+    [
+      image.beforePath   || null,
+      image.thumbnailPath || null,
+      image.previewPath  || null,
+      image.sortOrder    || 0,
+      image.id,
+    ]
   );
   const updated = rowToCamel(rows[0]);
   Object.assign(image, updated);
@@ -113,6 +138,7 @@ module.exports = {
   findPaginated,
   countDocuments,
   insertMany,
+  updateFolderIds,
   save,
   findByIdAndDelete,
 };

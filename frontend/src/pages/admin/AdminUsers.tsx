@@ -1,15 +1,17 @@
 import { useEffect, useRef, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { AdminLayout } from '@/components/admin/AdminLayout';
 import { useAuth } from '@/hooks/useAuth';
 import { useI18n } from '@/lib/i18n';
-import api, { API_BASE } from '@/lib/api';
+import api, { getImageUrl, API_BASE } from '@/lib/api';
 import { toast } from 'sonner';
 import { Trash2, Plus, Shield, User, Pencil, ExternalLink, X, Check, Search } from 'lucide-react';
 import type { AdminRecord, AdminSettings } from '@/types/admin';
 import { InputField, TextareaField, SelectField } from '@/components/admin/InputField';
 import { Button } from '@/components/admin/Button';
 import { Modal } from '@/components/ui/Modal';
-import { useAdmins, useCreateAdmin, useDeleteAdmin, useAdminStorage, useSetAdminQuota } from '@/hooks/useQueries';
+import { useAdmins, useCreateAdmin, useDeleteAdmin, useAdminStorage, useSetAdminQuota, queryKeys } from '@/hooks/useQueries';
+import { useQueryClient } from '@tanstack/react-query';
 import { StorageBar } from '@/components/admin/StorageBar';
 import { QuotaSlider } from '@/components/admin/QuotaSlider';
 
@@ -38,6 +40,7 @@ const labelClass = 'block text-xs text-warm-gray mb-1';
 export const AdminUsers = () => {
   const { admin: me } = useAuth();
   const { t } = useI18n();
+  const queryClient = useQueryClient();
   const { data: admins = [], isError: adminsError } = useAdmins();
   const createAdminMutation = useCreateAdmin();
   const deleteAdminMutation = useDeleteAdmin();
@@ -69,6 +72,21 @@ export const AdminUsers = () => {
     if (adminsError) toast.error(t('admin.users.load_failed'));
   }, [adminsError, t]);
 
+  useEffect(() => {
+    const sso = searchParams.get('sso');
+    if (!sso) return;
+    if (sso === 'linked') toast.success(t('admin.settings.sso.linked_success'));
+    else if (sso === 'error') {
+      const reason = searchParams.get('reason');
+      if (reason === 'already_linked') toast.error(t('admin.login.sso_error'));
+      else toast.error(t('admin.login.sso_error'));
+    }
+    const next = new URLSearchParams(searchParams);
+    next.delete('sso');
+    next.delete('reason');
+    setSearchParams(next, { replace: true });
+  }, []);
+
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.name || !form.email || !form.password) return;
@@ -97,18 +115,47 @@ export const AdminUsers = () => {
     });
   };
 
+  const handleConnectGoogle = (adminId: string) => {
+    window.location.href = `${API_BASE}/api/admins/${adminId}/sso-link`;
+  };
+
+  const handleDisconnectSSO = async (adminId: string) => {
+    setDisconnectingSSO(true);
+    try {
+      await api.delete(`/admins/${adminId}/sso-link`);
+      queryClient.invalidateQueries({ queryKey: queryKeys.admins });
+      toast.success(t('admin.settings.sso.unlink_success'));
+    } catch {
+      toast.error(t('admin.settings.sso.toggle_failed'));
+    } finally {
+      setDisconnectingSSO(false);
+    }
+  };
+
+  const handleToggleSSO = async (adminId: string) => {
+    setTogglingSSO(true);
+    try {
+      await api.patch(`/admins/${adminId}/sso`);
+      queryClient.invalidateQueries({ queryKey: queryKeys.admins });
+    } catch {
+      toast.error(t('admin.settings.sso.toggle_failed'));
+    } finally {
+      setTogglingSSO(false);
+    }
+  };
+
   const openEdit = async (a: AdminRecord) => {
-    if (editingId === a._id) {
+    if (editingId === a.id) {
       setEditingId(null);
       return;
     }
-    setEditingId(a._id);
+    setEditingId(a.id);
     setEditMsg({ text: '', error: false });
     setProfileForm({ name: a.name, email: a.email, studioName: a.studioName || '', username: a.username || '', role: a.role, newPassword: '' });
     setQuotaInputGB(a.storageQuotaBytes ? parseFloat((a.storageQuotaBytes / 1024 ** 3).toFixed(1)) : 10);
     setSettings(null);
     try {
-      const r = await api.get(`/admins/${a._id}/settings`);
+      const r = await api.get(`/admins/${a.id}/settings`);
       const s: AdminSettings = r.data;
       setSettings(s);
       setLandingForm({
@@ -138,7 +185,7 @@ export const AdminUsers = () => {
       };
       if (profileForm.newPassword) payload.password = profileForm.newPassword;
       const r = await api.patch(`/admins/${editingId}`, payload);
-      setAdmins((prev) => prev.map((a) => (a._id === editingId ? { ...a, ...r.data } : a)));
+      queryClient.invalidateQueries({ queryKey: queryKeys.admins });
       setProfileForm((f) => ({ ...f, newPassword: '' }));
       setEditMsg({ text: t('admin.users.profile_saved'), error: false });
       setTimeout(() => setEditMsg({ text: '', error: false }), 3000);
@@ -195,10 +242,13 @@ export const AdminUsers = () => {
   const [quotaInputGB, setQuotaInputGB] = useState<number | null>(10);
   const setAdminQuotaMutation = useSetAdminQuota();
   const { data: editingAdminStorage } = useAdminStorage(editingId ?? '');
+  const [disconnectingSSO, setDisconnectingSSO] = useState(false);
+  const [togglingSSO, setTogglingSSO] = useState(false);
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const creating = createAdminMutation.isPending;
   const deletingId = deleteAdminMutation.isPending ? deleteAdminMutation.variables ?? null : null;
-  const editingAdmin = (admins as AdminRecord[]).find((a) => a._id === editingId);
+  const editingAdmin = (admins as AdminRecord[]).find((a) => a.id === editingId);
   const visibleAdmins = search.trim()
     ? admins.filter((a) => a.name.toLowerCase().includes(search.toLowerCase()) || a.email.toLowerCase().includes(search.toLowerCase()))
     : admins;
@@ -224,7 +274,7 @@ export const AdminUsers = () => {
           <h2 className=' text-charcoal'>{t('admin.users.existing')}</h2>
           <div className='space-y-2'>
             {visibleAdmins.map((a) => (
-              <div key={a._id} className='space-y-0'>
+              <div key={a.id} className='space-y-0'>
                 <div className='flex items-center justify-between px-4 py-3 rounded-lg border border-beige bg-ivory'>
                   <div className='flex items-center gap-3'>
                     <div
@@ -237,7 +287,7 @@ export const AdminUsers = () => {
                     <div>
                       <p className='text-sm font-medium text-charcoal flex items-center gap-2'>
                         {a.name}
-                        {a._id === me?.id && (
+                        {a.id === me?.id && (
                           <span className='text-[10px] bg-blush/20 text-charcoal px-1.5 py-0.5 rounded-full'>
                             {t('admin.users.you')}
                           </span>
@@ -256,7 +306,7 @@ export const AdminUsers = () => {
                       {a.role === 'superadmin' ? t('admin.users.superadmin_label') : t('admin.users.admin_label')}
                     </span>
                     <a
-                      href={`/${a._id}`}
+                      href={`/${a.id}`}
                       target='_blank'
                       rel='noopener noreferrer'
                       className='w-7 h-7 rounded-full flex items-center justify-center text-warm-gray hover:text-blush hover:bg-blush/10 transition-colors'
@@ -267,16 +317,16 @@ export const AdminUsers = () => {
                     <button
                       onClick={() => openEdit(a)}
                       className={`w-7 h-7 rounded-full flex items-center justify-center transition-colors ${
-                        editingId === a._id ? 'bg-blush text-primary-foreground' : 'text-warm-gray hover:text-charcoal hover:bg-beige'
+                        editingId === a.id ? 'bg-blush text-primary-foreground' : 'text-warm-gray hover:text-charcoal hover:bg-beige'
                       }`}
                       title={t('admin.users.edit')}
                     >
                       <Pencil size={14} />
                     </button>
-                    {a._id !== me?.id && (
+                    {a.id !== me?.id && (
                       <button
-                        onClick={() => setDeleteConfirmId(a._id)}
-                        disabled={deletingId === a._id}
+                        onClick={() => setDeleteConfirmId(a.id)}
+                        disabled={deletingId === a.id}
                         className='w-7 h-7 rounded-full flex items-center justify-center text-warm-gray hover:text-red-500 hover:bg-red-50 transition-colors disabled:opacity-40'
                         title={t('admin.clients.delete_btn')}
                       >
@@ -287,7 +337,7 @@ export const AdminUsers = () => {
                 </div>
 
                 {/* Edit panel — inline below the row */}
-                {editingId === a._id && editingAdmin && (
+                {editingId === a.id && editingAdmin && (
                   <div className='border border-beige bg-ivory rounded-xl p-6 space-y-6 mt-1'>
                     {/* Panel header */}
                     <div className='flex items-center justify-between'>
@@ -340,7 +390,7 @@ export const AdminUsers = () => {
                               setProfileForm((f) => ({ ...f, username: e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, '') }))
                             }
                             className='font-mono'
-                            placeholder='user123'
+                            placeholder={t('admin.users.username_ph')}
                           />
                         </div>
                         <div>
@@ -424,21 +474,21 @@ export const AdminUsers = () => {
                           />
                         </div>
                         <div>
-                          <label className={labelClass}>Instagram</label>
+                          <label className={labelClass}>{t('admin.settings.instagram')}</label>
                           <InputField
                             type='text'
                             value={landingForm.instagramHandle}
                             onChange={(e) => setLandingForm((f) => ({ ...f, instagramHandle: e.target.value }))}
-                            placeholder='@username'
+                            placeholder={t('admin.users.instagram_ph')}
                           />
                         </div>
                         <div>
-                          <label className={labelClass}>Facebook URL</label>
+                          <label className={labelClass}>{t('admin.settings.facebook')}</label>
                           <InputField
                             type='url'
                             value={landingForm.facebookUrl}
                             onChange={(e) => setLandingForm((f) => ({ ...f, facebookUrl: e.target.value }))}
-                            placeholder='https://facebook.com/...'
+                            placeholder={t('admin.users.facebook_ph')}
                           />
                         </div>
                       </div>
@@ -497,6 +547,62 @@ export const AdminUsers = () => {
 
                     <div className='border-t border-beige' />
 
+                    {/* SSO section */}
+                    <div className='space-y-3'>
+                      <h4 className='text-xs font-semibold text-warm-gray uppercase tracking-wide'>
+                        {t('admin.settings.sso.title')}
+                      </h4>
+                      <div className='flex items-center gap-2'>
+                        {editingAdmin.googleEmail ? (
+                          <span className='text-xs px-2 py-0.5 rounded-full bg-green-50 text-green-700 border border-green-200'>
+                            {t('admin.settings.sso.connected')} — <span className='font-mono'>{editingAdmin.googleEmail}</span>
+                          </span>
+                        ) : (
+                          <span className='text-xs text-warm-gray'>{t('admin.settings.sso.not_connected')}</span>
+                        )}
+                      </div>
+                      <div className='flex flex-wrap items-center gap-2'>
+                        {editingAdmin.googleEmail ? (
+                          <Button
+                            variant='ghost'
+                            size='sm'
+                            onClick={() => handleDisconnectSSO(editingAdmin.id)}
+                            disabled={disconnectingSSO}
+                          >
+                            {disconnectingSSO ? t('admin.settings.sso.disconnecting') : t('admin.settings.sso.disconnect')}
+                          </Button>
+                        ) : (
+                          <Button
+                            variant='ghost'
+                            size='sm'
+                            onClick={() => handleConnectGoogle(editingAdmin.id)}
+                          >
+                            <svg width='14' height='14' viewBox='0 0 24 24' aria-hidden='true' className='shrink-0'>
+                              <path d='M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z' fill='#4285F4' />
+                              <path d='M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z' fill='#34A853' />
+                              <path d='M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z' fill='#FBBC05' />
+                              <path d='M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z' fill='#EA4335' />
+                            </svg>
+                            {t('admin.settings.sso.connect')}
+                          </Button>
+                        )}
+                        {editingAdmin.googleEmail && (
+                          <label className='flex items-center gap-2 cursor-pointer select-none'>
+                            <input
+                              type='checkbox'
+                              checked={editingAdmin.ssoEnabled ?? false}
+                              disabled={togglingSSO}
+                              onChange={() => handleToggleSSO(editingAdmin.id)}
+                              className='accent-blush w-3.5 h-3.5'
+                            />
+                            <span className='text-xs text-charcoal'>{t('admin.settings.sso.enabled_label')}</span>
+                          </label>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className='border-t border-beige' />
+
                     {/* Images section */}
                     <div className='space-y-3'>
                       <h4 className='text-xs font-semibold text-warm-gray uppercase tracking-wide'>
@@ -508,7 +614,7 @@ export const AdminUsers = () => {
                           <p className='text-xs text-warm-gray'>{t('admin.users.hero_image_label')}</p>
                           {settings?.heroImagePath && (
                             <img
-                              src={`${API_BASE}${settings.heroImagePath}`}
+                              src={getImageUrl(settings.heroImagePath)}
                               alt='Hero'
                               className='w-full h-24 object-cover rounded-lg border border-beige'
                             />
@@ -544,7 +650,7 @@ export const AdminUsers = () => {
                           <p className='text-xs text-warm-gray'>{t('admin.users.profile_image_label')}</p>
                           {settings?.profileImagePath && (
                             <img
-                              src={`${API_BASE}${settings.profileImagePath}`}
+                              src={getImageUrl(settings.profileImagePath)}
                               alt='Profile'
                               className='w-24 h-24 object-cover rounded-full border border-beige mx-auto'
                             />
@@ -606,7 +712,7 @@ export const AdminUsers = () => {
                   value={form.email}
                   onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
                   required
-                  placeholder='email@example.com'
+                  placeholder={t('admin.users.email_ph')}
                 />
               </div>
               <div>
@@ -636,7 +742,7 @@ export const AdminUsers = () => {
                   type='text'
                   value={form.username}
                   onChange={(e) => setForm((f) => ({ ...f, username: e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, '') }))}
-                  placeholder='user123'
+                  placeholder={t('admin.users.username_ph')}
                   className='font-mono'
                 />
                 <p className='text-[10px] text-warm-gray mt-0.5'>{t('admin.users.username_hint')}</p>
@@ -647,7 +753,7 @@ export const AdminUsers = () => {
                   type='text'
                   value={form.studioName}
                   onChange={(e) => setForm((f) => ({ ...f, studioName: e.target.value }))}
-                  placeholder='Studio Name'
+                  placeholder={t('admin.users.studio_name_ph')}
                 />
               </div>
               <div className='sm:col-span-2'>

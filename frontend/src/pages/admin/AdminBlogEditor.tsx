@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { AdminLayout } from '@/components/admin/AdminLayout';
 import { useI18n } from '@/lib/i18n';
@@ -24,27 +24,35 @@ import {
   ArrowLeft,
   Check,
   X,
+  ArrowRight,
 } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 
-const CATEGORIES = ['Family Photography', 'Maternity', 'Newborn', 'Branding', 'Landscape', 'Behind the Lens'];
+const CATEGORY_OPTIONS = [
+  { value: 'Family Photography', labelKey: 'admin.editor.categories.family' },
+  { value: 'Maternity', labelKey: 'admin.editor.categories.maternity' },
+  { value: 'Newborn', labelKey: 'admin.editor.categories.newborn' },
+  { value: 'Branding', labelKey: 'admin.editor.categories.branding' },
+  { value: 'Landscape', labelKey: 'admin.editor.categories.landscape' },
+  { value: 'Behind the Lens', labelKey: 'admin.editor.categories.behind_lens' },
+] as const;
 
-const blogSchema = z.object({
-  title: z.string().min(1, 'Title is required'),
-  category: z.string().optional(),
-  seoTitle: z.string().optional(),
-  seoDescription: z.string().max(160, 'Max 160 characters').optional(),
-});
-
-type BlogFormValues = z.infer<typeof blogSchema>;
+type BlogFormValues = { title: string; category?: string; seoTitle?: string; seoDescription?: string };
 
 export const AdminBlogEditor = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { t } = useI18n();
   const isEdit = Boolean(id);
+
+  const blogSchema = useMemo(() => z.object({
+    title: z.string().min(1, t('admin.editor.title_required')),
+    category: z.string().optional(),
+    seoTitle: z.string().optional(),
+    seoDescription: z.string().max(160, t('admin.editor.meta_max_chars')).optional(),
+  }), [t]);
 
   const [published, setPublished] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -216,7 +224,7 @@ export const AdminBlogEditor = () => {
         onClick={() => navigate('/admin/blog')}
         className='flex items-center gap-1 text-sm text-warm-gray hover:text-charcoal mb-6'
       >
-        <ArrowLeft size={14} /> {t('admin.common.back_blog')}
+        <ArrowRight size={14} /> {t('admin.common.back_blog')}
       </button>
 
       <div className='grid grid-cols-1 lg:grid-cols-3 gap-6'>
@@ -256,16 +264,19 @@ export const AdminBlogEditor = () => {
                   value={pendingLinkUrl}
                   onChange={(e) => setPendingLinkUrl(e.target.value)}
                   onKeyDown={(e) => {
-                    if (e.key === 'Enter') { e.preventDefault(); commitLink(); }
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      commitLink();
+                    }
                     if (e.key === 'Escape') cancelLink();
                   }}
                   placeholder='https://'
                   className='flex-1 text-xs border border-beige rounded px-2 py-1 bg-ivory focus:outline-none focus:border-blush'
                 />
-                <button type='button' onClick={commitLink} className='text-blush hover:text-charcoal' title='Apply'>
+                <button type='button' onClick={commitLink} className='text-blush hover:text-charcoal' title={t('admin.editor.apply')}>
                   <Check size={14} />
                 </button>
-                <button type='button' onClick={cancelLink} className='text-warm-gray hover:text-charcoal' title='Cancel'>
+                <button type='button' onClick={cancelLink} className='text-warm-gray hover:text-charcoal' title={t('admin.common.cancel')}>
                   <X size={14} />
                 </button>
               </div>
@@ -280,16 +291,19 @@ export const AdminBlogEditor = () => {
                   value={pendingImageUrl}
                   onChange={(e) => setPendingImageUrl(e.target.value)}
                   onKeyDown={(e) => {
-                    if (e.key === 'Enter') { e.preventDefault(); commitImage(); }
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      commitImage();
+                    }
                     if (e.key === 'Escape') cancelImage();
                   }}
                   placeholder='https://'
                   className='flex-1 text-xs border border-beige rounded px-2 py-1 bg-ivory focus:outline-none focus:border-blush'
                 />
-                <button type='button' onClick={commitImage} className='text-blush hover:text-charcoal' title='Apply'>
+                <button type='button' onClick={commitImage} className='text-blush hover:text-charcoal' title={t('admin.editor.apply')}>
                   <Check size={14} />
                 </button>
-                <button type='button' onClick={cancelImage} className='text-warm-gray hover:text-charcoal' title='Cancel'>
+                <button type='button' onClick={cancelImage} className='text-warm-gray hover:text-charcoal' title={t('admin.common.cancel')}>
                   <X size={14} />
                 </button>
               </div>
@@ -306,20 +320,10 @@ export const AdminBlogEditor = () => {
         <div className='space-y-4'>
           {/* Actions */}
           <div className='bg-card rounded-xl border border-beige p-4 space-y-3'>
-            <Button
-              variant='ghost'
-              className='w-full'
-              onClick={handleSubmit((data) => save(data, false))}
-              disabled={saving}
-            >
+            <Button variant='ghost' className='w-full' onClick={handleSubmit((data) => save(data, false))} disabled={saving}>
               {saving ? t('admin.common.saving') : t('admin.editor.save_draft')}
             </Button>
-            <Button
-              variant='primary'
-              className='w-full'
-              onClick={handleSubmit((data) => save(data, true))}
-              disabled={saving}
-            >
+            <Button variant='primary' className='w-full' onClick={handleSubmit((data) => save(data, true))} disabled={saving}>
               {saving ? t('admin.editor.publishing') : t('admin.editor.publish')}
             </Button>
           </div>
@@ -329,9 +333,9 @@ export const AdminBlogEditor = () => {
             <label className='block text-xs text-warm-gray mb-2'>{t('admin.editor.category')}</label>
             <SelectField {...register('category')}>
               <option value=''>{t('admin.editor.select')}</option>
-              {CATEGORIES.map((c) => (
-                <option key={c} value={c}>
-                  {c}
+              {CATEGORY_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {t(opt.labelKey)}
                 </option>
               ))}
             </SelectField>
@@ -353,11 +357,7 @@ export const AdminBlogEditor = () => {
             <p className='text-xs font-medium font-sans text-charcoal'>{t('admin.editor.seo')}</p>
             <div>
               <label className='block text-xs text-warm-gray mb-1'>{t('admin.editor.seo_title')}</label>
-              <InputField
-                {...register('seoTitle')}
-                placeholder={titleValue}
-                className='text-xs'
-              />
+              <InputField {...register('seoTitle')} placeholder={titleValue} className='text-xs' />
             </div>
             <div>
               <label className='block text-xs text-warm-gray mb-1'>{t('admin.editor.meta_desc')}</label>

@@ -56,7 +56,8 @@
     --font-sans: 'Inter', system-ui, sans-serif;
   }
 
-  .dark {
+  /* Admin dark mode — higher specificity than [data-theme] (0-2-0 vs 0-1-0) */
+  [data-theme].dark {
     --background: #1c1a18;
     --foreground: #f5f3ef;
     --card: #231f1d;
@@ -73,10 +74,10 @@
     --accent-foreground: #f5f3ef;
     --destructive: #7f1d1d;
     --destructive-foreground: #f5f9fc;
-    --border: #302b29;
-    --input: #302b29;
+    --border: #3a3530;
+    --input: #3a3530;
     --ring: #e7b8b5;
-    --sidebar-background: #1c1a18;
+    --sidebar-background: #161412;
     --sidebar-foreground: #f5f3ef;
     --sidebar-primary: #e7b8b5;
     --sidebar-primary-foreground: #3c3a38;
@@ -84,6 +85,12 @@
     --sidebar-accent-foreground: #f5f3ef;
     --sidebar-border: #302b29;
     --sidebar-ring: #e7b8b5;
+    /* Custom tokens */
+    --blush: #e7b8b5;
+    --beige: #302b29;
+    --ivory: #1c1a18;
+    --warm-gray: #a09890;
+    --charcoal: #f5f3ef;
   }
 }
 

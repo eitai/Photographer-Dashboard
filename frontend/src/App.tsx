@@ -2,7 +2,8 @@ import { Suspense, lazy } from 'react';
 import { Toaster } from '@/components/ui/toaster';
 import { Toaster as Sonner } from '@/components/ui/sonner';
 import { TooltipProvider } from '@/components/ui/tooltip';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryClientProvider } from '@tanstack/react-query';
+import { queryClient } from '@/lib/queryClient';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { HelmetProvider } from 'react-helmet-async';
 import { I18nProvider } from '@/lib/i18n';
@@ -17,6 +18,7 @@ const Portfolio = lazy(() => import('./pages/Portfolio').then((m) => ({ default:
 const Contact = lazy(() => import('./pages/Contact').then((m) => ({ default: m.Contact })));
 const ClientGallery = lazy(() => import('./pages/ClientGallery').then((m) => ({ default: m.ClientGallery })));
 const ClientProductsPage = lazy(() => import('./pages/ClientProductsPage').then((m) => ({ default: m.ClientProductsPage })));
+const ClientProductOrderPage = lazy(() => import('./pages/ClientProductOrderPage').then((m) => ({ default: m.ClientProductOrderPage })));
 const Blog = lazy(() => import('./pages/Blog').then((m) => ({ default: m.Blog })));
 const BlogPost = lazy(() => import('./pages/BlogPost').then((m) => ({ default: m.BlogPost })));
 const NotFound = lazy(() => import('./pages/NotFound').then((m) => ({ default: m.NotFound })));
@@ -45,8 +47,10 @@ const AdminUsers = lazy(() => import('./pages/admin/AdminUsers').then((m) => ({ 
 const AdminContact = lazy(() => import('./pages/admin/AdminContact').then((m) => ({ default: m.AdminContact })));
 const BillingPage = lazy(() => import('./pages/admin/BillingPage').then((m) => ({ default: m.BillingPage })));
 const PlansPage = lazy(() => import('./pages/admin/PlansPage').then((m) => ({ default: m.PlansPage })));
-
-const queryClient = new QueryClient();
+// Dev-only test harness for the multipart S3 uploader. Gated by `?s3test=1`
+// query param inside the page itself AND by `import.meta.env.DEV` at the
+// route level, so it cannot ship to production builds.
+const S3UploadTest = lazy(() => import('./pages/admin/_S3UploadTest').then((m) => ({ default: m.S3UploadTest })));
 
 // Layout wrapper for public pages (shows Navbar/Footer/WhatsApp)
 const PublicLayout = ({ children }: { children: React.ReactNode }) => (
@@ -65,7 +69,7 @@ export const App = () => (
         <I18nProvider>
             <Toaster />
             <Sonner />
-            <BrowserRouter>
+            <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
               <Suspense fallback={null}>
                 <Routes>
                   {/* Public routes */}
@@ -111,6 +115,7 @@ export const App = () => (
                   }
                 />
                 <Route path='/gallery/:token' element={<ClientGallery />} />
+                <Route path='/products/order/:orderToken' element={<ClientProductOrderPage />} />
                 <Route path='/products/:token' element={<ClientProductsPage />} />
 
                 {/* Admin routes — no Navbar/Footer */}
@@ -228,6 +233,17 @@ export const App = () => (
                     </ProtectedRoute>
                   }
                 />
+                {/* Dev-only S3 uploader test harness. Reach via /admin/_s3test?s3test=1 */}
+                {import.meta.env.DEV && (
+                  <Route
+                    path='/admin/_s3test'
+                    element={
+                      <ProtectedRoute>
+                        <S3UploadTest />
+                      </ProtectedRoute>
+                    }
+                  />
+                )}
 
                 {/* Per-photographer public pages — must be last to avoid shadowing other routes */}
                 <Route path='/:id' element={<PhotographerLayout />}>

@@ -1,6 +1,7 @@
 const express = require('express');
 const path = require('path');
 const fs = require('fs');
+const pLimit = require('p-limit');
 const sharp = require('sharp');
 const GalleryImage = require('../models/GalleryImage');
 const Gallery = require('../models/Gallery');
@@ -11,11 +12,17 @@ const checkQuota = require('../middleware/checkQuota');
 const asyncHandler = require('../middleware/asyncHandler');
 const logger = require('../utils/logger');
 const { UUID_RE } = require('../utils/uuid');
+const s3 = require('../config/s3');
+const { getQueue, JOB_NAMES } = require('../queue');
+const pool = require('../db');
 
 const router = express.Router({ mergeParams: true });
 
-const THUMB_DIR = path.join(__dirname, '../../uploads/thumbnails');
-if (!fs.existsSync(THUMB_DIR)) fs.mkdirSync(THUMB_DIR, { recursive: true });
+const UPLOADS_DIR = path.join(__dirname, '../../uploads');
+const THUMB_DIR   = path.join(__dirname, '../../uploads/thumbnails');
+const PREVIEW_DIR = path.join(__dirname, '../../uploads/previews');
+if (!fs.existsSync(THUMB_DIR))   fs.mkdirSync(THUMB_DIR,   { recursive: true });
+if (!fs.existsSync(PREVIEW_DIR)) fs.mkdirSync(PREVIEW_DIR, { recursive: true });
 
 // GET /api/galleries/:galleryId/images  — PUBLIC
 // Optional: ?page=1&limit=50 for paginated response { images, total, page, totalPages }
@@ -27,6 +34,10 @@ router.get('/', asyncHandler(async (req, res) => {
   const limit = rawLimit > 0 ? Math.min(rawLimit, 200) : NaN;
   const page = rawPage >= 1 ? rawPage : 1;
   const filter = { galleryId: req.params.galleryId };
+
+  if (req.query.folderId && UUID_RE.test(req.query.folderId)) {
+    filter.folderId = req.query.folderId;
+  }
 
   if (!isNaN(limit)) {
     const { images, total } = await GalleryImage.findPaginated(filter, {}, (page - 1) * limit, limit);
@@ -58,41 +69,116 @@ router.post('/', protect, checkQuota, upload.array('images', 5000), validateImag
     const originalImages = selectedIds.length
       ? await GalleryImage.find({ _id: { $in: selectedIds } })
       : [];
-    selectedImageMap = Object.fromEntries(originalImages.map((img) => [img.id, img]));
+    selectedImageMap = Object.fromEntries(originalImages.map((img) => [path.parse(img.filename).name, img]));
   }
 
+  const limit = pLimit(5);
   const imageDocs = await Promise.all(
-    req.files.map(async (file, i) => {
+    req.files.map((file, i) => limit(async () => {
       const thumbFilename = `thumb_${path.parse(file.filename).name}.jpg`;
-      let thumbnailPath;
-      try {
-        await sharp(file.path)
-          .withMetadata(false)           // strip EXIF (GPS, camera info)
+
+      // Generate thumbnail and preview buffers from the local temp file before
+      // processUpload deletes it. Both Sharp operations read the same source path.
+      const [thumbBuffer, previewBuffer] = await Promise.all([
+        sharp(file.path)
+          .withMetadata(false)
           .resize({ width: 800, withoutEnlargement: true })
           .jpeg({ quality: 78 })
-          .toFile(path.join(THUMB_DIR, thumbFilename));
-        thumbnailPath = `/uploads/thumbnails/${thumbFilename}`;
-      } catch (thumbErr) {
-        logger.warn(`Thumbnail generation failed for ${file.filename}: ${thumbErr.message}`);
-        // fall back to original — non-fatal
+          .toBuffer(),
+        s3.generatePreview(file.path),
+      ]);
+
+      const previewBasename = path.parse(file.filename).name;
+      const previewFilename = `${previewBasename}.webp`;
+
+      // Store the preview buffer (S3 or local disk fallback).
+      // Buffers are already in memory so processUpload can safely unlink the temp file.
+      async function storePreview() {
+        if (s3.isEnabled()) {
+          try {
+            return await s3.uploadBuffer(
+              previewBuffer,
+              `admins/${req.admin.id}/previews/${previewFilename}`,
+              'image/webp'
+            );
+          } catch (err) {
+            logger.error('[images] storePreview S3 failed, preview will be null:', err.message);
+            return null;
+          }
+        }
+        fs.writeFileSync(path.join(PREVIEW_DIR, previewFilename), previewBuffer);
+        return `/uploads/previews/${previewFilename}`;
       }
+
+      // Upload original, thumbnail, and preview concurrently.
+      const [imagePath, thumbnailPath, previewPath] = await Promise.all([
+        s3.processUpload(file, req.admin.id),
+        s3.processThumbnail(thumbBuffer, thumbFilename, THUMB_DIR, req.admin.id),
+        storePreview(),
+      ]);
       const nameWithoutExt = path.parse(file.originalname).name;
       const matchedOriginal = selectedImageMap[nameWithoutExt];
 
+      const folderId = req.body.folderId && UUID_RE.test(req.body.folderId) ? req.body.folderId : null;
       return {
         galleryId,
         filename: file.filename,
         originalName: file.originalname,
-        path: `/uploads/${file.filename}`,
+        path: imagePath,
         thumbnailPath,
+        previewPath,
         beforePath: matchedOriginal ? matchedOriginal.path : undefined,
         sortOrder: i,
         size: file.size,
+        folderIds: folderId ? [folderId] : [],
       };
-    })
+    }))
   );
 
   const created = await GalleryImage.insertMany(imageDocs);
+
+  // Fire-and-forget: enqueue face recognition for ALL gallery images — never block the 201 response.
+  // We fetch the full ID list so the worker processes previously uploaded images too,
+  // and uses the idempotency guard in processImageForRecognition to skip already-tagged ones.
+  pool.query(
+    `SELECT id FROM gallery_images WHERE gallery_id = $1 ORDER BY sort_order ASC`,
+    [galleryId]
+  ).then(({ rows: allImgRows }) => {
+    const allImageIds = allImgRows.map((r) => r.id);
+    return pool.query(
+      `INSERT INTO face_recognition_jobs (gallery_id, admin_id, total_images, status)
+       VALUES ($1, $2, $3, 'queued')
+       ON CONFLICT (gallery_id) DO UPDATE
+         SET total_images   = EXCLUDED.total_images,
+             -- Only reset progress when the previous run finished; keep counters intact
+             -- if recognition is already queued/running so the UI isn't disrupted.
+             status         = CASE WHEN face_recognition_jobs.status IN ('done','failed')
+                                   THEN 'queued' ELSE face_recognition_jobs.status END,
+             processed      = CASE WHEN face_recognition_jobs.status IN ('done','failed')
+                                   THEN 0 ELSE face_recognition_jobs.processed END,
+             matched        = CASE WHEN face_recognition_jobs.status IN ('done','failed')
+                                   THEN 0 ELSE face_recognition_jobs.matched END,
+             error_message  = CASE WHEN face_recognition_jobs.status IN ('done','failed')
+                                   THEN NULL ELSE face_recognition_jobs.error_message END,
+             started_at     = CASE WHEN face_recognition_jobs.status IN ('done','failed')
+                                   THEN NULL ELSE face_recognition_jobs.started_at END,
+             finished_at    = CASE WHEN face_recognition_jobs.status IN ('done','failed')
+                                   THEN NULL ELSE face_recognition_jobs.finished_at END`,
+      [galleryId, req.admin.id, allImageIds.length]
+    ).then(() => getQueue()).then((boss) =>
+      boss.send(
+        JOB_NAMES.FACE_RECOGNITION,
+        { galleryId, adminId: req.admin.id, imageIds: allImageIds },
+        {
+          singletonKey:    `face:${galleryId}`,
+          retryLimit:      2,
+          retryDelay:      60,
+          expireInSeconds: 7200,
+        }
+      )
+    );
+  }).catch((err) => logger.warn('[images] face recognition enqueue failed:', err.message));
+
   res.status(201).json(created);
 }));
 
@@ -107,14 +193,12 @@ router.patch('/:imageId/before', protect, checkQuota, upload.single('before'), v
   if (!gallery) return res.status(403).json({ message: 'Forbidden' });
   if (!req.file) return res.status(400).json({ message: 'No file uploaded' });
 
-  // Delete old before file if exists
+  // Delete old before file if exists (S3 or local)
   if (image.beforePath) {
-    const oldFilename = path.basename(image.beforePath);
-    const oldFilePath = path.join(__dirname, '../../uploads', oldFilename);
-    if (fs.existsSync(oldFilePath)) fs.unlinkSync(oldFilePath);
+    await s3.deleteUpload(image.beforePath, UPLOADS_DIR);
   }
 
-  image.beforePath = `/uploads/${req.file.filename}`;
+  image.beforePath = await s3.processUpload(req.file, req.admin.id);
   await GalleryImage.save(image);
   res.json(image);
 }));
@@ -129,15 +213,115 @@ router.delete('/:imageId', protect, asyncHandler(async (req, res) => {
   const gallery = await Gallery.findOne({ _id: image.galleryId, adminId: req.admin.id });
   if (!gallery) return res.status(403).json({ message: 'Forbidden' });
 
-  const filePath = path.join(__dirname, '../../uploads', image.filename);
-  if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
-
-  if (image.thumbnailPath) {
-    const thumbPath = path.join(THUMB_DIR, path.basename(image.thumbnailPath));
-    if (fs.existsSync(thumbPath)) fs.unlinkSync(thumbPath);
-  }
+  // Delete original + thumbnail + preview from S3 or local disk
+  await Promise.all([
+    image.path          ? s3.deleteUpload(image.path,          UPLOADS_DIR) : Promise.resolve(),
+    image.thumbnailPath ? s3.deleteUpload(image.thumbnailPath, THUMB_DIR)   : Promise.resolve(),
+    image.previewPath   ? s3.deleteUpload(image.previewPath,   PREVIEW_DIR) : Promise.resolve(),
+    image.beforePath    ? s3.deleteUpload(image.beforePath,    UPLOADS_DIR) : Promise.resolve(),
+  ]);
 
   await GalleryImage.findByIdAndDelete(req.params.imageId);
+
+  const deletedImageId = req.params.imageId;
+  const galleryId = req.params.galleryId;
+  const adminId = req.admin.id;
+
+  // Delete face tags for the deleted image synchronously so the frontend refetch
+  // after receiving the 201 response sees a clean state.
+  const { rows: cropRows } = await pool.query(
+    `DELETE FROM gallery_image_face_tags WHERE gallery_image_id = $1 RETURNING face_crop_path`,
+    [deletedImageId]
+  );
+  // Clean up crop files async — doesn't block the response.
+  Promise.all(
+    cropRows.map(r => r.face_crop_path ? s3.deleteUpload(r.face_crop_path, UPLOADS_DIR) : Promise.resolve())
+  ).catch(err => logger.warn('[images] face crop file cleanup error:', err.message));
+
+  res.json({ message: 'Image deleted' });
+
+  // Fire-and-forget: clear all gallery face tags + re-trigger recognition.
+  ;(async () => {
+    try {
+
+      // Check if recognition has ever run for this gallery
+      const { rows: jobRows } = await pool.query(
+        `SELECT status FROM face_recognition_jobs WHERE gallery_id = $1`,
+        [galleryId]
+      );
+      if (!jobRows[0]) return; // Recognition never ran — nothing to do
+
+      // Remaining images after deletion (deleted image already removed from DB)
+      const { rows: imgRows } = await pool.query(
+        `SELECT id FROM gallery_images WHERE gallery_id = $1 ORDER BY sort_order ASC`,
+        [galleryId]
+      );
+      const remainingImageIds = imgRows.map(r => r.id);
+
+      // Clear ALL gallery face tags + their crop files (clean slate for re-run)
+      const { rows: allCropRows } = await pool.query(
+        `DELETE FROM gallery_image_face_tags
+         WHERE gallery_image_id = ANY(SELECT id FROM gallery_images WHERE gallery_id = $1)
+         RETURNING face_crop_path`,
+        [galleryId]
+      );
+      await Promise.all(
+        allCropRows.map(r => r.face_crop_path ? s3.deleteUpload(r.face_crop_path, UPLOADS_DIR) : Promise.resolve())
+      );
+
+      if (!remainingImageIds.length) {
+        // No images left — delete the job entirely so the next upload starts fresh
+        await pool.query(
+          `DELETE FROM face_recognition_jobs WHERE gallery_id = $1`,
+          [galleryId]
+        );
+        return;
+      }
+
+      // Atomically update the job row and determine which singletonKey to use.
+      // Running/queued → 'cancelled' (active job must stop first, re-run uses face-rerun: key).
+      // Done/failed/cancelled → 'queued' (no active job, re-run uses face: key directly).
+      const { rows: updatedRows } = await pool.query(
+        `UPDATE face_recognition_jobs
+         SET status        = CASE WHEN status IN ('running','queued') THEN 'cancelled' ELSE 'queued' END,
+             total_images  = $2,
+             processed     = 0,
+             matched       = 0,
+             error_message = NULL,
+             started_at    = NULL,
+             finished_at   = NULL
+         WHERE gallery_id = $1
+         RETURNING status`,
+        [galleryId, remainingImageIds.length]
+      );
+
+      const newStatus = updatedRows[0]?.status;
+      const boss = await getQueue();
+
+      if (newStatus === 'cancelled') {
+        // Active job was just cancelled; schedule re-run with a different singletonKey
+        // so pg-boss's dedup lock on the active job doesn't block the new enqueue.
+        // startAfter:10 gives the running worker time to detect 'cancelled' and exit.
+        await boss.send(
+          JOB_NAMES.FACE_RECOGNITION,
+          { galleryId, adminId, imageIds: remainingImageIds },
+          { singletonKey: `face-rerun:${galleryId}`, startAfter: 10, retryLimit: 2, retryDelay: 60, expireInSeconds: 7200 }
+        );
+        logger.info(`[images] gallery ${galleryId}: active face job cancelled, re-run scheduled`);
+      } else if (newStatus === 'queued') {
+        // No active job — re-run immediately with the standard singletonKey
+        await boss.send(
+          JOB_NAMES.FACE_RECOGNITION,
+          { galleryId, adminId, imageIds: remainingImageIds },
+          { singletonKey: `face:${galleryId}`, retryLimit: 2, retryDelay: 60, expireInSeconds: 7200 }
+        );
+        logger.info(`[images] gallery ${galleryId}: face re-run enqueued after image delete`);
+      }
+    } catch (err) {
+      logger.warn(`[images] face re-run after delete failed for gallery ${galleryId}: ${err.message}`);
+    }
+  })();
+
   res.json({ message: 'Image deleted' });
 }));
 

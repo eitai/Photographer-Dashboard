@@ -1,8 +1,8 @@
 import { Link } from 'react-router-dom';
 import { useI18n } from '@/lib/i18n';
-import { useResendGalleryEmail } from '@/hooks/useQueries';
+import { useResendGalleryEmail, useSendGallerySms } from '@/hooks/useQueries';
 import { toast } from 'sonner';
-import { Mail, Link2 } from 'lucide-react';
+import { Mail, Link2, MessageSquare } from 'lucide-react';
 import type { Client } from '@/types/admin';
 import { GalleryMosaic } from './GalleryMosaic';
 import { StatusBadge } from '@/components/admin/StatusBadge';
@@ -12,6 +12,7 @@ import type { RichGallery } from './types';
 export const GalleryCard = ({ gallery, client }: { gallery: RichGallery; client: Client }) => {
   const { t } = useI18n();
   const resendEmail = useResendGalleryEmail(client._id);
+  const sendSms = useSendGallerySms(client._id);
 
   const galleryUrl = gallery.token ? `${window.location.origin}/gallery/${gallery.token}` : null;
 
@@ -31,6 +32,18 @@ export const GalleryCard = ({ gallery, client }: { gallery: RichGallery; client:
     });
   };
 
+  const handleSendSms = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    sendSms.mutate(gallery._id, {
+      onSuccess: () =>
+        toast.success(t('admin.galleries.sms_sent_success').replace('{name}', client.name), { description: gallery.name }),
+      onError: (err: unknown) => {
+        const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
+        toast.error(msg || t('admin.galleries.sms_sent_error').replace('{name}', client.name));
+      },
+    });
+  };
+
   const whatsappHref = (() => {
     if (!galleryUrl || !client.phone) return null;
     const phone = client.phone.replace(/\D/g, '');
@@ -39,7 +52,7 @@ export const GalleryCard = ({ gallery, client }: { gallery: RichGallery; client:
   })();
 
   return (
-    <div className='flex items-center gap-3 py-2 px-3 bg-white rounded-lg border border-gray-100'>
+    <div className='flex items-center gap-3 py-2 px-3 bg-card rounded-lg border border-border'>
       <GalleryMosaic name={gallery.name} />
       <div className='flex-1 min-w-0'>
         <Link
@@ -77,6 +90,16 @@ export const GalleryCard = ({ gallery, client }: { gallery: RichGallery; client:
         title={client.email ? t('admin.galleries.resend_email') : t('admin.common.no_email')}
       >
         <Mail size={13} />
+      </button>
+      <button
+        type='button'
+        onClick={handleSendSms}
+        disabled={!client.phone || sendSms.isPending}
+        className='p-1.5 rounded-xl text-warm-gray hover:text-blue-500 hover:bg-beige transition-colors shrink-0 disabled:opacity-30 disabled:cursor-not-allowed'
+        aria-label={t('admin.galleries.send_sms')}
+        title={client.phone ? t('admin.galleries.send_sms') : t('admin.common.no_phone')}
+      >
+        <MessageSquare size={13} />
       </button>
       <button
         type='button'

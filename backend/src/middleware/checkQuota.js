@@ -11,7 +11,15 @@ const checkQuota = async (req, res, next) => {
     // null quota = unlimited
     if (quota === null) return next();
 
-    const used = await getStorageUsedBytes(req.admin.id);
+    let used;
+    try {
+      used = await getStorageUsedBytes(req.admin.id);
+    } catch (storageErr) {
+      // Storage check unavailable — allow the upload rather than block it.
+      const logger = require('../utils/logger');
+      logger.error('[checkQuota] storage check failed, allowing upload:', storageErr.message);
+      return next();
+    }
 
     if (used >= quota) {
       return res.status(413).json({
@@ -21,6 +29,7 @@ const checkQuota = async (req, res, next) => {
         quota,
       });
     }
+
     next();
   } catch (err) {
     next(err);

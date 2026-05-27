@@ -148,7 +148,9 @@ CREATE TABLE IF NOT EXISTS site_settings (
   testimonials JSONB NOT NULL DEFAULT '[]',
   packages JSONB NOT NULL DEFAULT '[]',
   instagram_feed_enabled BOOLEAN NOT NULL DEFAULT FALSE,
-  instagram_feed_images TEXT[] NOT NULL DEFAULT '{}'
+  instagram_feed_images TEXT[] NOT NULL DEFAULT '{}',
+  auto_send_gallery_email BOOLEAN NOT NULL DEFAULT TRUE,
+  auto_send_gallery_sms BOOLEAN NOT NULL DEFAULT FALSE
 );
 
 CREATE TABLE IF NOT EXISTS admin_products (

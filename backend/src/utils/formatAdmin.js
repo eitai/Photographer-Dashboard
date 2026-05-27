@@ -13,6 +13,9 @@ function formatAdmin(a) {
     role: a.role,
     username: a.username || null,
     studioName: a.studioName || null,
+    ssoEnabled: a.ssoEnabled ?? false,
+    firstLogin: a.firstLogin ?? true,
+    googleEmail: a.googleEmail || null,
   };
   if (a.storageQuotaBytes !== undefined) result.storageQuotaBytes = Number(a.storageQuotaBytes);
   if (a.storageUsedBytes  !== undefined) result.storageUsedBytes  = Number(a.storageUsedBytes);

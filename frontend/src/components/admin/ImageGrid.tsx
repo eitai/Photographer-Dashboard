@@ -1,27 +1,19 @@
-import { Check, Maximize2, Trash2, ImagePlus } from 'lucide-react';
+import { Maximize2, Trash2 } from 'lucide-react';
 import { useI18n } from '@/lib/i18n';
-import { API_BASE } from '@/lib/api';
+import { getImageUrl, API_BASE } from '@/lib/api';
 import { GalleryImage } from '@/types/admin';
+import { UploadSkeletonGrid } from '@/components/admin/UploadSkeletonGrid';
 
 interface Props {
   images: GalleryImage[];
   selectedIds: Set<string>;
-  uploadingBefore: string | null;
   onToggleSelect: (id: string) => void;
   onOpenLightbox: (index: number) => void;
   onRequestDelete: (id: string) => void;
-  onTriggerBeforeUpload: (id: string) => void;
+  skeletonCount?: number;
 }
 
-export const ImageGrid = ({
-  images,
-  selectedIds,
-  uploadingBefore,
-  onToggleSelect,
-  onOpenLightbox,
-  onRequestDelete,
-  onTriggerBeforeUpload,
-}: Props) => {
+export const ImageGrid = ({ images, selectedIds, onToggleSelect, onOpenLightbox, onRequestDelete, skeletonCount = 0 }: Props) => {
   const { t } = useI18n();
 
   return (
@@ -37,49 +29,44 @@ export const ImageGrid = ({
             }`}
           >
             <img
-              src={`${API_BASE}${img.thumbnailPath || img.path}`}
+              src={getImageUrl(img.thumbnailPath || img.path)}
               alt={img.originalName}
               className='w-full h-full object-cover'
               loading='lazy'
+              onError={(e) => {
+                const el = e.target as HTMLImageElement;
+                if (!el.dataset.fallback) {
+                  el.dataset.fallback = '1';
+                  el.src = getImageUrl(img.path);
+                }
+              }}
             />
 
-            {isSelected ? (
-              <div className='absolute top-1 right-1 w-5 h-5 rounded-full bg-blush flex items-center justify-center shadow'>
-                <Check size={11} className='text-charcoal' />
-              </div>
-            ) : (
-              <button
-                onClick={(e) => { e.stopPropagation(); onRequestDelete(img._id); }}
-                className='absolute top-1 end-1 bg-black/50 text-white p-1.5 rounded-xl opacity-0 group-hover:opacity-100 [@media(hover:none)]:opacity-100 transition-opacity'
-                title={t('admin.upload.delete_title')}
-              >
-                <Trash2 size={11} />
-              </button>
-            )}
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onRequestDelete(img._id);
+              }}
+              className='absolute top-1 end-1 bg-black/50 text-white p-1.5 rounded-xl opacity-0 group-hover:opacity-100 [@media(hover:none)]:opacity-100 transition-opacity'
+              title={t('admin.upload.delete_title')}
+            >
+              <Trash2 size={11} />
+            </button>
 
             <button
-              onClick={(e) => { e.stopPropagation(); onOpenLightbox(idx); }}
+              onClick={(e) => {
+                e.stopPropagation();
+                onOpenLightbox(idx);
+              }}
               className='absolute top-1 start-1 bg-black/50 text-white p-1.5 rounded-xl opacity-0 group-hover:opacity-100 [@media(hover:none)]:opacity-100 transition-opacity'
               title={t('admin.upload.open_title')}
             >
               <Maximize2 size={11} />
             </button>
-
-            <button
-              onClick={(e) => { e.stopPropagation(); onTriggerBeforeUpload(img._id); }}
-              disabled={uploadingBefore === img._id}
-              className={`absolute bottom-1 start-1 p-1.5 rounded-xl text-white transition-opacity ${
-                img.beforePath
-                  ? 'bg-blush/80 opacity-100'
-                  : 'bg-black/50 opacity-0 group-hover:opacity-100 [@media(hover:none)]:opacity-100'
-              } ${uploadingBefore === img._id ? 'opacity-60' : ''}`}
-              title='Upload before image'
-            >
-              <ImagePlus size={11} />
-            </button>
           </div>
         );
       })}
+      <UploadSkeletonGrid count={skeletonCount} />
     </div>
   );
 };

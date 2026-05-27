@@ -44,9 +44,7 @@ const parseOrigins = (raw) =>
 
 const allowedOrigins = [
   ...parseOrigins(process.env.FRONTEND_URL),
-  ...(process.env.NODE_ENV !== 'production'
-    ? ['http://localhost:8080', 'http://localhost:5173', 'http://localhost:3000']
-    : []),
+  ...(process.env.NODE_ENV !== 'production' ? ['http://localhost:8080', 'http://localhost:5173', 'http://localhost:3000'] : []),
 ];
 
 app.use(
@@ -60,7 +58,7 @@ app.use(
       callback(new Error(`CORS: origin ${origin} not allowed`));
     },
     credentials: true,
-  })
+  }),
 );
 
 // ── Request logging (skip in test) ───────────────────────────────────────────
@@ -68,7 +66,7 @@ if (process.env.NODE_ENV !== 'test') {
   app.use(
     morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev', {
       stream: { write: (msg) => logger.info(msg.trim()) },
-    })
+    }),
   );
 }
 
@@ -78,12 +76,14 @@ app.use(express.json({ limit: '2mb' }));
 app.use(express.urlencoded({ limit: '2mb', extended: true }));
 
 // ── Compression ───────────────────────────────────────────────────────────────
-app.use(compression({
-  filter: (req, res) => {
-    if (req.path.startsWith('/uploads')) return false;
-    return compression.filter(req, res);
-  },
-}));
+app.use(
+  compression({
+    filter: (req, res) => {
+      if (req.path.startsWith('/uploads')) return false;
+      return compression.filter(req, res);
+    },
+  }),
+);
 
 // ── Rate limiting ─────────────────────────────────────────────────────────────
 const globalLimiter = rateLimit({
@@ -92,6 +92,11 @@ const globalLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   message: { message: 'Too many requests, please try again later.' },
+  // Skip media proxy requests — a gallery with 200 images generates 200+
+  // concurrent /api/media/* requests on page load, and the 2000/15-min
+  // cap can be hit by an admin viewing several large galleries in a session.
+  // Media routes have no sensitive data; rate-limit only the API surface.
+  skip: (req) => req.path.startsWith('/media/') || req.path === '/media',
 });
 app.use('/api', globalLimiter);
 
@@ -142,36 +147,54 @@ app.use(
   '/uploads',
   (req, res, next) => {
     res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+    res.setHeader('Access-Control-Allow-Origin', '*');
     next();
   },
   express.static(path.join(__dirname, '../uploads'), {
     maxAge: '1d',
     etag: true,
     lastModified: true,
-  })
+  }),
 );
+
+// 404 fallback for /uploads — tell Cloudflare not to cache misses so a
+// newly uploaded file becomes visible immediately on the next request.
+app.use('/uploads', (req, res) => {
+  res.setHeader('Cache-Control', 'no-store');
+  res.status(404).json({ message: 'File not found' });
+});
 
 // ── Routes ────────────────────────────────────────────────────────────────────
 // All routes are mounted on a versioned sub-router.
 // Both /api/v1/* (canonical) and /api/* (backward compat) are active.
 const v1 = express.Router();
-v1.use('/auth',                      require('./routes/auth'));
-v1.use('/clients',                   require('./routes/clients'));
-v1.use('/galleries',                 require('./routes/galleries'));
+v1.use('/media', require('./routes/media'));
+v1.use('/auth', require('./routes/auth'));
+v1.use('/clients', require('./routes/clients'));
+v1.use('/clients', require('./routes/clientFaceReference'));
+v1.use('/galleries', require('./routes/galleries'));
 v1.use('/galleries/:galleryId/images', require('./routes/images'));
+v1.use('/galleries/:galleryId/face-recognition', require('./routes/faceRecognition'));
+v1.use('/galleries/:galleryId/folders', require('./routes/folders'));
 v1.use('/galleries/:galleryId',        require('./routes/selections'));
-v1.use('/blog',                      require('./routes/blog'));
-v1.use('/contact',                   require('./routes/contact'));
-v1.use('/settings',                  require('./routes/settings'));
-v1.use('/admins',                    require('./routes/admins'));
-v1.use('/storage',                   require('./routes/storage'));
-v1.use('/admin-products',            require('./routes/adminProducts'));
-v1.use('/product-orders',            require('./routes/productOrders'));
-v1.use('/plans',                     require('./routes/plans'));
-v1.use('/p/:id',                     require('./routes/public'));
+v1.use('/blog',                        require('./routes/blog'));
+v1.use('/contact',                     require('./routes/contact'));
+v1.use('/settings',                    require('./routes/settings'));
+v1.use('/admins',                      require('./routes/admins'));
+v1.use('/storage',                     require('./routes/storage'));
+v1.use('/admin-products',              require('./routes/adminProducts'));
+v1.use('/product-orders',              require('./routes/productOrders'));
+v1.use('/plans',                       require('./routes/plans'));
+v1.use('/p/:id',                       require('./routes/public'));
+
+// Direct browser → Wasabi multipart upload pipeline + pg-boss compression
+// queue. Mounted alongside the legacy /galleries/:id/images flow — both
+// remain active. See services/storage.js, queue/index.js, workers/index.js.
+v1.use('/uploads',      require('./routes/uploads'));
+v1.use('/admin/queue',  require('./routes/queue'));
 
 app.use('/api/v1', v1);
-app.use('/api',    v1); // backward compat — existing clients keep working
+app.use('/api', v1); // backward compat — existing clients keep working
 
 // ── Root + health checks ──────────────────────────────────────────────────────
 // GET /api and GET /api/v1 return 200 so deployment platform health probes pass.

@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useEffect, useRef } from 'react';
 import api, {
   getMyStorage,
   getAdminStorage,
@@ -13,11 +14,12 @@ import api, {
   cancelSubscription,
   reactivateSubscription,
   getInvoices,
+  pingS3,
 } from '@/lib/api';
-import type { Plan } from '@/lib/api';
+import type { Plan, InvoicesResponse } from '@/lib/api';
 import * as clientService from '@/services/clientService';
 import * as galleryService from '@/services/galleryService';
-import { fetchProductOrders } from '@/services/productOrderService';
+import { fetchProductOrders, updateProductOrderGalleries, deliverProductOrder } from '@/services/productOrderService';
 import { Client } from '@/types/admin';
 import type { GalleryData } from '@/types/gallery';
 
@@ -170,6 +172,15 @@ export function useAdminProducts() {
 }
 
 export function useMyStorage() {
+  const pinged = useRef(false);
+  useEffect(() => {
+    if (pinged.current) return;
+    pinged.current = true;
+    pingS3()
+      .then((result) => console.info('[S3 PING]', result))
+      .catch((err) => console.error('[S3 PING] failed:', err?.response?.data || err?.message));
+  }, []);
+
   return useQuery({
     queryKey: queryKeys.storageMe,
     queryFn: getMyStorage,
@@ -346,6 +357,24 @@ export function useResendGalleryEmail(clientId: string) {
   });
 }
 
+export function useSendGallerySms(clientId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (galleryId: string) => galleryService.sendGallerySms(galleryId),
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: queryKeys.galleriesByClient(clientId) }),
+  });
+}
+
+export function useReactivateGallery(clientId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (galleryId: string) => galleryService.reactivateGallery(galleryId),
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: queryKeys.galleriesByClient(clientId) }),
+  });
+}
+
 export function useDeleteGallery(clientId: string) {
   const queryClient = useQueryClient();
   return useMutation({
@@ -360,8 +389,11 @@ export function useDeleteSubmission(clientId: string) {
   return useMutation({
     mutationFn: ({ galleryId, submissionId }: { galleryId: string; submissionId: string }) =>
       galleryService.removeSubmission(galleryId, submissionId),
-    onSuccess: () =>
-      queryClient.invalidateQueries({ queryKey: queryKeys.galleriesByClient(clientId) }),
+    onSuccess: (_data, { galleryId }) => {
+      queryClient.setQueryData(queryKeys.submissions(galleryId), []);
+      queryClient.invalidateQueries({ queryKey: queryKeys.submissions(galleryId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.galleriesByClient(clientId) });
+    },
   });
 }
 
@@ -387,8 +419,33 @@ export function useUpdateGallery() {
   return useMutation({
     mutationFn: ({ id, data }: { id: string; data: Record<string, unknown> }) =>
       galleryService.updateGallery(id, data as Partial<GalleryData>),
+    onSuccess: (updatedGallery, { id }) => {
+      // Write server response directly — no refetch race condition
+      queryClient.setQueryData(queryKeys.gallery(id), updatedGallery);
+      // Invalidate the flat list and client-scoped lists, but NOT the single gallery
+      queryClient.invalidateQueries({ queryKey: queryKeys.galleries, exact: true });
+      queryClient.invalidateQueries({ queryKey: ['galleries', 'client'] });
+    },
+  });
+}
+
+export function useDeliverProductOrder(clientId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (orderId: string) => deliverProductOrder(orderId),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.galleries });
+      queryClient.invalidateQueries({ queryKey: queryKeys.productOrders(clientId) });
+    },
+  });
+}
+
+export function useUpdateProductOrderGalleries(clientId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ orderId, allowedGalleryIds }: { orderId: string; allowedGalleryIds: string[] }) =>
+      updateProductOrderGalleries(orderId, { allowedGalleryIds }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.productOrders(clientId) });
     },
   });
 }

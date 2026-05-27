@@ -2,12 +2,10 @@ import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import DOMPurify from 'dompurify';
 import { FadeIn } from '@/components/FadeIn';
-import api from '@/lib/api';
+import api, { getImageUrl } from '@/lib/api';
 import { useI18n } from '@/lib/i18n';
 import { ArrowLeft } from 'lucide-react';
 import { Helmet } from 'react-helmet-async';
-
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
 export const BlogPost = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -52,13 +50,13 @@ export const BlogPost = () => {
     );
   }
 
-  const postImage = post.featuredImagePath ? `${API_BASE}${post.featuredImagePath}` : undefined;
+  const postImage = post.featuredImagePath ? getImageUrl(post.featuredImagePath) : undefined;
   const canonicalUrl = `${window.location.origin}/blog/${post.slug}`;
 
   return (
     <main className='pt-16'>
       <Helmet>
-        <title>{post.seoTitle || post.title} | Koral Photography</title>
+        <title>{post.seoTitle || post.title} | LIGHT STUDIO</title>
         <meta name='description' content={post.seoDescription || post.title} />
         <meta property='og:title' content={post.seoTitle || post.title} />
         <meta property='og:description' content={post.seoDescription || post.title} />
@@ -78,7 +76,7 @@ export const BlogPost = () => {
             description: post.seoDescription || '',
             image: postImage,
             datePublished: post.publishedAt || post.createdAt,
-            author: { '@type': 'Person', name: 'Koral Photography' },
+            author: { '@type': 'Person', name: 'LIGHT STUDIO' },
           })}
         </script>
       </Helmet>
@@ -95,7 +93,7 @@ export const BlogPost = () => {
 
             {post.featuredImagePath && (
               <div className='rounded-2xl overflow-hidden mb-10 aspect-[16/9]'>
-                <img src={`${API_BASE}${post.featuredImagePath}`} alt={post.title} className='w-full h-full object-cover' />
+                <img src={getImageUrl(post.featuredImagePath)} alt={post.title} className='w-full h-full object-cover' />
               </div>
             )}
 

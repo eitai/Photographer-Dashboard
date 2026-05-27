@@ -1,13 +1,11 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { AdminLayout } from '@/components/admin/AdminLayout';
 import { useI18n } from '@/lib/i18n';
 import { toast } from 'sonner';
-import * as galleryService from '@/services/galleryService';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, ArrowRight } from 'lucide-react';
 import { ClientInfoCard } from '@/components/admin/ClientInfoCard';
 import { GalleriesSection } from '@/components/admin/GalleriesSection';
-import { SubmissionsSection } from '@/components/admin/SubmissionsSection';
 import { ConfirmationModals } from '@/components/admin/ConfirmationModals';
 import { ProductOrdersSection } from '@/components/admin/ProductOrdersSection';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
@@ -18,15 +16,14 @@ import {
   useUpdateClient,
   useCreateDelivery,
   useResendGalleryEmail,
+  useSendGallerySms,
   useDeleteGallery,
+  useReactivateGallery,
   useDeleteSubmission,
   useDeleteSubmissionImage,
   queryKeys,
 } from '@/hooks/useQueries';
-import { API_BASE } from '@/lib/api';
-import { downloadZip } from '@/lib/downloadZip';
 import type { Client } from '@/types/admin';
-import type { GallerySubmission } from '@/types/gallery';
 
 export const AdminClientDetail = () => {
   const { id } = useParams();
@@ -43,35 +40,11 @@ export const AdminClientDetail = () => {
   const updateClient = useUpdateClient(id!);
   const createDelivery = useCreateDelivery(id!);
   const resendEmail = useResendGalleryEmail(id!);
+  const sendSms = useSendGallerySms(id!);
   const deleteGalleryMutation = useDeleteGallery(id!);
+  const reactivateGalleryMutation = useReactivateGallery(id!);
   const deleteSubmissionMutation = useDeleteSubmission(id!);
   const deleteSubmissionImageMutation = useDeleteSubmissionImage(id!);
-
-  // ---------------------------------------------------------------------------
-  // Submissions — prefetch for all selection_submitted galleries
-  // ---------------------------------------------------------------------------
-  const submittedGalleries = galleries.filter((g) => ['selection_submitted', 'in_editing', 'delivered'].includes(g.status));
-
-  useEffect(() => {
-    const ids = submittedGalleries.map((g) => g._id).join(',');
-    if (!ids) return;
-    submittedGalleries.forEach((g) => {
-      queryClient.prefetchQuery({
-        queryKey: queryKeys.submissions(g._id),
-        queryFn: () => galleryService.fetchSubmissions(g._id),
-      });
-    });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [submittedGalleries.map((g) => g._id).join(',')]);
-
-  const submissions = useMemo(() => {
-    const result: Record<string, GallerySubmission[]> = {};
-    submittedGalleries.forEach((g) => {
-      const cached = queryClient.getQueryData<GallerySubmission[]>(queryKeys.submissions(g._id));
-      if (cached) result[g._id] = cached;
-    });
-    return result;
-  }, [galleries, queryClient]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ---------------------------------------------------------------------------
   // Pure UI state (not server data)
@@ -81,9 +54,11 @@ export const AdminClientDetail = () => {
   const [deliveryHeaderMessage, setDeliveryHeaderMessage] = useState('');
   const [showDeliveryFormFor, setShowDeliveryFormFor] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
-  const [downloading, setDownloading] = useState(false);
   const [resentId, setResentId] = useState<string | null>(null);
-  const [deleteImageTarget, setDeleteImageTarget] = useState<{ galleryId: string; submissionId: string; imageId: string } | null>(null);
+  const [sentSmsId, setSentSmsId] = useState<string | null>(null);
+  const [deleteImageTarget, setDeleteImageTarget] = useState<{ galleryId: string; submissionId: string; imageId: string } | null>(
+    null,
+  );
   const [deleteSubTarget, setDeleteSubTarget] = useState<{ galleryId: string; submissionId: string } | null>(null);
   const [deleteGalleryTarget, setDeleteGalleryTarget] = useState<string | null>(null);
 
@@ -99,12 +74,6 @@ export const AdminClientDetail = () => {
     e.preventDefault();
     await updateClient.mutateAsync(form);
     setEditing(false);
-  };
-
-  const downloadAsZip = async (submission: GallerySubmission) => {
-    setDownloading(true);
-    await downloadZip(submission.selectedImageIds, 'selected-images', `selection-${submission._id}`);
-    setDownloading(false);
   };
 
   const createDeliveryGallery = async (originalGalleryId: string) => {
@@ -124,6 +93,18 @@ export const AdminClientDetail = () => {
     setTimeout(() => setResentId(null), 2500);
   };
 
+  const handleSendSms = async (galleryId: string) => {
+    try {
+      await sendSms.mutateAsync(galleryId);
+      setSentSmsId(galleryId);
+      setTimeout(() => setSentSmsId(null), 2500);
+      toast.success(t('admin.galleries.sms_sent_success').replace('{name}', client?.name ?? ''));
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
+      toast.error(msg || t('admin.galleries.sms_sent_error').replace('{name}', client?.name ?? ''));
+    }
+  };
+
   const handleDeleteSubmission = async () => {
     if (!deleteSubTarget) return;
     await deleteSubmissionMutation.mutateAsync(deleteSubTarget);
@@ -134,6 +115,10 @@ export const AdminClientDetail = () => {
     if (!deleteGalleryTarget) return;
     await deleteGalleryMutation.mutateAsync(deleteGalleryTarget);
     setDeleteGalleryTarget(null);
+  };
+
+  const handleReactivateGallery = async (galleryId: string) => {
+    await reactivateGalleryMutation.mutateAsync(galleryId);
   };
 
   const handleDeleteSubmissionImage = async () => {
@@ -166,29 +151,38 @@ export const AdminClientDetail = () => {
     );
 
   // Derive per-mutation pending IDs
-  const creatingDeliveryFor = createDelivery.isPending ? createDelivery.variables?.galleryId ?? null : null;
-  const resendingId = resendEmail.isPending ? resendEmail.variables ?? null : null;
+  const creatingDeliveryFor = createDelivery.isPending ? (createDelivery.variables?.galleryId ?? null) : null;
+  const resendingId = resendEmail.isPending ? (resendEmail.variables ?? null) : null;
+  const sendingSmId = sendSms.isPending ? (sendSms.variables ?? null) : null;
   const deletingImage = deleteSubmissionImageMutation.isPending;
   const deletingSubmission = deleteSubmissionMutation.isPending;
   const deletingGallery = deleteGalleryMutation.isPending;
+  const reactivatingId = reactivateGalleryMutation.isPending ? (reactivateGalleryMutation.variables ?? null) : null;
 
   return (
     <AdminLayout>
       <Link to='/admin/clients' className='flex items-center gap-1 text-sm text-warm-gray hover:text-charcoal mb-6'>
-        <ArrowLeft size={14} /> {t('admin.common.back_clients')}
+        <ArrowRight size={14} /> {t('admin.common.back_clients')}
       </Link>
       <div className='space-y-6'>
-        <ErrorBoundary label='Client Info'>
-          <ClientInfoCard
-            client={client}
-            editing={editing}
-            setEditing={setEditing}
-            form={form}
-            setForm={setForm}
-            saving={updateClient.isPending}
-            save={save}
-          />
-        </ErrorBoundary>
+        {/* Top row: client info + product orders side by side */}
+        <div className='grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch'>
+          <ErrorBoundary label='Client Info'>
+            <ClientInfoCard
+              client={client}
+              editing={editing}
+              setEditing={setEditing}
+              form={form}
+              setForm={setForm}
+              saving={updateClient.isPending}
+              save={save}
+            />
+          </ErrorBoundary>
+          <ErrorBoundary label='Product Orders'>
+            <ProductOrdersSection clientId={id!} clientName={client.name} galleries={galleries} clientEmail={client.email} />
+          </ErrorBoundary>
+        </div>
+        {/* Galleries below */}
         <ErrorBoundary label='Galleries'>
           <GalleriesSection
             galleries={galleries}
@@ -197,34 +191,23 @@ export const AdminClientDetail = () => {
             copiedId={copiedId}
             resendingId={resendingId}
             resentId={resentId}
+            sendingSmId={sendingSmId}
+            sentSmsId={sentSmsId}
             showDeliveryFormFor={showDeliveryFormFor}
             deliveryHeaderMessage={deliveryHeaderMessage}
             creatingDeliveryFor={creatingDeliveryFor}
             copyLink={copyLink}
             whatsAppLink={whatsAppLink}
             resendEmail={handleResendEmail}
+            sendSms={handleSendSms}
             setDeleteGalleryTarget={setDeleteGalleryTarget}
             setShowDeliveryFormFor={setShowDeliveryFormFor}
             setDeliveryHeaderMessage={setDeliveryHeaderMessage}
             createDeliveryGallery={createDeliveryGallery}
-          />
-        </ErrorBoundary>
-        <ErrorBoundary label='Submissions'>
-          <SubmissionsSection
-            galleries={galleries}
-            submissions={submissions}
-            downloading={downloading}
-            API_BASE={API_BASE}
-            downloadAsZip={downloadAsZip}
+            reactivateGallery={handleReactivateGallery}
+            reactivatingId={reactivatingId}
             setDeleteSubTarget={setDeleteSubTarget}
             setDeleteImageTarget={setDeleteImageTarget}
-          />
-        </ErrorBoundary>
-        <ErrorBoundary label='Product Orders'>
-          <ProductOrdersSection
-            clientId={id!}
-            clientName={client.name}
-            galleries={galleries}
           />
         </ErrorBoundary>
       </div>

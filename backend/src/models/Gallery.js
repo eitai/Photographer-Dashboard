@@ -11,9 +11,11 @@ function toRow(data) {
     isActive: 'is_active',
     expiresAt: 'expires_at',
     maxSelections: 'max_selections',
+    sessionType: 'session_type',
     isDelivery: 'is_delivery',
     deliveryOf: 'delivery_of',
     lastEmailSentAt: 'last_email_sent_at',
+    selectionEnabled: 'selection_enabled',
   };
   const row = {};
   for (const [k, v] of Object.entries(data)) {
@@ -26,7 +28,7 @@ function toRow(data) {
 async function _populateClient(gallery) {
   if (!gallery || !gallery.clientId) return gallery;
   const { rows } = await pool.query(
-    'SELECT id, name, email FROM clients WHERE id = $1',
+    'SELECT id, name, email, phone FROM clients WHERE id = $1',
     [gallery.clientId]
   );
   if (rows[0]) {
@@ -91,8 +93,8 @@ async function create(data, client = null) {
 
   const optionals = [
     'client_id', 'client_name', 'header_message', 'is_active',
-    'expires_at', 'status', 'max_selections', 'is_delivery',
-    'delivery_of', 'last_email_sent_at', 'videos',
+    'expires_at', 'status', 'max_selections', 'session_type', 'is_delivery',
+    'delivery_of', 'last_email_sent_at', 'videos', 'selection_enabled',
   ];
 
   for (const col of optionals) {
@@ -135,21 +137,23 @@ async function findOneAndUpdate(filter, update, opts = {}) {
     expiresAt: 'expires_at',
     status: 'status',
     maxSelections: 'max_selections',
+    sessionType: 'session_type',
     isDelivery: 'is_delivery',
     deliveryOf: 'delivery_of',
     lastEmailSentAt: 'last_email_sent_at',
     videos: 'videos',
+    selectionEnabled: 'selection_enabled',
   };
 
   const src = update.$set || update;
   for (const [k, v] of Object.entries(src)) {
-    if (colMap[k]) {
+    if (colMap[k] && v !== undefined) {
       if (colMap[k] === 'videos') {
         sets.push(`videos = $${i++}::jsonb`);
         vals.push(JSON.stringify(v));
       } else {
         sets.push(`${colMap[k]} = $${i++}`);
-        vals.push(v === undefined ? null : v);
+        vals.push(v);
       }
     }
   }
@@ -179,10 +183,12 @@ async function save(gallery, client = null) {
     expiresAt: 'expires_at',
     status: 'status',
     maxSelections: 'max_selections',
+    sessionType: 'session_type',
     isDelivery: 'is_delivery',
     deliveryOf: 'delivery_of',
     lastEmailSentAt: 'last_email_sent_at',
     videos: 'videos',
+    selectionEnabled: 'selection_enabled',
   };
 
   const sets = [];

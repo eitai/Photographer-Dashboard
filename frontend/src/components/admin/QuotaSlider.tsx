@@ -1,7 +1,7 @@
 import { useI18n } from '@/lib/i18n';
 
 // Ordered steps — null means unlimited (∞)
-const STEPS: (number | null)[] = [1, 5, 10, 20, 50, 100, 200, 500, null];
+const STEPS: (number | null)[] = [1, 5, 10, 20, 50, 100, 200, 500, 1000, null];
 const MAX_IDX = STEPS.length - 1;
 
 function label(step: number | null): string {
@@ -91,7 +91,7 @@ export function QuotaSlider({ value, onChange }: QuotaSliderProps) {
             className={`absolute w-4 h-4 rounded-full border-2 shadow-sm transition-all duration-150 pointer-events-none z-0 ${
               isUnlimited
                 ? 'bg-amber-400 border-amber-500'
-                : 'bg-white border-[#E7B8B5]'
+                : 'bg-card border-[#E7B8B5]'
             }`}
             style={{ left: `calc(${fillPct}% - 8px)` }}
           />

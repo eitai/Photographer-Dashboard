@@ -10,7 +10,7 @@
 process.env.NODE_ENV = 'test';
 process.env.JWT_SECRET = 'test_secret_32_chars_minimum_ok!';
 process.env.JWT_EXPIRES_IN = '7d';
-process.env.FRONTEND_URL = 'http://localhost:8080';
+process.env.FRONTEND_URL = process.env.FRONTEND_URL;
 
 // Use a dedicated test database URL if provided, otherwise fall back to DATABASE_URL
 if (!process.env.DATABASE_URL) {
@@ -71,16 +71,12 @@ describe('P0 — Security Headers (Helmet)', () => {
 // ─────────────────────────────────────────────────────────────────────────────
 describe('P0 — CORS', () => {
   test('Allows request from FRONTEND_URL', async () => {
-    const res = await request(app)
-      .get('/api/health')
-      .set('Origin', 'http://localhost:8080');
-    expect(res.headers['access-control-allow-origin']).toBe('http://localhost:8080');
+    const res = await request(app).get('/api/health').set('Origin', process.env.FRONTEND_URL);
+    expect(res.headers['access-control-allow-origin']).toBe(process.env.FRONTEND_URL);
   });
 
   test('Blocks request from unknown origin', async () => {
-    const res = await request(app)
-      .get('/api/health')
-      .set('Origin', 'https://evil.example.com');
+    const res = await request(app).get('/api/health').set('Origin', 'https://evil.example.com');
     expect(res.status).toBe(403);
   });
 
@@ -94,17 +90,12 @@ describe('P0 — CORS', () => {
 describe('P0 — Body Size Limit', () => {
   test('Rejects JSON body larger than 10kb', async () => {
     const bigPayload = JSON.stringify({ data: 'x'.repeat(11 * 1024) });
-    const res = await request(app)
-      .post('/api/auth/login')
-      .set('Content-Type', 'application/json')
-      .send(bigPayload);
+    const res = await request(app).post('/api/auth/login').set('Content-Type', 'application/json').send(bigPayload);
     expect(res.status).toBe(413);
   });
 
   test('Accepts JSON body smaller than 10kb', async () => {
-    const res = await request(app)
-      .post('/api/auth/login')
-      .send({ email: 'test@example.com', password: 'wrong-password' });
+    const res = await request(app).post('/api/auth/login').send({ email: 'test@example.com', password: 'wrong-password' });
     // 401 = route ran fine (wrong credentials), not a size rejection
     expect(res.status).not.toBe(413);
   });
@@ -113,16 +104,12 @@ describe('P0 — Body Size Limit', () => {
 // ─────────────────────────────────────────────────────────────────────────────
 describe('P0 — Rate Limiting', () => {
   test('RateLimit-Limit header present on auth/login', async () => {
-    const res = await request(app)
-      .post('/api/auth/login')
-      .send({ email: 'x@x.com', password: 'x' });
+    const res = await request(app).post('/api/auth/login').send({ email: 'x@x.com', password: 'x' });
     expect(res.headers['ratelimit-limit']).toBeDefined();
   });
 
   test('RateLimit-Limit header present on /api/contact', async () => {
-    const res = await request(app)
-      .post('/api/contact')
-      .send({ name: 'Test', email: 'x@x.com', message: 'hello' });
+    const res = await request(app).post('/api/contact').send({ name: 'Test', email: 'x@x.com', message: 'hello' });
     expect(res.headers['ratelimit-limit']).toBeDefined();
   });
 });
@@ -210,10 +197,7 @@ describe('P0 — Startup Env Validation', () => {
 // ─────────────────────────────────────────────────────────────────────────────
 describe('P1 — DB schema is applied (indexes exist in PostgreSQL)', () => {
   const checkIndex = async (tableName) => {
-    const { rows } = await pool.query(
-      `SELECT indexname FROM pg_indexes WHERE tablename = $1`,
-      [tableName]
-    );
+    const { rows } = await pool.query(`SELECT indexname FROM pg_indexes WHERE tablename = $1`, [tableName]);
     return rows.map((r) => r.indexname);
   };
 
@@ -251,9 +235,7 @@ describe('P1 — DB schema is applied (indexes exist in PostgreSQL)', () => {
 // ─────────────────────────────────────────────────────────────────────────────
 describe('P1 — Compression', () => {
   test('Compression middleware is active (response does not error)', async () => {
-    const res = await request(app)
-      .get('/api/health')
-      .set('Accept-Encoding', 'gzip');
+    const res = await request(app).get('/api/health').set('Accept-Encoding', 'gzip');
     expect(res.status).toBeDefined();
   });
 });
@@ -299,8 +281,13 @@ describe('P1 — asyncHandler middleware (unit)', () => {
   test('Wraps sync errors and forwards to next()', (done) => {
     const asyncHandler = require('../src/middleware/asyncHandler');
     const err = new Error('boom');
-    const handler = asyncHandler(async () => { throw err; });
-    const next = (e) => { expect(e).toBe(err); done(); };
+    const handler = asyncHandler(async () => {
+      throw err;
+    });
+    const next = (e) => {
+      expect(e).toBe(err);
+      done();
+    };
     handler({}, {}, next);
   });
 
@@ -308,7 +295,10 @@ describe('P1 — asyncHandler middleware (unit)', () => {
     const asyncHandler = require('../src/middleware/asyncHandler');
     const err = new Error('async boom');
     const handler = asyncHandler(() => Promise.reject(err));
-    const next = (e) => { expect(e).toBe(err); done(); };
+    const next = (e) => {
+      expect(e).toBe(err);
+      done();
+    };
     handler({}, {}, next);
   });
 });
@@ -316,9 +306,7 @@ describe('P1 — asyncHandler middleware (unit)', () => {
 // ─────────────────────────────────────────────────────────────────────────────
 describe('P1 — Auth-protected routes work with real DB', () => {
   test('GET /api/clients returns 200 with valid JWT', async () => {
-    const res = await request(app)
-      .get('/api/clients')
-      .set('Authorization', `Bearer ${VALID_TOKEN}`);
+    const res = await request(app).get('/api/clients').set('Authorization', `Bearer ${VALID_TOKEN}`);
     expect(res.status).toBe(200);
     expect(Array.isArray(res.body)).toBe(true);
   });
@@ -329,9 +317,7 @@ describe('P1 — Auth-protected routes work with real DB', () => {
   });
 
   test('GET /api/clients returns 401 with tampered token', async () => {
-    const res = await request(app)
-      .get('/api/clients')
-      .set('Authorization', 'Bearer invalid.token.here');
+    const res = await request(app).get('/api/clients').set('Authorization', 'Bearer invalid.token.here');
     expect(res.status).toBe(401);
   });
 });
@@ -339,10 +325,7 @@ describe('P1 — Auth-protected routes work with real DB', () => {
 // ─────────────────────────────────────────────────────────────────────────────
 describe('P2 — API versioning (/api/v1/)', () => {
   test('GET /api/v1/health returns same response as /api/health', async () => {
-    const [v1, legacy] = await Promise.all([
-      request(app).get('/api/v1/health'),
-      request(app).get('/api/health'),
-    ]);
+    const [v1, legacy] = await Promise.all([request(app).get('/api/v1/health'), request(app).get('/api/health')]);
     expect(v1.status).toBe(legacy.status);
     expect(v1.body.status).toBe(legacy.body.status);
   });
@@ -353,9 +336,7 @@ describe('P2 — API versioning (/api/v1/)', () => {
   });
 
   test('/api/v1/clients returns 200 with valid token', async () => {
-    const res = await request(app)
-      .get('/api/v1/clients')
-      .set('Authorization', `Bearer ${VALID_TOKEN}`);
+    const res = await request(app).get('/api/v1/clients').set('Authorization', `Bearer ${VALID_TOKEN}`);
     expect(res.status).toBe(200);
   });
 });

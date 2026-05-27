@@ -1,5 +1,7 @@
 const express = require('express');
 const fs = require('fs');
+const jwt = require('jsonwebtoken');
+const pool = require('../db');
 const Admin = require('../models/Admin');
 const { getStorageUsedBytes } = require('../utils/storageUsage');
 const AdminProduct = require('../models/AdminProduct');
@@ -11,6 +13,7 @@ const asyncHandler = require('../middleware/asyncHandler');
 const validatePassword = require('../utils/validatePassword');
 const formatAdmin = require('../utils/formatAdmin');
 const replaceUploadedFile = require('../utils/replaceUploadedFile');
+const s3 = require('../config/s3');
 
 const router = express.Router();
 router.use(superprotect);
@@ -27,6 +30,9 @@ router.post('/', asyncHandler(async (req, res) => {
   if (!name || !email || !password)
     return res.status(400).json({ message: 'Name, email and password are required' });
 
+  if (role !== undefined && !['admin', 'superadmin'].includes(role))
+    return res.status(400).json({ message: 'role must be admin or superadmin' });
+
   const pwErr = validatePassword(password);
   if (pwErr) return res.status(400).json({ message: pwErr });
 
@@ -36,6 +42,12 @@ router.post('/', asyncHandler(async (req, res) => {
   if (username) {
     const usernameTaken = await Admin.findOne({ username: username.toLowerCase() });
     if (usernameTaken) return res.status(400).json({ message: 'Username already taken' });
+  }
+
+  if (quotaGB !== undefined && quotaGB !== null && quotaGB !== 0) {
+    const gb = parseFloat(quotaGB);
+    if (!isFinite(gb) || gb < 0.1 || gb > 10000)
+      return res.status(400).json({ message: 'quotaGB must be between 0.1 and 10000, or null for unlimited' });
   }
 
   const admin = await Admin.create({
@@ -133,14 +145,14 @@ router.put('/:id/landing', asyncHandler(async (req, res) => {
 // POST /api/admins/:id/hero-image
 router.post('/:id/hero-image', upload.single('image'), validateImageMagicBytes, asyncHandler(async (req, res) => {
   if (!req.file) return res.status(400).json({ message: 'No image uploaded' });
-  const heroImagePath = await replaceUploadedFile(req.params.id, 'heroImagePath', `/uploads/${req.file.filename}`, { SiteSettings, fs });
+  const heroImagePath = await replaceUploadedFile(req.params.id, 'heroImagePath', await s3.processUpload(req.file, req.params.id), { SiteSettings, fs });
   res.json({ heroImagePath });
 }));
 
 // POST /api/admins/:id/profile-image
 router.post('/:id/profile-image', upload.single('image'), validateImageMagicBytes, asyncHandler(async (req, res) => {
   if (!req.file) return res.status(400).json({ message: 'No image uploaded' });
-  const profileImagePath = await replaceUploadedFile(req.params.id, 'profileImagePath', `/uploads/${req.file.filename}`, { SiteSettings, fs });
+  const profileImagePath = await replaceUploadedFile(req.params.id, 'profileImagePath', await s3.processUpload(req.file, req.params.id), { SiteSettings, fs });
   res.json({ profileImagePath });
 }));
 
@@ -169,5 +181,61 @@ router.get('/:id/storage', asyncHandler(async (req, res) => {
 
 // NOTE: PATCH /api/admins/:id/quota was removed — quota is now entirely driven by the
 // subscription system. Use PATCH /api/plans/admin/subscriptions/:adminId instead.
+
+// ── SSO helpers (mirrors auth.js) ────────────────────────────────────────────
+const _frontendUrl = () => {
+  const url = process.env.FRONTEND_URL;
+  if (!url) return 'http://localhost:8080';
+  return url.split(',')[0].trim().replace(/\/$/, '');
+};
+
+const _googleCallbackUrl = () => {
+  if (process.env.GOOGLE_CALLBACK_URL) return process.env.GOOGLE_CALLBACK_URL;
+  const base = _frontendUrl();
+  if (!base.includes('localhost')) return `${base}/api/auth/google/callback`;
+  return 'http://localhost:5000/api/auth/google/callback';
+};
+
+const _encodeState = (payload) => jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '10m' });
+
+// GET /api/admins/:id/sso-link — initiate Google OAuth link for a specific admin
+router.get('/:id/sso-link', asyncHandler(async (req, res) => {
+  const clientID = process.env.GOOGLE_CLIENT_ID;
+  if (!clientID) {
+    return res.redirect(`${_frontendUrl()}/admin/users?sso=error&reason=not_configured`);
+  }
+  const admin = await Admin.findById(req.params.id);
+  if (!admin) return res.status(404).json({ message: 'Admin not found' });
+
+  const params = new URLSearchParams({
+    client_id: clientID,
+    redirect_uri: _googleCallbackUrl(),
+    response_type: 'code',
+    scope: 'openid email profile',
+    access_type: 'online',
+    prompt: 'select_account',
+    state: _encodeState({ flow: 'link', adminId: req.params.id, returnTo: '/admin/users' }),
+  });
+  res.redirect(`https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`);
+}));
+
+// DELETE /api/admins/:id/sso-link — unlink Google from a specific admin
+router.delete('/:id/sso-link', asyncHandler(async (req, res) => {
+  const admin = await Admin.findById(req.params.id);
+  if (!admin) return res.status(404).json({ message: 'Admin not found' });
+  await Admin.findByIdAndUpdate(req.params.id, { googleId: null, googleEmail: null, ssoEnabled: false });
+  res.json({ message: 'Google account unlinked' });
+}));
+
+// PATCH /api/admins/:id/sso — toggle ssoEnabled for a specific admin
+router.patch('/:id/sso', asyncHandler(async (req, res) => {
+  const admin = await Admin.findById(req.params.id);
+  if (!admin) return res.status(404).json({ message: 'Admin not found' });
+  if (!admin.googleId) {
+    return res.status(400).json({ message: 'No Google account linked. Link a Google account first.' });
+  }
+  const updated = await Admin.findByIdAndUpdate(req.params.id, { ssoEnabled: !admin.ssoEnabled });
+  res.json({ admin: formatAdmin(updated) });
+}));
 
 module.exports = router;
