@@ -1,9 +1,12 @@
 const express = require('express');
-const pool = require('../db');
 const Plan = require('../models/Plan');
 const Subscription = require('../models/Subscription');
 const asyncHandler = require('../middleware/asyncHandler');
 const { protect, superprotect } = require('../middleware/auth');
+const { getStorageUsedBytes } = require('../utils/storageUsage');
+const { UUID_RE } = require('../utils/uuid');
+const { FREE_TIER_BYTES } = Subscription;
+const ANNUAL_DISCOUNT = 0.8; // 20% discount when billed annually
 
 const router = express.Router();
 
@@ -14,6 +17,8 @@ router.get('/', asyncHandler(async (req, res) => {
 }));
 
 // ── Superadmin plan management ──────────────────────────────────────────────
+// IMPORTANT: literal paths (/admin, /admin/subscriptions, /admin/subscriptions/:adminId)
+// are defined BEFORE parameterized paths (/admin/:id) to prevent shadowing.
 
 // GET /api/plans/admin — all plans including inactive
 router.get('/admin', superprotect, asyncHandler(async (req, res) => {
@@ -21,7 +26,37 @@ router.get('/admin', superprotect, asyncHandler(async (req, res) => {
   res.json(plans);
 }));
 
-// PUT /api/plans/admin/:id — update plan definition
+// GET /api/plans/admin/subscriptions — all photographer subscriptions
+router.get('/admin/subscriptions', superprotect, asyncHandler(async (req, res) => {
+  const { status, planId, page = 1 } = req.query;
+  if (planId && !UUID_RE.test(planId))
+    return res.status(400).json({ message: 'Invalid planId format' });
+  const subs = await Subscription.findAll({ status, planId, page: Number(page) });
+  res.json(subs);
+}));
+
+// PATCH /api/plans/admin/subscriptions/:adminId — manually override plan (no Stripe)
+router.patch('/admin/subscriptions/:adminId', superprotect, asyncHandler(async (req, res) => {
+  const { planId, billingInterval, customStorageGb } = req.body;
+  if (!planId) return res.status(400).json({ message: 'planId is required' });
+
+  const plan = await Plan.findById(planId);
+  if (!plan) return res.status(404).json({ message: 'Plan not found' });
+
+  if (plan.slug === 'custom' && (customStorageGb == null || customStorageGb <= 0)) {
+    return res.status(400).json({ message: 'customStorageGb must be a positive number for the custom plan' });
+  }
+
+  const sub = await Subscription.upsert(req.params.adminId, {
+    planId,
+    billingInterval: billingInterval || null,
+    customStorageGb: plan.slug === 'custom' ? customStorageGb : null,
+    status: 'active',
+  });
+  res.json(sub);
+}));
+
+// PUT /api/plans/admin/:id — update plan definition (parameterized — must come after all literal /admin/* routes)
 router.put('/admin/:id', superprotect, asyncHandler(async (req, res) => {
   const plan = await Plan.findById(req.params.id);
   if (!plan) return res.status(404).json({ message: 'Plan not found' });
@@ -37,36 +72,19 @@ router.put('/admin/:id', superprotect, asyncHandler(async (req, res) => {
     if (req.body[key] !== undefined) data[key] = req.body[key];
   }
 
+  const NUMERIC_FIELDS = [
+    'storageBytes', 'priceMonthlyIls', 'priceAnnualIls',
+    'pricePerGbIls', 'customMinGb', 'customMaxGb', 'sortOrder',
+  ];
+  for (const field of NUMERIC_FIELDS) {
+    if (data[field] !== undefined && typeof data[field] !== 'number')
+      return res.status(400).json({ message: `${field} must be a number` });
+  }
+  if (data.isActive !== undefined && typeof data.isActive !== 'boolean')
+    return res.status(400).json({ message: 'isActive must be a boolean' });
+
   const updated = await Plan.update(req.params.id, data);
   res.json(updated);
-}));
-
-// GET /api/plans/admin/subscriptions — all photographer subscriptions
-router.get('/admin/subscriptions', superprotect, asyncHandler(async (req, res) => {
-  const { status, planId, page = 1 } = req.query;
-  const subs = await Subscription.findAll({ status, planId, page: Number(page) });
-  res.json(subs);
-}));
-
-// PATCH /api/plans/admin/subscriptions/:adminId — manually override plan (no Stripe)
-router.patch('/admin/subscriptions/:adminId', superprotect, asyncHandler(async (req, res) => {
-  const { planId, billingInterval, customStorageGb } = req.body;
-  if (!planId) return res.status(400).json({ message: 'planId is required' });
-
-  const plan = await Plan.findById(planId);
-  if (!plan) return res.status(404).json({ message: 'Plan not found' });
-
-  if (plan.slug === 'custom' && !customStorageGb) {
-    return res.status(400).json({ message: 'customStorageGb is required for custom plan' });
-  }
-
-  const sub = await Subscription.upsert(req.params.adminId, {
-    planId,
-    billingInterval: billingInterval || null,
-    customStorageGb: plan.slug === 'custom' ? customStorageGb : null,
-    status: 'active',
-  });
-  res.json(sub);
 }));
 
 // ── Photographer subscription info ──────────────────────────────────────────
@@ -74,27 +92,22 @@ router.patch('/admin/subscriptions/:adminId', superprotect, asyncHandler(async (
 // GET /api/plans/me — current plan + storage usage
 router.get('/me', protect, asyncHandler(async (req, res) => {
   const sub = await Subscription.findByAdminId(req.admin.id);
-  if (!sub) return res.status(404).json({ message: 'Subscription not found' });
+  // If no subscription exists (e.g. migration not yet run), treat as a 10 GB free fallback —
+  // consistent with how checkQuota handles a missing subscription row.
+  if (!sub) {
+    return res.json({
+      plan: { id: null, slug: 'free', name: 'Free', storageBytes: FREE_TIER_BYTES,
+              priceMonthlyIls: 0, priceAnnualIls: 0, pricePerGbIls: null,
+              customMinGb: null, customMaxGb: null },
+      subscription: { id: null, status: 'active', billingInterval: null,
+                      customStorageGb: null, currentPeriodEnd: null, cancelAtPeriodEnd: false },
+      storage: { usedBytes: 0, quotaBytes: FREE_TIER_BYTES,
+                 usedGb: 0, quotaGb: parseFloat((FREE_TIER_BYTES / 1024 ** 3).toFixed(2)), percentUsed: 0 },
+    });
+  }
 
   const quota = Subscription.resolveQuotaBytes(sub);
-
-  const { rows } = await pool.query(
-    `SELECT
-       COALESCE(SUM(gi.size), 0)::bigint
-       + COALESCE((
-           SELECT SUM((v->>'size')::bigint)
-           FROM galleries g2, jsonb_array_elements(g2.videos) v
-           WHERE g2.admin_id = $1 AND (v->>'size') IS NOT NULL
-         ), 0)::bigint AS used
-     FROM admins a
-     LEFT JOIN galleries g ON g.admin_id = a.id
-     LEFT JOIN gallery_images gi ON gi.gallery_id = g.id
-     WHERE a.id = $1
-     GROUP BY a.id`,
-    [req.admin.id]
-  );
-
-  const usedBytes = Number(rows[0]?.used ?? 0);
+  const usedBytes = await getStorageUsedBytes(req.admin.id);
 
   res.json({
     plan: {
@@ -139,9 +152,16 @@ router.get('/custom-price', asyncHandler(async (req, res) => {
   if (!plan || !plan.pricePerGbIls)
     return res.status(503).json({ message: 'Custom plan pricing not configured' });
 
+  const minGb = plan.customMinGb ?? 1;
+  const maxGb = plan.customMaxGb ?? null;
+  if (gb < minGb)
+    return res.status(400).json({ message: `Minimum storage is ${minGb} GB` });
+  if (maxGb !== null && gb > maxGb)
+    return res.status(400).json({ message: `Maximum storage is ${maxGb} GB` });
+
   const pricePerGb     = Number(plan.pricePerGbIls);
   const totalMonthly   = parseFloat((gb * pricePerGb).toFixed(2));
-  const totalAnnual    = parseFloat((totalMonthly * 12 * 0.8).toFixed(2));
+  const totalAnnual    = parseFloat((totalMonthly * 12 * ANNUAL_DISCOUNT).toFixed(2));
   const annualDiscount = parseFloat((totalMonthly * 12 - totalAnnual).toFixed(2));
 
   res.json({

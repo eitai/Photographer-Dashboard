@@ -45,4 +45,78 @@ export const getAdminStorage = (adminId: string): Promise<import('@/types/admin'
 export const setAdminQuota = (adminId: string, quotaGB: number): Promise<{ adminId: string; quotaBytes: number; quotaGB: number }> =>
   api.patch(`/admins/${adminId}/quota`, { quotaGB }).then((r) => r.data);
 
+// ---- Plans ----
+export interface Plan {
+  id: string;
+  slug: string;
+  name: string;
+  storageBytes: number | null;
+  priceMonthlyIls: number;
+  priceAnnualIls: number;
+  pricePerGbIls: number | null;
+  customMinGb: number | null;
+  customMaxGb: number | null;
+  isActive: boolean;
+}
+
+export interface Subscription {
+  id: string;
+  status: string;
+  billingInterval: 'monthly' | 'annual';
+  customStorageGb: number | null;
+  currentPeriodEnd: string | null;
+  cancelAtPeriodEnd: boolean;
+}
+
+export interface MyPlanResponse {
+  plan: Plan;
+  subscription: Subscription;
+  storage: {
+    usedBytes: number;
+    quotaBytes: number | null;
+    usedGb: number;
+    quotaGb: number | null;
+    percentUsed: number;
+  };
+}
+
+export interface CustomPriceResponse {
+  gb: number;
+  pricePerGb: number;
+  totalMonthly: number;
+  totalAnnual: number;
+  annualDiscount: number;
+  effectiveMonthlyIfAnnual: number;
+}
+
+export const getPublicPlans = (): Promise<Plan[]> =>
+  api.get('/plans').then((r) => r.data);
+
+export const getMyPlan = (): Promise<MyPlanResponse> =>
+  api.get('/plans/me').then((r) => r.data);
+
+export const getCustomPrice = (gb: number, billingInterval: 'monthly' | 'annual'): Promise<CustomPriceResponse> =>
+  api.get('/plans/custom-price', { params: { gb, billingInterval } }).then((r) => r.data);
+
+export const getAdminPlans = (): Promise<Plan[]> =>
+  api.get('/plans/admin').then((r) => r.data);
+
+export const updateAdminPlan = (id: string, data: Partial<Plan>): Promise<Plan> =>
+  api.put(`/plans/admin/${id}`, data).then((r) => r.data);
+
+export interface AdminSubscription {
+  id: string;
+  adminId: string;
+  adminName: string;
+  adminEmail: string;
+  plan: Plan;
+  subscription: Subscription;
+}
+
+export const getAdminSubscriptions = (): Promise<AdminSubscription[]> =>
+  api.get('/plans/admin/subscriptions').then((r) => r.data);
+
+export const overrideAdminSubscription = (adminId: string, data: { planId: string; billingInterval?: string }) =>
+  api.patch(`/plans/admin/subscriptions/${adminId}`, data).then((r) => r.data);
+
 export default api;

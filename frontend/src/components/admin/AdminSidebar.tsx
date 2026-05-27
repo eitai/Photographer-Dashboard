@@ -1,7 +1,7 @@
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useI18n } from '@/lib/i18n';
-import { LayoutDashboard, Users, BookOpen, Settings, LogOut, Languages, Star, Shield, Mail } from 'lucide-react';
+import { LayoutDashboard, Users, BookOpen, Settings, LogOut, Languages, Star, Shield, Mail, CreditCard, LayoutList } from 'lucide-react';
 import { useMyStorage } from '@/hooks/useQueries';
 import { StorageBar } from '@/components/admin/StorageBar';
 
@@ -18,13 +18,17 @@ export const AdminSidebar = ({ isOpen, onClose }: AdminSidebarProps) => {
 
   const NAV_ITEMS =
     admin?.role === 'superadmin'
-      ? [{ to: '/admin/users', label: t('admin.nav.users'), icon: Shield }]
+      ? [
+          { to: '/admin/users', label: t('admin.nav.users'), icon: Shield },
+          { to: '/admin/plans', label: t('admin.nav.plans'), icon: LayoutList },
+        ]
       : [
           { to: '/admin/dashboard', label: t('admin.nav.dashboard'), icon: LayoutDashboard },
           { to: '/admin/clients', label: t('admin.nav.clients'), icon: Users },
           { to: '/admin/showcase', label: t('admin.nav.showcase'), icon: Star },
           { to: '/admin/blog', label: t('admin.nav.blog'), icon: BookOpen },
           { to: '/admin/contact', label: t('admin.nav.contact'), icon: Mail },
+          { to: '/admin/billing', label: t('admin.nav.billing'), icon: CreditCard },
           { to: '/admin/settings', label: t('admin.nav.settings'), icon: Settings },
         ];
 

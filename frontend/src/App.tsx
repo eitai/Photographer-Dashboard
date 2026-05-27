@@ -42,6 +42,8 @@ const AdminSettings = lazy(() => import('./pages/admin/AdminSettings').then((m) 
 const AdminShowcase = lazy(() => import('./pages/admin/AdminShowcase').then((m) => ({ default: m.AdminShowcase })));
 const AdminUsers = lazy(() => import('./pages/admin/AdminUsers').then((m) => ({ default: m.AdminUsers })));
 const AdminContact = lazy(() => import('./pages/admin/AdminContact').then((m) => ({ default: m.AdminContact })));
+const BillingPage = lazy(() => import('./pages/admin/BillingPage').then((m) => ({ default: m.BillingPage })));
+const PlansPage = lazy(() => import('./pages/admin/PlansPage').then((m) => ({ default: m.PlansPage })));
 
 const queryClient = new QueryClient();
 
@@ -190,6 +192,22 @@ export const App = () => (
                   element={
                     <ProtectedRoute>
                       <AdminContact />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path='/admin/billing'
+                  element={
+                    <ProtectedRoute>
+                      <BillingPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path='/admin/plans'
+                  element={
+                    <ProtectedRoute superadminOnly>
+                      <PlansPage />
                     </ProtectedRoute>
                   }
                 />

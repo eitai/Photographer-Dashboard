@@ -1,5 +1,16 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import api, { getMyStorage, getAdminStorage, setAdminQuota } from '@/lib/api';
+import api, {
+  getMyStorage,
+  getAdminStorage,
+  setAdminQuota,
+  getPublicPlans,
+  getMyPlan,
+  getAdminPlans,
+  updateAdminPlan,
+  getAdminSubscriptions,
+  getCustomPrice,
+} from '@/lib/api';
+import type { Plan } from '@/lib/api';
 import * as clientService from '@/services/clientService';
 import * as galleryService from '@/services/galleryService';
 import { fetchProductOrders } from '@/services/productOrderService';
@@ -27,6 +38,11 @@ export const queryKeys = {
   storageMe: ['storage', 'me'] as const,
   adminStorage: (id: string) => ['storage', 'admin', id] as const,
   galleryPreview: (galleryId: string) => ['galleries', galleryId, 'preview'] as const,
+  publicPlans: ['plans', 'public'] as const,
+  myPlan: ['plans', 'me'] as const,
+  adminPlans: ['plans', 'admin'] as const,
+  adminSubscriptions: ['plans', 'admin', 'subscriptions'] as const,
+  customPrice: (gb: number, interval: string) => ['plans', 'custom-price', gb, interval] as const,
 };
 
 // ---------------------------------------------------------------------------
@@ -177,6 +193,63 @@ export function useSetAdminQuota() {
       queryClient.invalidateQueries({ queryKey: queryKeys.admins });
       queryClient.invalidateQueries({ queryKey: queryKeys.adminStorage(adminId) });
       queryClient.invalidateQueries({ queryKey: queryKeys.storageMe });
+    },
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Plan hooks
+// ---------------------------------------------------------------------------
+
+export function usePublicPlans() {
+  return useQuery({
+    queryKey: queryKeys.publicPlans,
+    queryFn: getPublicPlans,
+    staleTime: 5 * 60_000,
+  });
+}
+
+export function useMyPlan() {
+  return useQuery({
+    queryKey: queryKeys.myPlan,
+    queryFn: getMyPlan,
+    staleTime: 60_000,
+  });
+}
+
+export function useAdminPlans() {
+  return useQuery({
+    queryKey: queryKeys.adminPlans,
+    queryFn: getAdminPlans,
+    staleTime: 60_000,
+  });
+}
+
+export function useAdminSubscriptions() {
+  return useQuery({
+    queryKey: queryKeys.adminSubscriptions,
+    queryFn: getAdminSubscriptions,
+    staleTime: 60_000,
+  });
+}
+
+export function useCustomPrice(gb: number, interval: 'monthly' | 'annual', enabled = true) {
+  return useQuery({
+    queryKey: queryKeys.customPrice(gb, interval),
+    queryFn: () => getCustomPrice(gb, interval),
+    enabled: enabled && gb > 0,
+    staleTime: 30_000,
+  });
+}
+
+export function useUpdateAdminPlan() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Partial<Plan> }) => updateAdminPlan(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.adminPlans });
+      queryClient.invalidateQueries({ queryKey: queryKeys.publicPlans });
+      queryClient.invalidateQueries({ queryKey: queryKeys.myPlan });
     },
   });
 }

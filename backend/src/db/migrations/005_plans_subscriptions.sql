@@ -66,7 +66,12 @@ CREATE TABLE IF NOT EXISTS billing_events (
   created_at        TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- 6. Back-fill: assign free plan to all existing admins without a subscription
+-- 6. Indexes
+-- subscriptions.admin_id is already covered by the UNIQUE constraint above.
+-- billing_events.admin_id needs an explicit index for the Phase 2 billing history queries.
+CREATE INDEX IF NOT EXISTS billing_events_admin_id_idx ON billing_events(admin_id);
+
+-- 7. Back-fill: assign free plan to all existing admins without a subscription
 INSERT INTO subscriptions (admin_id, plan_id, status)
 SELECT a.id, p.id, 'active'
 FROM admins a
@@ -74,4 +79,5 @@ CROSS JOIN plans p
 WHERE p.slug = 'free'
   AND NOT EXISTS (
     SELECT 1 FROM subscriptions s WHERE s.admin_id = a.id
-  );
+  )
+ON CONFLICT (admin_id) DO NOTHING;

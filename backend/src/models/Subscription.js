@@ -1,6 +1,10 @@
 const pool = require('../db');
 const { rowToCamel } = require('../db/utils');
 
+// Default quota applied when no subscription row exists (e.g. pre-migration admins).
+// Must match the seed value set for the 'free' plan in 005_plans_subscriptions.sql.
+const FREE_TIER_BYTES = 10 * 1024 ** 3; // 10 GB
+
 async function findByAdminId(adminId) {
   const { rows } = await pool.query(
     `SELECT s.*, p.slug AS plan_slug, p.name AS plan_name,
@@ -120,13 +124,26 @@ async function update(adminId, data) {
 
 // Resolve effective storage quota in bytes (null = unlimited)
 function resolveQuotaBytes(subscription) {
-  if (!subscription) return 10 * 1024 ** 3; // fallback: 10 GB
+  if (!subscription) return FREE_TIER_BYTES; // fallback: 10 GB
   if (subscription.planSlug === 'custom') {
-    return subscription.customStorageGb
+    // Explicit positive-value check: 0 or null both fall through to null (unlimited),
+    // preventing a zero-GB custom plan from being mistaken for unlimited storage.
+    return (subscription.customStorageGb != null && subscription.customStorageGb > 0)
       ? subscription.customStorageGb * 1024 ** 3
       : null;
   }
   return subscription.storageBytes ?? null; // null = unlimited
 }
 
-module.exports = { findByAdminId, findAll, upsert, update, resolveQuotaBytes };
+// Assign the free plan to a newly created admin.
+// Safe to call multiple times — upsert is idempotent.
+// Silently skips if the plans table has not yet been migrated.
+async function assignFreePlan(adminId) {
+  // Lazy require to avoid a circular dependency (Plan → pool, Subscription → pool).
+  const Plan = require('./Plan');
+  const free = await Plan.findBySlug('free');
+  if (!free) return; // plans table not yet migrated
+  return upsert(adminId, { planId: free.id, status: 'active' });
+}
+
+module.exports = { findByAdminId, findAll, upsert, update, resolveQuotaBytes, assignFreePlan, FREE_TIER_BYTES };
