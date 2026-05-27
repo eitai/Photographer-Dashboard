@@ -572,6 +572,9 @@ export interface StoreOrderStatus {
   paymentStatus: string;
   totalAmount: number | null;
   currency: string;
+  trackingNumber: string | null;
+  trackingCarrier: string | null;
+  shippedAt: string | null;
   createdAt: string;
 }
 

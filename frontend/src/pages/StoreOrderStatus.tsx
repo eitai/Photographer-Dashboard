@@ -143,13 +143,36 @@ export const StoreOrderStatus = () => {
           <p className='text-sm font-sans text-charcoal'>{t('store.order.paid')}</p>
           <div className='border-t border-beige pt-4 space-y-1 text-sm font-sans text-charcoal/60'>
             <p>
-              <span className='font-medium text-charcoal'>{t('store.order.number')}:</span> {data.id}
+              <span className='font-medium text-charcoal'>{t('store.order.number')}:</span> {data.id.slice(0, 8).toUpperCase()}
             </p>
             {data.totalAmount !== null && (
               <p>
                 <span className='font-medium text-charcoal'>{t('store.order.total')}:</span>{' '}
                 ₪{data.totalAmount.toLocaleString('he-IL')}
               </p>
+            )}
+            {(data.status === 'shipped' || data.status === 'delivered') && data.trackingNumber && (
+              <div className='mt-3 pt-3 border-t border-beige space-y-1'>
+                <p className='font-medium text-charcoal text-xs uppercase tracking-wide'>
+                  {dir === 'rtl' ? 'פרטי משלוח' : 'Shipping Info'}
+                </p>
+                <p>
+                  <span className='font-medium text-charcoal'>{t('orders.tracking')}:</span>{' '}
+                  {data.trackingNumber}
+                </p>
+                {data.trackingCarrier && (
+                  <p>
+                    <span className='font-medium text-charcoal'>{t('orders.tracking.carrier')}:</span>{' '}
+                    {data.trackingCarrier}
+                  </p>
+                )}
+                {data.shippedAt && (
+                  <p className='text-xs text-charcoal/40'>
+                    {dir === 'rtl' ? 'נשלח ב-' : 'Shipped '}
+                    {new Date(data.shippedAt).toLocaleDateString(dir === 'rtl' ? 'he-IL' : 'en-GB')}
+                  </p>
+                )}
+              </div>
             )}
           </div>
           <a

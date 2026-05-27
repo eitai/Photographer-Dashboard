@@ -9,7 +9,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { CreateOrderModal } from '@/components/admin/CreateOrderModal';
-import { Plus, Eye } from 'lucide-react';
+import { Plus, Eye, Download } from 'lucide-react';
 import type { StoreOrder } from '@/lib/api';
 
 type OrderStatus = StoreOrder['status'] | 'all';
@@ -27,8 +27,32 @@ const STATUS_COLORS: Record<StoreOrder['status'], string> = {
   cancelled: 'bg-red-100 text-red-600',
 };
 
+const exportCsv = (orders: StoreOrder[], lang: string) => {
+  const headers = lang === 'he'
+    ? ['מספר', 'לקוח', 'גלריה', 'פריטים', 'סטטוס', 'זרימה', 'סכום', 'תאריך']
+    : ['#', 'Client', 'Gallery', 'Items', 'Status', 'Flow', 'Total', 'Date'];
+  const rows = orders.map((o, i) => [
+    i + 1,
+    o.client.name,
+    o.gallery.name,
+    o.itemsCount ?? o.items?.length ?? 0,
+    o.status,
+    o.flow,
+    o.totalAmount != null ? `₪${o.totalAmount}` : '',
+    new Date(o.createdAt).toLocaleDateString(lang === 'he' ? 'he-IL' : 'en-GB'),
+  ]);
+  const escape = (v: string | number) => `"${String(v).replace(/"/g, '""')}"`;
+  const csv = [headers, ...rows].map((r) => r.map(escape).join(',')).join('\n');
+  const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `orders-${new Date().toISOString().slice(0, 10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+};
+
 export const AdminOrders = () => {
-  const { t, dir } = useI18n();
+  const { t, lang, dir } = useI18n();
   const navigate = useNavigate();
   const [statusFilter, setStatusFilter] = useState<OrderStatus>('all');
   const [flowFilter, setFlowFilter] = useState<OrderFlow>('all');
@@ -71,13 +95,26 @@ export const AdminOrders = () => {
         {/* Header */}
         <div className={`flex items-center justify-between ${dir === 'rtl' ? 'flex-row-reverse' : ''}`}>
           <h1 className='font-serif text-2xl text-charcoal'>{t('orders.title')}</h1>
-          <Button
-            onClick={() => setIsCreateOpen(true)}
-            className='bg-blush hover:bg-blush/90 text-white gap-2'
-          >
-            <Plus size={16} />
-            {t('orders.new')}
-          </Button>
+          <div className={`flex gap-2 ${dir === 'rtl' ? 'flex-row-reverse' : ''}`}>
+            {orders.length > 0 && (
+              <Button
+                variant='outline'
+                size='sm'
+                className='gap-2'
+                onClick={() => exportCsv(orders, lang)}
+              >
+                <Download size={15} />
+                {dir === 'rtl' ? 'ייצוא CSV' : 'Export CSV'}
+              </Button>
+            )}
+            <Button
+              onClick={() => setIsCreateOpen(true)}
+              className='bg-blush hover:bg-blush/90 text-white gap-2'
+            >
+              <Plus size={16} />
+              {t('orders.new')}
+            </Button>
+          </div>
         </div>
 
         {/* Filter bar */}

@@ -261,7 +261,8 @@ router.get(
     }
 
     const { rows } = await pool.query(
-      `SELECT id, status, payment_status, total_amount, currency, created_at
+      `SELECT id, status, payment_status, total_amount, currency,
+              tracking_number, tracking_carrier, shipped_at, created_at
        FROM store_orders
        WHERE id = $1 AND flow = 'client'`,
       [orderId],
@@ -272,12 +273,15 @@ router.get(
 
     const order = rowToCamel(rows[0]);
     return res.json({
-      id:            order.id,
-      status:        order.status,
-      paymentStatus: order.paymentStatus,
-      totalAmount:   order.totalAmount,
-      currency:      order.currency,
-      createdAt:     order.createdAt,
+      id:              order.id,
+      status:          order.status,
+      paymentStatus:   order.paymentStatus,
+      totalAmount:     order.totalAmount,
+      currency:        order.currency,
+      trackingNumber:  order.trackingNumber  || null,
+      trackingCarrier: order.trackingCarrier || null,
+      shippedAt:       order.shippedAt       || null,
+      createdAt:       order.createdAt,
     });
   }),
 );

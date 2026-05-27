@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import JSZip from 'jszip';
 import { useI18n } from '@/lib/i18n';
 import { useSupplierOrder, useUpdateSupplierOrderStatus } from '@/hooks/useQueries';
 import { getSupplierOrderDownloadUrls } from '@/lib/api';
@@ -85,15 +86,31 @@ export const SupplierOrderDetail = () => {
     setDownloadingImages(true);
     try {
       const { urls } = await getSupplierOrderDownloadUrls(id);
-      const MAX_TABS = 10;
-      urls.slice(0, MAX_TABS).forEach((url) => window.open(url, '_blank'));
-      if (urls.length > MAX_TABS) {
-        toast({
-          title: dir === 'rtl'
-            ? `נפתחו ${MAX_TABS} מתוך ${urls.length} קישורים`
-            : `Opened ${MAX_TABS} of ${urls.length} links`,
-        });
+      if (urls.length === 0) {
+        toast({ title: dir === 'rtl' ? 'אין תמונות להורדה' : 'No images to download' });
+        return;
       }
+      const zip = new JSZip();
+      const folder = zip.folder('images') ?? zip;
+      const CONCURRENCY = 5;
+      for (let i = 0; i < urls.length; i += CONCURRENCY) {
+        await Promise.all(
+          urls.slice(i, i + CONCURRENCY).map(async (url, batchIdx) => {
+            const globalIdx = i + batchIdx;
+            const filename = url.split('?')[0].split('/').pop() || `image-${globalIdx + 1}`;
+            try {
+              const res = await fetch(url);
+              if (res.ok) folder.file(filename, await res.blob());
+            } catch { /* skip failed images */ }
+          }),
+        );
+      }
+      const content = await zip.generateAsync({ type: 'blob' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(content);
+      a.download = `order-${id.slice(0, 8)}-images.zip`;
+      a.click();
+      URL.revokeObjectURL(a.href);
     } catch {
       toast({ title: t('admin.common.error'), variant: 'destructive' });
     } finally {
