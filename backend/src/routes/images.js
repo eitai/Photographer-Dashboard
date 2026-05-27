@@ -223,18 +223,26 @@ router.delete('/:imageId', protect, asyncHandler(async (req, res) => {
 
   await GalleryImage.findByIdAndDelete(req.params.imageId);
 
-  // Fire-and-forget: clean up face tags and re-trigger recognition if it was previously run.
-  // Never blocks the response.
   const deletedImageId = req.params.imageId;
   const galleryId = req.params.galleryId;
   const adminId = req.admin.id;
+
+  // Delete face tags for the deleted image synchronously so the frontend refetch
+  // after receiving the 201 response sees a clean state.
+  const { rows: cropRows } = await pool.query(
+    `DELETE FROM gallery_image_face_tags WHERE gallery_image_id = $1 RETURNING face_crop_path`,
+    [deletedImageId]
+  );
+  // Clean up crop files async — doesn't block the response.
+  Promise.all(
+    cropRows.map(r => r.face_crop_path ? s3.deleteUpload(r.face_crop_path, UPLOADS_DIR) : Promise.resolve())
+  ).catch(err => logger.warn('[images] face crop file cleanup error:', err.message));
+
+  res.json({ message: 'Image deleted' });
+
+  // Fire-and-forget: clear all gallery face tags + re-trigger recognition.
   ;(async () => {
     try {
-      // Remove face tags for the deleted image
-      await pool.query(
-        `DELETE FROM gallery_image_face_tags WHERE gallery_image_id = $1`,
-        [deletedImageId]
-      );
 
       // Check if recognition has ever run for this gallery
       const { rows: jobRows } = await pool.query(
@@ -250,20 +258,21 @@ router.delete('/:imageId', protect, asyncHandler(async (req, res) => {
       );
       const remainingImageIds = imgRows.map(r => r.id);
 
-      // Clear ALL gallery face tags so the re-run starts with a clean slate
-      // (required for correct cluster recomputation across the full gallery)
-      await pool.query(
+      // Clear ALL gallery face tags + their crop files (clean slate for re-run)
+      const { rows: allCropRows } = await pool.query(
         `DELETE FROM gallery_image_face_tags
-         WHERE gallery_image_id = ANY(SELECT id FROM gallery_images WHERE gallery_id = $1)`,
+         WHERE gallery_image_id = ANY(SELECT id FROM gallery_images WHERE gallery_id = $1)
+         RETURNING face_crop_path`,
         [galleryId]
+      );
+      await Promise.all(
+        allCropRows.map(r => r.face_crop_path ? s3.deleteUpload(r.face_crop_path, UPLOADS_DIR) : Promise.resolve())
       );
 
       if (!remainingImageIds.length) {
-        // No images left — mark as done with zeroed counters
+        // No images left — delete the job entirely so the next upload starts fresh
         await pool.query(
-          `UPDATE face_recognition_jobs
-           SET status = 'done', total_images = 0, processed = 0, matched = 0, finished_at = NOW()
-           WHERE gallery_id = $1`,
+          `DELETE FROM face_recognition_jobs WHERE gallery_id = $1`,
           [galleryId]
         );
         return;

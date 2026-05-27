@@ -19,6 +19,8 @@ export const useImageDeletion = (id: string | undefined, onSuccess: () => void) 
       }
       setToDelete([]);
       queryClient.invalidateQueries({ queryKey: queryKeys.storageMe });
+      queryClient.invalidateQueries({ queryKey: ['faceGroups', id] });
+      queryClient.invalidateQueries({ queryKey: ['faceRecognitionStatus', id] });
       onSuccess();
     } finally {
       setBulkDeleting(false);

@@ -104,6 +104,33 @@ else
   log "frontend: directory not present, skipping"
 fi
 
+# ---------- face recognition service ----------
+FACE_DIR="${REPO_DIR}/face-recognition-service"
+if [ -d "${FACE_DIR}" ]; then
+  VENV="${FACE_DIR}/venv"
+  if [ ! -f "${VENV}/bin/python" ]; then
+    log "face-service: creating Python venv"
+    python3 -m venv "${VENV}"
+  fi
+
+  log "face-service: pip install -r requirements.txt"
+  "${VENV}/bin/pip" install --quiet -r "${FACE_DIR}/requirements.txt"
+
+  # Pre-download InsightFace buffalo_l model if not cached (~500 MB, once only)
+  MODEL_DIR="${HOME}/.insightface/models/buffalo_l"
+  if [ ! -d "${MODEL_DIR}" ]; then
+    log "face-service: downloading buffalo_l model (first time, ~500 MB)"
+    "${VENV}/bin/python" - <<'PYEOF'
+from insightface.app import FaceAnalysis
+FaceAnalysis(name="buffalo_l", providers=["CPUExecutionProvider"]).prepare(ctx_id=0, det_size=(640,640))
+PYEOF
+    log "face-service: model ready"
+  fi
+
+  mkdir -p "${FACE_DIR}/data"
+  log "face-service: ready"
+fi
+
 # ---------- restart ----------
 # `photo` user must have sudoers entry permitting these exact commands; see
 # /etc/sudoers.d/photo-deploy in ops/README.md.

@@ -50,6 +50,12 @@ router.post('/run', protect, asyncHandler(async (req, res) => {
 
   try {
     const boss = await getQueue();
+    // Force-fail any stuck active/created pg-boss jobs so singletonKey doesn't block
+    await pool.query(
+      `UPDATE pgboss.job SET state = 'failed', completedon = NOW()
+       WHERE name = $1 AND singletonkey = $2 AND state IN ('active', 'created')`,
+      [JOB_NAMES.FACE_RECOGNITION, `face:${galleryId}`]
+    ).catch(() => {});
     await boss.send(
       JOB_NAMES.FACE_RECOGNITION,
       { galleryId, adminId: req.admin.id, imageIds },
@@ -123,9 +129,9 @@ router.get('/faces', optionalProtect, asyncHandler(async (req, res) => {
        c.name                                                       AS client_name,
        cfr.image_path                                               AS reference_photo_path,
        COUNT(DISTINCT t.gallery_image_id)::int                      AS photo_count,
-       (ARRAY_AGG(t.bounding_box     ORDER BY t.confidence DESC))[1] AS rep_bounding_box,
-       (ARRAY_AGG(gi.thumbnail_path  ORDER BY t.confidence DESC))[1] AS rep_thumbnail_path,
-       (ARRAY_AGG(t.face_crop_path   ORDER BY t.confidence DESC))[1] AS rep_face_crop_path,
+       (ARRAY_AGG(t.bounding_box     ORDER BY (t.bounding_box->>'width')::float * (t.bounding_box->>'height')::float * t.confidence DESC))[1] AS rep_bounding_box,
+       (ARRAY_AGG(gi.thumbnail_path  ORDER BY (t.bounding_box->>'width')::float * (t.bounding_box->>'height')::float * t.confidence DESC))[1] AS rep_thumbnail_path,
+       (ARRAY_AGG(t.face_crop_path   ORDER BY (t.bounding_box->>'width')::float * (t.bounding_box->>'height')::float * t.confidence DESC))[1] AS rep_face_crop_path,
        ARRAY_AGG(DISTINCT t.gallery_image_id)                        AS image_ids
      FROM gallery_image_face_tags t
      JOIN gallery_images gi ON gi.id = t.gallery_image_id

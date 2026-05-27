@@ -9,15 +9,19 @@ require('./src/utils/loadSystemdCredentials').loadSystemdCredentials();
 
 // ── Startup validation ────────────────────────────────────────────────────────
 const { validateEnv } = require('./src/config/validateEnv');
-const { ok, missing } = validateEnv();
+const { ok, missing, warnings } = validateEnv();
 if (!ok) {
   console.error(`[startup] Missing required env vars: ${missing.join(', ')}`);
   console.error('[startup] Copy .env.example to .env and fill in all values.');
   process.exit(1);
 }
+if (warnings && warnings.length > 0) {
+  warnings.forEach((w) => console.warn(`[startup] WARNING: ${w}`));
+}
 
 const path = require('path');
 const fs   = require('fs');
+const { spawn } = require('child_process');
 
 const { connectDB, pool } = require('./src/config/db');
 const logger = require('./src/utils/logger');
@@ -27,7 +31,41 @@ const app = require('./src/app');
 const UPLOADS_DIR = path.join(__dirname, 'uploads');
 const THUMB_DIR   = path.join(__dirname, 'uploads/thumbnails');
 
+// ── Face recognition service child process ────────────────────────────────────
+let faceServiceProc = null;
+
+function spawnFaceService() {
+  const serviceDir = process.env.FACE_SERVICE_DIR;
+  if (!serviceDir) return; // not configured — skip silently
+
+  const python = path.join(serviceDir, 'venv', 'bin', 'python');
+  const args   = ['-m', 'uvicorn', 'main:app', '--host', '127.0.0.1', '--port', '8001'];
+
+  function launch() {
+    const proc = spawn(python, args, {
+      cwd: serviceDir,
+      env: { ...process.env, FACE_STORAGE_PATH: path.join(serviceDir, 'data', 'embeddings.pkl') },
+      stdio: ['ignore', 'pipe', 'pipe'],
+    });
+
+    proc.stdout.on('data', d => logger.info('[face-svc] ' + d.toString().trim()));
+    proc.stderr.on('data', d => logger.info('[face-svc] ' + d.toString().trim()));
+
+    proc.on('exit', (code, signal) => {
+      if (signal === 'SIGTERM' || signal === 'SIGKILL') return; // intentional shutdown
+      logger.warn(`[face-svc] exited (code=${code}) — restarting in 5s`);
+      setTimeout(launch, 5000);
+    });
+
+    faceServiceProc = proc;
+    logger.info(`[face-svc] started PID ${proc.pid}`);
+  }
+
+  launch();
+}
+
 async function start() {
+  spawnFaceService();
   await connectDB();
 
   // ── Auto-migrations (run before accepting requests) ───────────────────────
@@ -316,8 +354,8 @@ async function start() {
     logger.warn('[migrate] face_recognition_jobs migration skipped:', err.message);
   }
 
-  // Reset any jobs that were left in 'running' state from a previous crashed process.
-  // Safe to do unconditionally — the worker re-checks and re-processes only untagged images.
+  // Reset any jobs stuck in 'running' state from a previous crashed process.
+  // Re-enqueueing into pg-boss happens after the worker is registered (see below).
   try {
     await pool.query(
       `UPDATE face_recognition_jobs SET status = 'queued', started_at = NULL WHERE status = 'running'`
@@ -340,6 +378,43 @@ async function start() {
     logger.info('[migrate] face_recognition_jobs status constraint updated with cancelled');
   } catch (err) {
     logger.warn('[migrate] face_recognition_jobs status constraint migration skipped:', err.message);
+  }
+
+  // ── CompreFace migration ──────────────────────────────────────────────────
+  // Add compreface_image_id column and make embedding nullable (CompreFace stores
+  // embeddings server-side; we no longer persist the raw vector in Postgres).
+  // The one-time data purge (TRUNCATE/DELETE) runs only when compreface_image_id
+  // does not yet exist — meaning the column was just added — so old TF.js data
+  // (which is incompatible with CompreFace) is removed exactly once.
+  try {
+    // Check whether the column already exists before deciding to purge
+    const { rows: colCheck } = await pool.query(`
+      SELECT 1 FROM information_schema.columns
+      WHERE table_name = 'client_face_references'
+        AND column_name = 'compreface_image_id'
+    `);
+    const isFirstRun = colCheck.length === 0;
+
+    await pool.query(`
+      ALTER TABLE client_face_references
+        ADD COLUMN IF NOT EXISTS compreface_image_id TEXT
+    `);
+    await pool.query(`
+      ALTER TABLE client_face_references
+        ALTER COLUMN embedding DROP NOT NULL
+    `);
+    logger.info('[migrate] client_face_references compreface columns ensured');
+
+    if (isFirstRun) {
+      // Purge all TF.js-era data — embeddings from the old model are not
+      // compatible with CompreFace and would produce incorrect matches.
+      await pool.query(`TRUNCATE TABLE gallery_image_face_tags`);
+      await pool.query(`TRUNCATE TABLE face_recognition_jobs`);
+      await pool.query(`DELETE FROM client_face_references`);
+      logger.info('[migrate] CompreFace migration: purged stale TF.js face data (one-time)');
+    }
+  } catch (err) {
+    logger.warn('[migrate] CompreFace migration skipped:', err.message);
   }
 
   // ── In-process face recognition worker ───────────────────────────────────
@@ -392,6 +467,32 @@ async function start() {
       }
     });
     logger.info('[face] in-process face recognition worker registered');
+
+    // Re-enqueue any jobs that were reset from 'running' → 'queued' above.
+    // Done here so pg-boss is guaranteed to be initialized.
+    const { rows: orphanedJobs } = await pool.query(
+      `SELECT gallery_id, admin_id FROM face_recognition_jobs WHERE status = 'queued'`
+    );
+    for (const job of orphanedJobs) {
+      const { rows: imgRows } = await pool.query(
+        'SELECT id FROM gallery_images WHERE gallery_id = $1 ORDER BY sort_order ASC',
+        [job.gallery_id]
+      );
+      const imageIds = imgRows.map(r => r.id);
+      if (!imageIds.length) continue;
+      // Clear any stuck active/created pg-boss jobs so singletonKey doesn't block
+      await pool.query(
+        `UPDATE pgboss.job SET state = 'failed', completedon = NOW()
+         WHERE name = $1 AND singletonkey = $2 AND state IN ('active', 'created')`,
+        [JOB_NAMES.FACE_RECOGNITION, `face:${job.gallery_id}`]
+      ).catch(() => {});
+      await boss.send(
+        JOB_NAMES.FACE_RECOGNITION,
+        { galleryId: job.gallery_id, adminId: job.admin_id, imageIds },
+        { singletonKey: `face:${job.gallery_id}`, retryLimit: 2, retryDelay: 60, expireInSeconds: 7200 }
+      ).catch(() => {});
+      logger.info(`[startup] re-enqueued face recognition for gallery ${job.gallery_id}`);
+    }
   } catch (err) {
     logger.warn('[face] face recognition worker registration failed (non-fatal):', err.message);
   }
@@ -461,6 +562,7 @@ async function start() {
 
   const gracefulShutdown = async (signal) => {
     logger.info(`${signal} received — shutting down gracefully`);
+    if (faceServiceProc) { faceServiceProc.kill('SIGTERM'); faceServiceProc = null; }
     server.close(async () => {
       logger.info('HTTP server closed');
       await pool.end();
