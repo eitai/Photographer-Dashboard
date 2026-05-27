@@ -1008,6 +1008,43 @@ const translations: Record<string, Record<Lang, string>> = {
   'admin.status.selection_submitted': { he: 'בחירה הוגשה', en: 'Selection Submitted' },
   'admin.status.in_editing': { he: 'בעריכה', en: 'In Editing' },
   'admin.status.delivered': { he: 'נמסר', en: 'Delivered' },
+
+  // ── Admin: Billing — PayPlus additions ──────────────────────────────────────
+  'admin.billing.upgrade_select_interval': { he: 'בחר מחזור חיוב', en: 'Select billing interval' },
+  'admin.billing.upgrade_monthly': { he: 'חודשי', en: 'Monthly' },
+  'admin.billing.upgrade_annual': { he: 'שנתי (20% הנחה)', en: 'Annual (20% off)' },
+  'admin.billing.upgrade_custom_gb': { he: 'בחר נפח אחסון (GB)', en: 'Select storage (GB)' },
+  'admin.billing.upgrade_confirm': { he: 'עבור לתשלום', en: 'Proceed to payment' },
+  'admin.billing.cancel_confirm_title': { he: 'ביטול מנוי', en: 'Cancel subscription' },
+  'admin.billing.cancel_confirm_body': { he: 'המנוי יבוטל בסוף תקופת החיוב הנוכחית.', en: 'Your subscription will be cancelled at the end of the current billing period.' },
+  'admin.billing.cancel_btn': { he: 'בטל מנוי', en: 'Cancel plan' },
+  'admin.billing.reactivate_btn': { he: 'חדש מנוי', en: 'Reactivate plan' },
+  'admin.billing.payment_success': { he: 'התשלום הצליח! המנוי שלך עודכן.', en: 'Payment successful! Your plan has been updated.' },
+  'admin.billing.payment_failed': { he: 'התשלום נכשל. אנא נסה שנית.', en: 'Payment failed. Please try again.' },
+  'admin.billing.processing': { he: 'מעבד...', en: 'Processing...' },
+  'admin.billing.invoice_date': { he: 'תאריך', en: 'Date' },
+  'admin.billing.invoice_amount': { he: 'סכום', en: 'Amount' },
+  'admin.billing.invoice_type': { he: 'סוג', en: 'Type' },
+  'admin.billing.no_invoices': { he: 'אין חשבוניות עדיין.', en: 'No invoices yet.' },
+
+  // ── Public: Pricing page ─────────────────────────────────────────────────────
+  'pricing.title': { he: 'מחירים', en: 'Pricing' },
+  'pricing.subtitle': { he: 'בחר את התוכנית שמתאימה לך', en: "Choose the plan that's right for you" },
+  'pricing.monthly': { he: 'חודשי', en: 'Monthly' },
+  'pricing.annual': { he: 'שנתי', en: 'Annual' },
+  'pricing.annual_discount': { he: 'חיסכון 20%', en: 'Save 20%' },
+  'pricing.per_month': { he: '/חודש', en: '/mo' },
+  'pricing.per_year': { he: '/שנה', en: '/yr' },
+  'pricing.storage': { he: 'אחסון', en: 'Storage' },
+  'pricing.unlimited_storage': { he: 'אחסון ללא הגבלה', en: 'Unlimited storage' },
+  'pricing.cta': { he: 'התחל עכשיו', en: 'Get started' },
+  'pricing.current': { he: 'תוכנית נוכחית', en: 'Current plan' },
+  'pricing.free_cta': { he: 'הרשמה חינם', en: 'Sign up free' },
+  'pricing.custom_gb_label': { he: '{gb} GB אחסון', en: '{gb} GB storage' },
+  'pricing.custom_monthly_price': { he: '₪{price}/חודש', en: '₪{price}/mo' },
+  'pricing.custom_annual_price': { he: '₪{price}/שנה', en: '₪{price}/yr' },
+  'pricing.custom_slider_label': { he: 'כמות אחסון', en: 'Storage amount' },
+  'pricing.popular': { he: 'פופולרי', en: 'Popular' },
 };
 
 const I18nContext = createContext<I18nContextType | null>(null);

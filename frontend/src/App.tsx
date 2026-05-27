@@ -20,6 +20,7 @@ const ClientProductsPage = lazy(() => import('./pages/ClientProductsPage').then(
 const Blog = lazy(() => import('./pages/Blog').then((m) => ({ default: m.Blog })));
 const BlogPost = lazy(() => import('./pages/BlogPost').then((m) => ({ default: m.BlogPost })));
 const NotFound = lazy(() => import('./pages/NotFound').then((m) => ({ default: m.NotFound })));
+const PricingPage = lazy(() => import('./pages/PricingPage').then((m) => ({ default: m.PricingPage })));
 
 // Photographer public pages
 const PhotographerLayout = lazy(() => import('./pages/photographer/PhotographerLayout').then((m) => ({ default: m.PhotographerLayout })));
@@ -98,6 +99,14 @@ export const App = () => (
                   element={
                     <PublicLayout>
                       <BlogPost />
+                    </PublicLayout>
+                  }
+                />
+                <Route
+                  path='/pricing'
+                  element={
+                    <PublicLayout>
+                      <PricingPage />
                     </PublicLayout>
                   }
                 />

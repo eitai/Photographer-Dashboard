@@ -9,6 +9,10 @@ import api, {
   updateAdminPlan,
   getAdminSubscriptions,
   getCustomPrice,
+  checkoutPlan,
+  cancelSubscription,
+  reactivateSubscription,
+  getInvoices,
 } from '@/lib/api';
 import type { Plan } from '@/lib/api';
 import * as clientService from '@/services/clientService';
@@ -249,6 +253,44 @@ export function useUpdateAdminPlan() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.adminPlans });
       queryClient.invalidateQueries({ queryKey: queryKeys.publicPlans });
+      queryClient.invalidateQueries({ queryKey: queryKeys.myPlan });
+    },
+  });
+}
+
+export function useInvoices(page = 1) {
+  return useQuery({
+    queryKey: ['plans', 'invoices', page],
+    queryFn: () => getInvoices(page),
+    staleTime: 60_000,
+  });
+}
+
+export function useCheckoutPlan() {
+  return useMutation({
+    mutationFn: ({ planId, billingInterval, customStorageGb }: { planId: string; billingInterval: 'monthly' | 'annual'; customStorageGb?: number }) =>
+      checkoutPlan(planId, billingInterval, customStorageGb),
+    onSuccess: ({ url }) => {
+      window.location.href = url;
+    },
+  });
+}
+
+export function useCancelSubscription() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: cancelSubscription,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.myPlan });
+    },
+  });
+}
+
+export function useReactivateSubscription() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: reactivateSubscription,
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.myPlan });
     },
   });

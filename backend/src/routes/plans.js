@@ -1,10 +1,12 @@
 const express = require('express');
+const pool = require('../db');
 const Plan = require('../models/Plan');
 const Subscription = require('../models/Subscription');
 const asyncHandler = require('../middleware/asyncHandler');
 const { protect, superprotect } = require('../middleware/auth');
 const { getStorageUsedBytes } = require('../utils/storageUsage');
 const { UUID_RE } = require('../utils/uuid');
+const payplus = require('../utils/payplus');
 const { FREE_TIER_BYTES } = Subscription;
 const ANNUAL_DISCOUNT = 0.8; // 20% discount when billed annually
 
@@ -172,6 +174,166 @@ router.get('/custom-price', asyncHandler(async (req, res) => {
     annualDiscount,
     effectiveMonthlyIfAnnual: parseFloat((totalAnnual / 12).toFixed(2)),
   });
+}));
+
+// ── PayPlus subscription payment flow ──────────────────────────────────────
+
+// POST /api/plans/checkout — create a PayPlus hosted payment page for the chosen plan
+router.post('/checkout', protect, asyncHandler(async (req, res) => {
+  const { planId, billingInterval, customStorageGb } = req.body;
+  if (!planId) return res.status(400).json({ message: 'planId is required' });
+  if (!['monthly', 'annual'].includes(billingInterval))
+    return res.status(400).json({ message: 'billingInterval must be monthly or annual' });
+
+  const plan = await Plan.findById(planId);
+  if (!plan || !plan.isActive)
+    return res.status(404).json({ message: 'Plan not found' });
+  if (plan.slug === 'free')
+    return res.status(400).json({ message: 'Free plan does not require payment' });
+
+  let amount;
+  if (plan.slug === 'custom') {
+    if (!customStorageGb || customStorageGb < 1)
+      return res.status(400).json({ message: 'customStorageGb is required for the custom plan' });
+    const pricePerGb = Number(plan.pricePerGbIls);
+    if (!pricePerGb)
+      return res.status(503).json({ message: 'Custom plan pricing not configured' });
+    const monthly = parseFloat((customStorageGb * pricePerGb).toFixed(2));
+    amount = billingInterval === 'annual'
+      ? parseFloat((monthly * 12 * ANNUAL_DISCOUNT).toFixed(2))
+      : monthly;
+  } else {
+    amount = billingInterval === 'annual'
+      ? Number(plan.priceAnnualIls)
+      : Number(plan.priceMonthlyIls);
+    if (!amount)
+      return res.status(503).json({ message: 'Plan pricing not configured' });
+  }
+
+  const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:8080';
+  const result = await payplus.generatePaymentLink({
+    amount,
+    adminId:        req.admin.id,
+    planId,
+    planName:       `${plan.name} (${billingInterval})`,
+    billingInterval,
+    customStorageGb: plan.slug === 'custom' ? customStorageGb : null,
+    successUrl:  `${frontendUrl}/admin/billing?payment=success`,
+    failureUrl:  `${frontendUrl}/admin/billing?payment=failed`,
+    cancelUrl:   `${frontendUrl}/admin/billing`,
+    callbackUrl: `${process.env.BACKEND_URL || 'http://localhost:5000'}/api/plans/webhook`,
+  });
+
+  const url = result?.data?.payment_page_link;
+  if (!url) return res.status(502).json({ message: 'PayPlus did not return a payment URL' });
+
+  res.json({ url });
+}));
+
+// POST /api/plans/webhook — PayPlus callback (no auth — called by PayPlus servers)
+// Raw body is needed for signature verification; Express json() already parsed it here
+// because the payment link includes the callback URL. Signature check is best-effort
+// until PayPlus account access confirms the exact field/algorithm.
+router.post('/webhook', asyncHandler(async (req, res) => {
+  const payload = req.body;
+
+  // Verify signature — skip in dev if PAYPLUS_SECRET_KEY not set
+  if (process.env.PAYPLUS_SECRET_KEY && !payplus.verifyWebhookSignature(payload)) {
+    return res.status(401).json({ message: 'Invalid signature' });
+  }
+
+  // Only process approved transactions
+  const status = payload?.data?.status_code || payload?.status_code;
+  if (status !== '000' && status !== 0) {
+    return res.json({ received: true, skipped: true });
+  }
+
+  let moreInfo = {};
+  try { moreInfo = JSON.parse(payload.more_info || '{}'); } catch (_) { /* ignore */ }
+
+  const { adminId, planId, billingInterval, customStorageGb } = moreInfo;
+  if (!adminId || !planId) return res.json({ received: true, skipped: true });
+
+  const payplusCustomerUid  = payload?.data?.customer?.customer_uid || null;
+  const payplusRecurringUid = payload?.data?.recurring_uid || null;
+  const amount              = payload?.data?.amount || null;
+  const transactionUid      = payload?.data?.transaction_uid || null;
+
+  // Determine period boundaries (monthly or annual from now)
+  const now   = new Date();
+  const end   = new Date(now);
+  if (billingInterval === 'annual') end.setFullYear(end.getFullYear() + 1);
+  else                               end.setMonth(end.getMonth() + 1);
+
+  await Subscription.upsert(adminId, {
+    planId,
+    status:              'active',
+    billingInterval,
+    customStorageGb:     customStorageGb || null,
+    payplusCustomerUid,
+    payplusRecurringUid,
+    currentPeriodStart:  now.toISOString(),
+    currentPeriodEnd:    end.toISOString(),
+    cancelAtPeriodEnd:   false,
+  });
+
+  // Log billing event
+  await pool.query(
+    `INSERT INTO billing_events
+       (admin_id, subscription_id, type, amount, currency, description)
+     SELECT $1, s.id, 'payment_succeeded', $2, 'ILS', $3
+     FROM subscriptions s WHERE s.admin_id = $1`,
+    [adminId, amount, `Plan: ${planId} | ${billingInterval} | tx: ${transactionUid}`]
+  );
+
+  res.json({ received: true });
+}));
+
+// POST /api/plans/cancel — cancel at period end
+router.post('/cancel', protect, asyncHandler(async (req, res) => {
+  const sub = await Subscription.findByAdminId(req.admin.id);
+  if (!sub) return res.status(404).json({ message: 'No active subscription' });
+  if (!sub.payplusRecurringUid)
+    return res.status(400).json({ message: 'No PayPlus recurring ID on file' });
+
+  await payplus.setRecurringValid(sub.payplusRecurringUid, false);
+  const updated = await Subscription.update(req.admin.id, { cancelAtPeriodEnd: true });
+  res.json(updated);
+}));
+
+// POST /api/plans/reactivate — remove cancel_at_period_end
+router.post('/reactivate', protect, asyncHandler(async (req, res) => {
+  const sub = await Subscription.findByAdminId(req.admin.id);
+  if (!sub) return res.status(404).json({ message: 'No active subscription' });
+  if (!sub.payplusRecurringUid)
+    return res.status(400).json({ message: 'No PayPlus recurring ID on file' });
+
+  await payplus.setRecurringValid(sub.payplusRecurringUid, true);
+  const updated = await Subscription.update(req.admin.id, { cancelAtPeriodEnd: false });
+  res.json(updated);
+}));
+
+// GET /api/plans/invoices — billing history for the current admin
+router.get('/invoices', protect, asyncHandler(async (req, res) => {
+  const page  = Math.max(1, parseInt(req.query.page, 10) || 1);
+  const limit = 20;
+  const offset = (page - 1) * limit;
+
+  const { rows } = await pool.query(
+    `SELECT id, type, amount, currency, description, created_at
+     FROM billing_events
+     WHERE admin_id = $1
+     ORDER BY created_at DESC
+     LIMIT $2 OFFSET $3`,
+    [req.admin.id, limit, offset]
+  );
+
+  const { rows: [{ count }] } = await pool.query(
+    'SELECT COUNT(*) FROM billing_events WHERE admin_id = $1',
+    [req.admin.id]
+  );
+
+  res.json({ invoices: rows, total: Number(count), page, limit });
 }));
 
 module.exports = router;

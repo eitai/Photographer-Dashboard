@@ -57,30 +57,30 @@ async function findAll({ status, planId, page = 1, limit = 50 } = {}) {
 // Create or update subscription for an admin
 async function upsert(adminId, data) {
   const { planId, status = 'active', billingInterval = null,
-          customStorageGb = null, stripeCustomerId = null,
-          stripeSubscriptionId = null, currentPeriodStart = null,
+          customStorageGb = null, payplusCustomerUid = null,
+          payplusRecurringUid = null, currentPeriodStart = null,
           currentPeriodEnd = null, cancelAtPeriodEnd = false } = data;
 
   const { rows } = await pool.query(
     `INSERT INTO subscriptions
        (admin_id, plan_id, status, billing_interval, custom_storage_gb,
-        stripe_customer_id, stripe_subscription_id,
+        payplus_customer_uid, payplus_recurring_uid,
         current_period_start, current_period_end, cancel_at_period_end)
      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
      ON CONFLICT (admin_id) DO UPDATE SET
-       plan_id               = EXCLUDED.plan_id,
-       status                = EXCLUDED.status,
-       billing_interval      = EXCLUDED.billing_interval,
-       custom_storage_gb     = EXCLUDED.custom_storage_gb,
-       stripe_customer_id    = COALESCE(EXCLUDED.stripe_customer_id, subscriptions.stripe_customer_id),
-       stripe_subscription_id= COALESCE(EXCLUDED.stripe_subscription_id, subscriptions.stripe_subscription_id),
-       current_period_start  = COALESCE(EXCLUDED.current_period_start, subscriptions.current_period_start),
-       current_period_end    = COALESCE(EXCLUDED.current_period_end, subscriptions.current_period_end),
-       cancel_at_period_end  = EXCLUDED.cancel_at_period_end,
-       updated_at            = NOW()
+       plan_id              = EXCLUDED.plan_id,
+       status               = EXCLUDED.status,
+       billing_interval     = EXCLUDED.billing_interval,
+       custom_storage_gb    = EXCLUDED.custom_storage_gb,
+       payplus_customer_uid = COALESCE(EXCLUDED.payplus_customer_uid, subscriptions.payplus_customer_uid),
+       payplus_recurring_uid= COALESCE(EXCLUDED.payplus_recurring_uid, subscriptions.payplus_recurring_uid),
+       current_period_start = COALESCE(EXCLUDED.current_period_start, subscriptions.current_period_start),
+       current_period_end   = COALESCE(EXCLUDED.current_period_end, subscriptions.current_period_end),
+       cancel_at_period_end = EXCLUDED.cancel_at_period_end,
+       updated_at           = NOW()
      RETURNING *`,
     [adminId, planId, status, billingInterval, customStorageGb,
-     stripeCustomerId, stripeSubscriptionId,
+     payplusCustomerUid, payplusRecurringUid,
      currentPeriodStart, currentPeriodEnd, cancelAtPeriodEnd]
   );
   return rows[0] ? rowToCamel(rows[0]) : null;
@@ -88,15 +88,15 @@ async function upsert(adminId, data) {
 
 async function update(adminId, data) {
   const colMap = {
-    planId:               'plan_id',
-    status:               'status',
-    billingInterval:      'billing_interval',
-    customStorageGb:      'custom_storage_gb',
-    stripeCustomerId:     'stripe_customer_id',
-    stripeSubscriptionId: 'stripe_subscription_id',
-    currentPeriodStart:   'current_period_start',
-    currentPeriodEnd:     'current_period_end',
-    cancelAtPeriodEnd:    'cancel_at_period_end',
+    planId:              'plan_id',
+    status:              'status',
+    billingInterval:     'billing_interval',
+    customStorageGb:     'custom_storage_gb',
+    payplusCustomerUid:  'payplus_customer_uid',
+    payplusRecurringUid: 'payplus_recurring_uid',
+    currentPeriodStart:  'current_period_start',
+    currentPeriodEnd:    'current_period_end',
+    cancelAtPeriodEnd:   'cancel_at_period_end',
   };
 
   const sets = [];

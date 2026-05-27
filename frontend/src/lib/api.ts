@@ -119,4 +119,33 @@ export const getAdminSubscriptions = (): Promise<AdminSubscription[]> =>
 export const overrideAdminSubscription = (adminId: string, data: { planId: string; billingInterval?: string }) =>
   api.patch(`/plans/admin/subscriptions/${adminId}`, data).then((r) => r.data);
 
+// PayPlus billing
+export interface InvoiceItem {
+  id: string;
+  type: string;
+  amount: number | null;
+  currency: string;
+  description: string | null;
+  created_at: string;
+}
+
+export interface InvoicesResponse {
+  invoices: InvoiceItem[];
+  total: number;
+  page: number;
+  limit: number;
+}
+
+export const checkoutPlan = (planId: string, billingInterval: 'monthly' | 'annual', customStorageGb?: number): Promise<{ url: string }> =>
+  api.post('/plans/checkout', { planId, billingInterval, customStorageGb }).then((r) => r.data);
+
+export const cancelSubscription = (): Promise<unknown> =>
+  api.post('/plans/cancel').then((r) => r.data);
+
+export const reactivateSubscription = (): Promise<unknown> =>
+  api.post('/plans/reactivate').then((r) => r.data);
+
+export const getInvoices = (page = 1): Promise<InvoicesResponse> =>
+  api.get('/plans/invoices', { params: { page } }).then((r) => r.data);
+
 export default api;
