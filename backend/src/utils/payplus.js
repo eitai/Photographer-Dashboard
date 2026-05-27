@@ -124,8 +124,49 @@ function verifyWebhookSignature(payload) {
   );
 }
 
+/**
+ * Generate a one-time (non-recurring) PayPlus payment page link for a store order.
+ * Uses the PAYPLUS_STORE_PAYMENT_PAGE_UID payment page (separate from subscription page).
+ */
+async function generateStorePaymentLink({
+  amount,          // total order amount (number, 2 decimal places)
+  orderId,         // our store_orders.id (UUID)
+  clientName,      // for PayPlus customer identification
+  items,           // [{ name, quantity, unitPrice }]
+  successUrl,
+  failureUrl,
+  cancelUrl,
+  callbackUrl,
+}) {
+  const moreInfo = JSON.stringify({ orderId, flow: 'client' });
+
+  const payload = {
+    payment_page_uid: process.env.PAYPLUS_STORE_PAYMENT_PAGE_UID,
+    amount,
+    currency_code:     'ILS',
+    sendEmailApproval: true,
+    sendEmailFailure:  true,
+    refURL_success:    successUrl,
+    refURL_failure:    failureUrl,
+    refURL_cancel:     cancelUrl,
+    refURL_callback:   callbackUrl,
+    more_info:         moreInfo,
+    fullName:          clientName || '',
+    items: items.map((i) => ({
+      name:     i.name,
+      quantity: i.quantity,
+      price:    Number(i.unitPrice).toFixed(2),
+      vat_type: 0,
+    })),
+    // No recurring_settings — one-time payment
+  };
+
+  return payplusRequest('POST', '/api/v1.0/PaymentPages/generateLink', payload);
+}
+
 module.exports = {
   generatePaymentLink,
+  generateStorePaymentLink,
   setRecurringValid,
   getTransactionDetails,
   verifyWebhookSignature,

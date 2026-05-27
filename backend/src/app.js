@@ -140,6 +140,15 @@ app.use('/api/galleries/:galleryId/submit', submissionLimiter);
 app.use('/api/product-orders/:id/selection', submissionLimiter);
 app.use('/api/galleries/token', galleryTokenLimiter);
 
+const storeLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: process.env.NODE_ENV === 'test' ? 10000 : 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { message: 'Too many requests, please try again later.' },
+});
+app.use('/api/store/:galleryToken/checkout', storeLimiter);
+
 // ── Static files ──────────────────────────────────────────────────────────────
 // crossOriginResourcePolicy must be disabled here so browsers can load images
 // from this origin into pages served from a different origin (the frontend).
@@ -190,6 +199,7 @@ v1.use('/supplier/products',           require('./routes/supplierProducts'));
 v1.use('/admin/suppliers',             require('./routes/adminSuppliers'));
 v1.use('/orders',           require('./routes/orders'));
 v1.use('/supplier/orders',  require('./routes/supplierOrders'));
+v1.use('/store',                       require('./routes/store'));
 v1.use('/p/:id',                       require('./routes/public'));
 
 // Direct browser → Wasabi multipart upload pipeline + pg-boss compression

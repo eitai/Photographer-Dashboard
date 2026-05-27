@@ -68,6 +68,9 @@ const AdminOrderDetail = lazy(() => import('./pages/admin/AdminOrderDetail').the
 // Public: client order selection
 const ClientOrderSelection = lazy(() => import('./pages/ClientOrderSelection').then((m) => ({ default: m.ClientOrderSelection })));
 
+// Public: store order status (post-PayPlus redirect)
+const StoreOrderStatus = lazy(() => import('./pages/StoreOrderStatus').then((m) => ({ default: m.StoreOrderStatus })));
+
 // Supplier: orders
 const SupplierOrders = lazy(() => import('./pages/supplier/SupplierOrders').then((m) => ({ default: m.SupplierOrders })));
 const SupplierOrderDetail = lazy(() => import('./pages/supplier/SupplierOrderDetail').then((m) => ({ default: m.SupplierOrderDetail })));
@@ -135,6 +138,7 @@ export const App = () => (
                   }
                 />
                 <Route path='/gallery/:token' element={<ClientGallery />} />
+                <Route path='/store/order/:orderId' element={<StoreOrderStatus />} />
                 <Route path='/order-selection/:token' element={<ClientOrderSelection />} />
                 <Route path='/products/order/:orderToken' element={<ClientProductOrderPage />} />
                 <Route path='/products/:token' element={<ClientProductsPage />} />

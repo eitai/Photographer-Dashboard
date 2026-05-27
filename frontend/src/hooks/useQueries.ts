@@ -37,8 +37,10 @@ import api, {
   getSupplierOrders,
   getSupplierOrder,
   updateSupplierOrderStatus,
+  getStoreProducts,
+  getStoreOrderStatus,
 } from '@/lib/api';
-import type { Plan, InvoicesResponse, SupplierProduct, Supplier } from '@/lib/api';
+import type { Plan, InvoicesResponse, SupplierProduct, Supplier, StoreProductsResponse } from '@/lib/api';
 import * as clientService from '@/services/clientService';
 import * as galleryService from '@/services/galleryService';
 import { fetchProductOrders, updateProductOrderGalleries, deliverProductOrder } from '@/services/productOrderService';
@@ -77,6 +79,8 @@ export const queryKeys = {
   orderDetail: (id: string) => ['orders', id] as const,
   supplierOrders: ['supplier', 'orders'] as const,
   supplierOrderDetail: (id: string) => ['supplier', 'orders', id] as const,
+  storeProducts: (token: string) => ['store', 'products', token] as const,
+  storeOrderStatus: (id: string) => ['store', 'order', id] as const,
 };
 
 // ---------------------------------------------------------------------------
@@ -642,6 +646,32 @@ export function useUpdateSupplierOrderStatus() {
     onSuccess: (_, { id }) => {
       qc.invalidateQueries({ queryKey: queryKeys.supplierOrderDetail(id) });
       qc.invalidateQueries({ queryKey: queryKeys.supplierOrders });
+    },
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Store public hooks (client self-service Flow B)
+// ---------------------------------------------------------------------------
+
+export function useStoreProducts(galleryToken: string) {
+  return useQuery<StoreProductsResponse>({
+    queryKey: queryKeys.storeProducts(galleryToken),
+    queryFn: () => getStoreProducts(galleryToken),
+    enabled: !!galleryToken,
+    retry: false,
+  });
+}
+
+export function useStoreOrderStatus(orderId: string, enabled = true) {
+  return useQuery({
+    queryKey: queryKeys.storeOrderStatus(orderId),
+    queryFn: () => getStoreOrderStatus(orderId),
+    enabled: !!orderId && enabled,
+    refetchInterval: (query) => {
+      const status = query.state.data?.paymentStatus;
+      if (status === 'paid' || status === 'refunded') return false;
+      return 3000;
     },
   });
 }

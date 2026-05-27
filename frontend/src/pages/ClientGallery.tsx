@@ -5,6 +5,8 @@ import { useI18n } from '@/lib/i18n';
 import { DeliveryGallery } from '@/components/gallery/DeliveryGallery';
 import { SelectionGallery } from '@/components/gallery/SelectionGallery';
 import { FaceFilterStrip } from '@/components/gallery/FaceFilterStrip';
+import { StoreTab } from '@/components/gallery/StoreTab';
+import { useStoreProducts } from '@/hooks/useQueries';
 import type { GalleryData, GalleryImage } from '@/types/gallery';
 
 export const ClientGallery = () => {
@@ -16,6 +18,7 @@ export const ClientGallery = () => {
   const [error, setError] = useState(false);
   const [activeFaceGroupKey, setActiveFaceGroupKey] = useState<string | null>(null);
   const [faceFilteredIds, setFaceFilteredIds] = useState<Set<string> | null>(null);
+  const [activeTab, setActiveTab] = useState<'gallery' | 'store'>('gallery');
   const resolveImageUrl = useCallback((path: string) => getImageUrl(path), []);
 
   useEffect(() => {
@@ -34,6 +37,12 @@ export const ClientGallery = () => {
       }
     })();
   }, [token]);
+
+  // Fetch store products to determine whether to show the Store tab.
+  // retry:false so a missing/unconfigured supplier doesn't spam the console.
+  // This hook must be called unconditionally (rules of hooks).
+  const { data: storeData } = useStoreProducts(token ?? '');
+  const hasStore = !!(storeData?.products?.length && storeData.products.length > 0);
 
   const header = (
     <header className='h-20 shrink-0 flex items-center px-6 bg-white border-b border-beige'>
@@ -81,6 +90,72 @@ export const ClientGallery = () => {
     );
   }
 
+  // Selection gallery — with optional Store tab
+  if (hasStore && token) {
+    const tabBar = (
+      <div className='flex border-b border-beige bg-white shrink-0'>
+        <button
+          type='button'
+          onClick={() => setActiveTab('gallery')}
+          className={`px-6 py-3 text-sm font-sans font-medium transition-colors ${
+            activeTab === 'gallery'
+              ? 'border-b-2 border-charcoal text-charcoal'
+              : 'text-warm-gray hover:text-charcoal'
+          }`}
+        >
+          {t('gallery.tab')}
+        </button>
+        <button
+          type='button'
+          onClick={() => setActiveTab('store')}
+          className={`px-6 py-3 text-sm font-sans font-medium transition-colors ${
+            activeTab === 'store'
+              ? 'border-b-2 border-charcoal text-charcoal'
+              : 'text-warm-gray hover:text-charcoal'
+          }`}
+        >
+          {t('store.tab')}
+        </button>
+      </div>
+    );
+
+    return themeWrapper(
+      <>
+        {header}
+        {tabBar}
+        {activeTab === 'gallery' ? (
+          <>
+            <div className='px-4 pt-4'>
+              <FaceFilterStrip
+                galleryId={gallery._id}
+                showNames={false}
+                selectedGroupKey={activeFaceGroupKey}
+                onSelect={(groupKey, imageIds) => {
+                  setActiveFaceGroupKey(groupKey);
+                  setFaceFilteredIds(groupKey ? new Set(imageIds) : null);
+                }}
+                galleryToken={token}
+              />
+            </div>
+            <SelectionGallery
+              gallery={gallery}
+              images={images}
+              getImageUrl={resolveImageUrl}
+              filteredImageIds={faceFilteredIds}
+            />
+          </>
+        ) : (
+          <StoreTab
+            galleryToken={token}
+            galleryImages={images}
+            getImageUrl={resolveImageUrl}
+          />
+        )}
+      </>
+    );
+  }
+
+  // No store — render exactly as before
   return themeWrapper(
     <>
       {header}

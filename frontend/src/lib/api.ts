@@ -517,3 +517,69 @@ export const updateSupplierOrderStatus = (id: string, data: { status: string; tr
 
 export const getSupplierOrderDownloadUrls = (id: string) =>
   api.get<{ urls: string[] }>(`/supplier/orders/${id}/images/download`).then((r) => r.data);
+
+// ---- Store Public (client self-service, Flow B) ----
+
+// Store product (public view for clients — uses client_price not cost_price)
+export interface StoreProduct {
+  id: string;
+  name: string;
+  type: string;
+  description: string | null;
+  sku: string | null;
+  specs: Record<string, unknown>;
+  clientPrice: number;
+  imagePreviewPath: string | null;
+  sortOrder: number;
+}
+
+export interface StoreProductsResponse {
+  supplierId: string;
+  supplierName: string;
+  products: StoreProduct[];
+}
+
+export interface StoreCheckoutItem {
+  productId: string;
+  quantity: number;
+  selectedImageIds: string[];
+  imageNotes?: Record<string, string>;
+  productOptions?: Record<string, unknown>;
+}
+
+export interface StoreCheckoutRequest {
+  items: StoreCheckoutItem[];
+  shippingAddress: {
+    name: string;
+    street: string;
+    apartment?: string;
+    city: string;
+    zip?: string;
+    country?: string;
+    phone?: string;
+  };
+  clientNote?: string;
+}
+
+export interface StoreCheckoutResponse {
+  orderId: string;
+  url: string;
+}
+
+export interface StoreOrderStatus {
+  id: string;
+  status: string;
+  paymentStatus: string;
+  totalAmount: number | null;
+  currency: string;
+  createdAt: string;
+}
+
+export const getStoreProducts = (galleryToken: string) =>
+  api.get<StoreProductsResponse>(`/store/products/${galleryToken}`).then((r) => r.data);
+
+export const storeCheckout = (galleryToken: string, data: StoreCheckoutRequest) =>
+  api.post<StoreCheckoutResponse>(`/store/${galleryToken}/checkout`, data).then((r) => r.data);
+
+export const getStoreOrderStatus = (orderId: string) =>
+  api.get<StoreOrderStatus>(`/store/orders/${orderId}/status`).then((r) => r.data);
