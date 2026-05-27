@@ -303,3 +303,84 @@ export const getGalleryFaceGroupsPublic = (galleryId: string, token: string): Pr
   api.get(`/galleries/${galleryId}/face-recognition/faces`, { params: { token } }).then((r) => r.data);
 
 export default api;
+
+// ---- Supplier Auth & Products ----
+export interface Supplier {
+  id: string;
+  name: string;
+  email: string;
+  phone: string | null;
+  contactPerson: string | null;
+  logoPath: string | null;
+  isActive: boolean;
+  isExclusive: boolean;
+  orderCount?: number;
+}
+
+export interface SupplierProduct {
+  id: string;
+  supplierId: string;
+  name: string;
+  type: 'print' | 'canvas' | 'album' | 'digital' | 'other';
+  description: string | null;
+  sku: string | null;
+  specs: Record<string, unknown>;
+  costPrice: number;
+  clientPrice: number | null;
+  imagePreviewPath: string | null;
+  isActive: boolean;
+  sortOrder: number;
+}
+
+export const supplierLogin = (email: string, password: string): Promise<{ supplier: Supplier }> =>
+  api.post('/supplier/auth/login', { email, password }).then((r) => r.data);
+
+export const supplierLogout = (): Promise<void> =>
+  api.post('/supplier/auth/logout').then(() => undefined);
+
+export const getSupplierMe = (): Promise<{ supplier: Supplier }> =>
+  api.get('/supplier/auth/me').then((r) => r.data);
+
+export const getSupplierProducts = (): Promise<SupplierProduct[]> =>
+  api.get('/supplier/products').then((r) => r.data);
+
+export const createSupplierProduct = (data: Partial<SupplierProduct>): Promise<SupplierProduct> =>
+  api.post('/supplier/products', data).then((r) => r.data);
+
+export const updateSupplierProduct = (id: string, data: Partial<SupplierProduct>): Promise<SupplierProduct> =>
+  api.put(`/supplier/products/${id}`, data).then((r) => r.data);
+
+export const deleteSupplierProduct = (id: string): Promise<void> =>
+  api.delete(`/supplier/products/${id}`).then(() => undefined);
+
+export const uploadSupplierProductImage = (id: string, file: File): Promise<SupplierProduct> => {
+  const form = new FormData();
+  form.append('image', file);
+  return api.post(`/supplier/products/${id}/image`, form, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  }).then((r) => r.data);
+};
+
+export const reorderSupplierProducts = (items: { id: string; sortOrder: number }[]): Promise<void> =>
+  api.put('/supplier/products/reorder', items).then(() => undefined);
+
+// ---- Admin Suppliers ----
+export const getAdminSuppliers = (): Promise<Supplier[]> =>
+  api.get('/admin/suppliers').then((r) => r.data);
+
+export const createAdminSupplier = (data: {
+  name: string; email: string; password: string; phone?: string; contactPerson?: string;
+}): Promise<Supplier> =>
+  api.post('/admin/suppliers', data).then((r) => r.data);
+
+export const updateAdminSupplier = (id: string, data: Partial<Omit<Supplier, 'id' | 'orderCount'>>): Promise<Supplier> =>
+  api.put(`/admin/suppliers/${id}`, data).then((r) => r.data);
+
+export const deleteAdminSupplier = (id: string): Promise<void> =>
+  api.delete(`/admin/suppliers/${id}`).then(() => undefined);
+
+export const toggleSupplierActive = (id: string): Promise<Supplier> =>
+  api.patch(`/admin/suppliers/${id}/toggle-active`).then((r) => r.data);
+
+export const setSupplierExclusive = (id: string): Promise<Supplier> =>
+  api.patch(`/admin/suppliers/${id}/set-exclusive`).then((r) => r.data);

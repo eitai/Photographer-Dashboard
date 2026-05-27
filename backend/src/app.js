@@ -185,6 +185,9 @@ v1.use('/storage',                     require('./routes/storage'));
 v1.use('/admin-products',              require('./routes/adminProducts'));
 v1.use('/product-orders',              require('./routes/productOrders'));
 v1.use('/plans',                       require('./routes/plans'));
+v1.use('/supplier/auth',               require('./routes/supplierAuth'));
+v1.use('/supplier/products',           require('./routes/supplierProducts'));
+v1.use('/admin/suppliers',             require('./routes/adminSuppliers'));
 v1.use('/p/:id',                       require('./routes/public'));
 
 // Direct browser → Wasabi multipart upload pipeline + pg-boss compression

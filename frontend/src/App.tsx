@@ -8,6 +8,7 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { HelmetProvider } from 'react-helmet-async';
 import { I18nProvider } from '@/lib/i18n';
 import { ProtectedRoute } from '@/components/admin/ProtectedRoute';
+import { SupplierProtectedRoute } from '@/components/supplier/SupplierProtectedRoute';
 import { Navbar } from '@/components/Navbar';
 import { Footer } from '@/components/Footer';
 import { WhatsAppButton } from '@/components/WhatsAppButton';
@@ -51,6 +52,14 @@ const PlansPage = lazy(() => import('./pages/admin/PlansPage').then((m) => ({ de
 // query param inside the page itself AND by `import.meta.env.DEV` at the
 // route level, so it cannot ship to production builds.
 const S3UploadTest = lazy(() => import('./pages/admin/_S3UploadTest').then((m) => ({ default: m.S3UploadTest })));
+
+// Supplier panel
+const SupplierLogin = lazy(() => import('./pages/supplier/SupplierLogin').then((m) => ({ default: m.SupplierLogin })));
+const SupplierLayout = lazy(() => import('./pages/supplier/SupplierLayout').then((m) => ({ default: m.SupplierLayout })));
+const SupplierProducts = lazy(() => import('./pages/supplier/SupplierProducts').then((m) => ({ default: m.SupplierProducts })));
+
+// Admin: suppliers management
+const AdminSuppliersPage = lazy(() => import('./pages/admin/AdminSuppliersPage').then((m) => ({ default: m.AdminSuppliersPage })));
 
 // Layout wrapper for public pages (shows Navbar/Footer/WhatsApp)
 const PublicLayout = ({ children }: { children: React.ReactNode }) => (
@@ -233,6 +242,14 @@ export const App = () => (
                     </ProtectedRoute>
                   }
                 />
+                <Route
+                  path='/admin/suppliers'
+                  element={
+                    <ProtectedRoute superadminOnly>
+                      <AdminSuppliersPage />
+                    </ProtectedRoute>
+                  }
+                />
                 {/* Dev-only S3 uploader test harness. Reach via /admin/_s3test?s3test=1 */}
                 {import.meta.env.DEV && (
                   <Route
@@ -244,6 +261,19 @@ export const App = () => (
                     }
                   />
                 )}
+
+                {/* Supplier panel — separate auth, placed before /:id to avoid shadowing */}
+                <Route path='/supplier/login' element={<SupplierLogin />} />
+                <Route
+                  path='/supplier'
+                  element={
+                    <SupplierProtectedRoute>
+                      <SupplierLayout />
+                    </SupplierProtectedRoute>
+                  }
+                >
+                  <Route path='products' element={<SupplierProducts />} />
+                </Route>
 
                 {/* Per-photographer public pages — must be last to avoid shadowing other routes */}
                 <Route path='/:id' element={<PhotographerLayout />}>

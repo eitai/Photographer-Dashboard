@@ -15,8 +15,19 @@ import api, {
   reactivateSubscription,
   getInvoices,
   pingS3,
+  getSupplierProducts,
+  createSupplierProduct,
+  updateSupplierProduct,
+  deleteSupplierProduct,
+  uploadSupplierProductImage,
+  getAdminSuppliers,
+  createAdminSupplier,
+  updateAdminSupplier,
+  deleteAdminSupplier,
+  toggleSupplierActive,
+  setSupplierExclusive,
 } from '@/lib/api';
-import type { Plan, InvoicesResponse } from '@/lib/api';
+import type { Plan, InvoicesResponse, SupplierProduct, Supplier } from '@/lib/api';
 import * as clientService from '@/services/clientService';
 import * as galleryService from '@/services/galleryService';
 import { fetchProductOrders, updateProductOrderGalleries, deliverProductOrder } from '@/services/productOrderService';
@@ -49,6 +60,8 @@ export const queryKeys = {
   adminPlans: ['plans', 'admin'] as const,
   adminSubscriptions: ['plans', 'admin', 'subscriptions'] as const,
   customPrice: (gb: number, interval: string) => ['plans', 'custom-price', gb, interval] as const,
+  supplierProducts: ['supplier', 'products'] as const,
+  adminSuppliers: ['admin', 'suppliers'] as const,
 };
 
 // ---------------------------------------------------------------------------
@@ -304,6 +317,91 @@ export function useReactivateSubscription() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.myPlan });
     },
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Supplier hooks
+// ---------------------------------------------------------------------------
+
+export function useSupplierProducts() {
+  return useQuery({ queryKey: queryKeys.supplierProducts, queryFn: getSupplierProducts, staleTime: 30_000 });
+}
+
+export function useAdminSuppliers() {
+  return useQuery({ queryKey: queryKeys.adminSuppliers, queryFn: getAdminSuppliers, staleTime: 30_000 });
+}
+
+export function useCreateSupplierProduct() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: createSupplierProduct,
+    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.supplierProducts }),
+  });
+}
+
+export function useUpdateSupplierProduct() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Partial<SupplierProduct> }) => updateSupplierProduct(id, data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.supplierProducts }),
+  });
+}
+
+export function useDeleteSupplierProduct() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: deleteSupplierProduct,
+    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.supplierProducts }),
+  });
+}
+
+export function useUploadSupplierProductImage() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, file }: { id: string; file: File }) => uploadSupplierProductImage(id, file),
+    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.supplierProducts }),
+  });
+}
+
+export function useCreateAdminSupplier() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: createAdminSupplier,
+    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.adminSuppliers }),
+  });
+}
+
+export function useUpdateAdminSupplier() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Partial<Omit<Supplier, 'id' | 'orderCount'>> }) =>
+      updateAdminSupplier(id, data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.adminSuppliers }),
+  });
+}
+
+export function useDeleteAdminSupplier() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: deleteAdminSupplier,
+    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.adminSuppliers }),
+  });
+}
+
+export function useToggleSupplierActive() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: toggleSupplierActive,
+    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.adminSuppliers }),
+  });
+}
+
+export function useSetSupplierExclusive() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: setSupplierExclusive,
+    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.adminSuppliers }),
   });
 }
 
