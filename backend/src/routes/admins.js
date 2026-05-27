@@ -4,6 +4,8 @@ const pool = require('../db');
 const Admin = require('../models/Admin');
 const AdminProduct = require('../models/AdminProduct');
 const SiteSettings = require('../models/SiteSettings');
+const Plan = require('../models/Plan');
+const Subscription = require('../models/Subscription');
 const { superprotect } = require('../middleware/auth');
 const { uploadImage: upload, validateImageMagicBytes } = require('../middleware/upload');
 const asyncHandler = require('../middleware/asyncHandler');
@@ -47,8 +49,10 @@ router.post('/', asyncHandler(async (req, res) => {
     quotaGB: quotaGB || undefined,
   });
 
-  // Seed default product catalog for the new admin
+  // Seed default product catalog and assign free plan
   await AdminProduct.seedDefaults(admin.id);
+  const freePlan = await Plan.findBySlug('free');
+  if (freePlan) await Subscription.upsert(admin.id, { planId: freePlan.id, status: 'active' });
 
   res.status(201).json({
     id: admin.id,

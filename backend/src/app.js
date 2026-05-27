@@ -167,6 +167,7 @@ v1.use('/admins',                    require('./routes/admins'));
 v1.use('/storage',                   require('./routes/storage'));
 v1.use('/admin-products',            require('./routes/adminProducts'));
 v1.use('/product-orders',            require('./routes/productOrders'));
+v1.use('/plans',                     require('./routes/plans'));
 v1.use('/p/:id',                     require('./routes/public'));
 
 app.use('/api/v1', v1);

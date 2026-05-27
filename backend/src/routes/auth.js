@@ -1,6 +1,8 @@
 const express = require('express');
 const jwt = require('jsonwebtoken');
 const Admin = require('../models/Admin');
+const Plan = require('../models/Plan');
+const Subscription = require('../models/Subscription');
 const { protect } = require('../middleware/auth');
 const asyncHandler = require('../middleware/asyncHandler');
 const validatePassword = require('../utils/validatePassword');
@@ -107,7 +109,15 @@ router.post('/seed', asyncHandler(async (req, res) => {
   if (count > 0)
     return res.status(400).json({ message: 'Admins already exist. Use superadmin panel to add more.' });
   const admin = await Admin.create({ name, email, username, password, role: 'superadmin' });
+  await assignFreePlan(admin.id);
   res.status(201).json({ message: 'Superadmin created', id: admin.id });
 }));
+
+// Assign free plan subscription — used on every new admin creation
+async function assignFreePlan(adminId) {
+  const free = await Plan.findBySlug('free');
+  if (!free) return; // plans table not yet migrated — skip gracefully
+  await Subscription.upsert(adminId, { planId: free.id, status: 'active' });
+}
 
 module.exports = router;
