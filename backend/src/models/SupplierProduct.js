@@ -26,8 +26,9 @@ async function create(supplierId, data) {
   const { rows } = await pool.query(
     `INSERT INTO supplier_products
        (supplier_id, name, type, description, sku, specs,
-        cost_price, client_price, image_preview_path, is_active, sort_order)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+        cost_price, client_price, image_preview_path, is_active, sort_order,
+        min_photos, max_photos, production_days, variations)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
      RETURNING *`,
     [
       supplierId,
@@ -41,6 +42,10 @@ async function create(supplierId, data) {
       data.imagePreviewPath  || null,
       data.isActive          !== undefined ? data.isActive    : true,
       data.sortOrder         !== undefined ? data.sortOrder   : 0,
+      data.minPhotos         !== undefined ? data.minPhotos   : 0,
+      data.maxPhotos         !== undefined ? data.maxPhotos   : 0,
+      data.productionDays    !== undefined ? data.productionDays : null,
+      data.variations        !== undefined ? JSON.stringify(data.variations) : '[]',
     ]
   );
   return rowToCamel(rows[0]);
@@ -58,6 +63,10 @@ async function update(id, data) {
     imagePreviewPath: 'image_preview_path',
     isActive:         'is_active',
     sortOrder:        'sort_order',
+    minPhotos:        'min_photos',
+    maxPhotos:        'max_photos',
+    productionDays:   'production_days',
+    variations:       'variations',
   };
 
   const sets = [];
@@ -67,8 +76,8 @@ async function update(id, data) {
   for (const [k, v] of Object.entries(data)) {
     if (!colMap[k]) continue;
     const col = colMap[k];
-    // Serialize JSONB field
-    if (col === 'specs') {
+    // Serialize JSONB fields
+    if (col === 'specs' || col === 'variations') {
       sets.push(`${col} = $${i++}`);
       vals.push(JSON.stringify(v));
     } else {
@@ -112,7 +121,7 @@ async function deleteById(id) {
  * Bulk-update sort_order for an array of { id, sortOrder } items.
  * Uses a single UPDATE ... CASE statement for efficiency.
  */
-async function reorder(items) {
+async function reorder(items, supplierId) {
   if (!items || items.length === 0) return;
 
   // Build: CASE WHEN id = $1 THEN $2 WHEN id = $3 THEN $4 ... END
@@ -126,12 +135,14 @@ async function reorder(items) {
   }
 
   const inPlaceholders = items.map((_, idx) => `$${idx * 2 + 1}`).join(', ');
+  vals.push(supplierId);
+  const supplierParam = `$${vals.length}`;
 
   await pool.query(
     `UPDATE supplier_products
         SET sort_order = CASE ${caseParts.join(' ')} END,
             updated_at = NOW()
-      WHERE id IN (${inPlaceholders})`,
+      WHERE id IN (${inPlaceholders}) AND supplier_id = ${supplierParam}`,
     vals
   );
 }

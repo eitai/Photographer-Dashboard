@@ -158,7 +158,7 @@ export const AdminShowcase = () => {
                   onClick={() => setBrowseGalleryId(g._id === browseGalleryId ? '' : g._id)}
                   className={`text-start px-4 py-3 rounded-xl border text-sm transition-colors ${
                     browseGalleryId === g._id
-                      ? 'border-blush bg-blush/10 text-charcoal font-medium'
+                      ? 'bg-ivory border-beige text-charcoal font-medium'
                       : 'border-beige hover:bg-ivory text-charcoal'
                   }`}
                 >
@@ -196,7 +196,7 @@ export const AdminShowcase = () => {
                       <div
                         key={img._id}
                         className={`group relative aspect-square rounded-lg overflow-hidden border-2 transition-all cursor-pointer ${
-                          selected ? 'border-blush ring-2 ring-blush/40' : 'border-transparent hover:border-beige'
+                          selected ? 'border-charcoal ring-2 ring-charcoal/20' : 'border-transparent hover:border-beige'
                         }`}
                         onClick={() => toggleFeatured(img)}
                       >
@@ -208,7 +208,7 @@ export const AdminShowcase = () => {
                           decoding='async'
                         />
                         {selected && (
-                          <div className='absolute inset-0 bg-blush/25 flex items-center justify-center pointer-events-none'>
+                          <div className='absolute inset-0 bg-charcoal/20 flex items-center justify-center pointer-events-none'>
                             <Check size={18} className='text-white drop-shadow' />
                           </div>
                         )}
@@ -230,7 +230,7 @@ export const AdminShowcase = () => {
                 {/* Infinite scroll sentinel */}
                 {hasMore && (
                   <div ref={sentinelRef} className='flex justify-center py-4'>
-                    {loadingMore && <div className='w-5 h-5 rounded-full border-2 border-beige border-t-blush animate-spin' />}
+                    {loadingMore && <div className='w-5 h-5 rounded-full border-2 border-beige border-t-charcoal animate-spin' />}
                   </div>
                 )}
               </>

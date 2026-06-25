@@ -13,7 +13,7 @@ export const StoreOrderStatus = () => {
 
   const header = (
     <header className='h-20 shrink-0 flex items-center px-6 bg-white border-b border-beige'>
-      <img src='/logos/03_logo_horizontal_transparent.png' alt='LIGHT STUDIO' className='h-14 w-auto' />
+      <img src='/logos/logo.png' style={{mixBlendMode: 'multiply'}} alt='LIGHT STUDIO' className='h-14 w-auto' />
     </header>
   );
 
@@ -77,7 +77,10 @@ export const StoreOrderStatus = () => {
   }
 
   const isPaid = data.paymentStatus === 'paid';
-  const isCancelled = data.status === 'cancelled' || data.paymentStatus === 'refunded';
+  const isCancelled =
+    data.status === 'cancelled' ||
+    data.paymentStatus === 'refunded' ||
+    data.paymentStatus === 'failed';
 
   // Cancelled / refunded state
   if (isCancelled) {
@@ -175,9 +178,19 @@ export const StoreOrderStatus = () => {
               </div>
             )}
           </div>
+          {data.receiptUrl && (
+            <a
+              href={data.receiptUrl}
+              target='_blank'
+              rel='noreferrer'
+              className='inline-block bg-charcoal text-white text-sm font-sans rounded-full px-5 py-2.5 hover:bg-charcoal/90 transition-colors'
+            >
+              {t('store.order.download_receipt')}
+            </a>
+          )}
           <a
             href='/'
-            className='inline-block text-sm font-sans text-charcoal underline hover:no-underline'
+            className='block text-sm font-sans text-charcoal underline hover:no-underline'
           >
             {t('store.order.back_to_gallery')}
           </a>

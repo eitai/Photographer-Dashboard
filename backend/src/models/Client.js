@@ -34,8 +34,10 @@ async function find(filter = {}) {
 
 async function create(data) {
   const { rows } = await pool.query(
-    `INSERT INTO clients (admin_id, name, phone, email, session_type, notes, status, event_date)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
+    `INSERT INTO clients
+       (admin_id, name, phone, email, session_type, notes, status, event_date,
+        address_street, address_apartment, address_city, address_zip, address_country)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13) RETURNING *`,
     [
       data.adminId,
       data.name,
@@ -45,6 +47,11 @@ async function create(data) {
       data.notes || null,
       data.status || 'gallery_sent',
       data.eventDate || null,
+      data.addressStreet || null,
+      data.addressApartment || null,
+      data.addressCity || null,
+      data.addressZip || null,
+      data.addressCountry || null,
     ]
   );
   return rowToCamel(rows[0]);
@@ -66,6 +73,11 @@ async function findOneAndUpdate(filter, update, opts = {}, pgClient = null) {
     status: 'status',
     eventDate: 'event_date',
     faceRecognitionEnabled: 'face_recognition_enabled',
+    addressStreet:    'address_street',
+    addressApartment: 'address_apartment',
+    addressCity:      'address_city',
+    addressZip:       'address_zip',
+    addressCountry:   'address_country',
   };
 
   const src = update.$set || update;

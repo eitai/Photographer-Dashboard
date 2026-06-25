@@ -47,7 +47,7 @@ export const AdminBlog = () => {
     <AdminLayout title={t('admin.blog.title')}>
       <div className="flex justify-end mb-6">
         <Link to="/admin/blog/new"
-          className="flex items-center gap-2 bg-blush text-primary-foreground px-4 py-2 rounded-lg text-sm font-medium hover:bg-blush/80 transition-colors">
+          className="flex items-center gap-2 bg-charcoal text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-charcoal/90 transition-colors">
           <Plus size={15} /> {t('admin.blog.new_post')}
         </Link>
       </div>
@@ -123,7 +123,7 @@ export const AdminBlog = () => {
             <button
               onClick={() => deleteMutation.mutate(deleteTargetId)}
               disabled={deleteMutation.isPending}
-              className="flex-1 bg-rose-500 text-white py-3 rounded-xl text-sm font-medium hover:bg-rose-600 transition-colors disabled:opacity-60"
+              className="flex-1 bg-red-500 text-white py-3 rounded-xl text-sm font-medium hover:bg-red-600 transition-colors disabled:opacity-60"
             >
               {deleteMutation.isPending ? t('admin.common.deleting') : t('admin.common.delete')}
             </button>

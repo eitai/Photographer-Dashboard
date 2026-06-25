@@ -68,7 +68,7 @@ export function QuotaSlider({ value, onChange }: QuotaSliderProps) {
           <div className='absolute inset-x-0 h-2 rounded-full bg-beige overflow-hidden'>
             <div
               className={`h-full rounded-full transition-all duration-150 ${
-                isUnlimited ? 'bg-amber-400' : 'bg-[#E7B8B5]'
+                isUnlimited ? 'bg-amber-400' : 'bg-blush'
               }`}
               style={{ width: `${fillPct}%` }}
             />
@@ -91,7 +91,7 @@ export function QuotaSlider({ value, onChange }: QuotaSliderProps) {
             className={`absolute w-4 h-4 rounded-full border-2 shadow-sm transition-all duration-150 pointer-events-none z-0 ${
               isUnlimited
                 ? 'bg-amber-400 border-amber-500'
-                : 'bg-card border-[#E7B8B5]'
+                : 'bg-card border-blush'
             }`}
             style={{ left: `calc(${fillPct}% - 8px)` }}
           />

@@ -6,6 +6,7 @@ const asyncHandler   = require('../middleware/asyncHandler');
 const Admin          = require('../models/Admin');
 const payplus        = require('../utils/payplus');
 const logger         = require('../utils/logger');
+const { checkPhotoCount } = require('../utils/validatePhotoCounts');
 
 const router = express.Router();
 
@@ -18,16 +19,21 @@ router.get(
   asyncHandler(async (req, res) => {
     const { galleryToken } = req.params;
 
-    // 1. Resolve gallery by token
+    // 1. Resolve gallery by token (+ the photographer's store permission)
     const { rows: galRows } = await pool.query(
-      `SELECT id, admin_id, client_id, name
-       FROM galleries
-       WHERE token = $1 AND is_active = true
+      `SELECT g.id, g.admin_id, g.client_id, g.name, a.clients_can_order
+       FROM galleries g
+       JOIN admins a ON a.id = g.admin_id
+       WHERE g.token = $1 AND g.is_active = true
        LIMIT 1`,
       [galleryToken],
     );
     if (!galRows[0]) {
       return res.status(404).json({ message: 'Gallery not found' });
+    }
+    // Photographer's clients are not allowed to order → render nothing (no store tab)
+    if (galRows[0].clients_can_order === false) {
+      return res.json({ products: [] });
     }
 
     // 2. Find exclusive active supplier
@@ -44,7 +50,8 @@ router.get(
     // 3. Fetch active products ordered by sort_order
     const { rows: prodRows } = await pool.query(
       `SELECT id, name, type, description, sku, specs,
-              client_price, image_preview_path, sort_order
+              client_price, image_preview_path, sort_order,
+              min_photos, max_photos, production_days, variations
        FROM supplier_products
        WHERE supplier_id = $1 AND is_active = true
        ORDER BY sort_order ASC`,
@@ -100,16 +107,20 @@ router.post(
       }
     }
 
-    // 3. Resolve gallery by token
+    // 3. Resolve gallery by token (+ store permission)
     const { rows: galRows } = await pool.query(
-      `SELECT id, admin_id, client_id, name
-       FROM galleries
-       WHERE token = $1 AND is_active = true
+      `SELECT g.id, g.admin_id, g.client_id, g.name, a.clients_can_order
+       FROM galleries g
+       JOIN admins a ON a.id = g.admin_id
+       WHERE g.token = $1 AND g.is_active = true
        LIMIT 1`,
       [galleryToken],
     );
     if (!galRows[0]) {
       return res.status(404).json({ message: 'Gallery not found' });
+    }
+    if (galRows[0].clients_can_order === false) {
+      return res.status(403).json({ message: 'Store ordering is not available for this gallery' });
     }
     const gallery   = galRows[0];
     const adminId   = gallery.admin_id;
@@ -132,7 +143,7 @@ router.post(
     // 5. Fetch and validate all products in one query
     const productIds = items.map((i) => i.productId);
     const { rows: prodRows } = await pool.query(
-      `SELECT id, name, cost_price, client_price, is_active
+      `SELECT id, name, cost_price, client_price, is_active, min_photos, max_photos
        FROM supplier_products
        WHERE id = ANY($1::uuid[]) AND supplier_id = $2`,
       [productIds, supplierId],
@@ -151,6 +162,17 @@ router.post(
     // Build a map for O(1) lookups during total computation and item inserts
     const productMap = new Map(prodRows.map((p) => [p.id, p]));
 
+    // 5b. Enforce per-product photo selection requirements
+    for (const item of items) {
+      const prod = productMap.get(item.productId);
+      const count = Array.isArray(item.selectedImageIds) ? item.selectedImageIds.length : 0;
+      try {
+        checkPhotoCount(prod, count);
+      } catch (countErr) {
+        return res.status(countErr.status || 422).json({ message: countErr.message });
+      }
+    }
+
     // 6. Compute total using client_price
     let total = 0;
     for (const item of items) {
@@ -158,6 +180,10 @@ router.post(
       total += item.quantity * Number(prod.client_price);
     }
     total = Math.round(total * 100) / 100; // round to 2 dp
+
+    if (total <= 0) {
+      return res.status(422).json({ message: 'Order total must be greater than zero' });
+    }
 
     // 7. Create order + items in a transaction
     const txClient = await pool.connect();
@@ -272,6 +298,11 @@ router.get(
     }
 
     const order = rowToCamel(rows[0]);
+
+    // Receipt PDF link, if a document has been issued for this order
+    const IssuedDocument = require('../models/IssuedDocument');
+    const receipt = await IssuedDocument.findBySource('store_order', orderId, 'receipt');
+
     return res.json({
       id:              order.id,
       status:          order.status,
@@ -282,6 +313,7 @@ router.get(
       trackingCarrier: order.trackingCarrier || null,
       shippedAt:       order.shippedAt       || null,
       createdAt:       order.createdAt,
+      receiptUrl:      receipt?.pdfUrl || null,
     });
   }),
 );
@@ -292,13 +324,15 @@ router.post(
   asyncHandler(async (req, res) => {
     const payload = req.body;
 
-    // 1. Optionally verify signature — warn but still process on mismatch so we
-    //    don't silently drop real payments in dev/staging where PayPlus may omit it.
-    if (process.env.PAYPLUS_SECRET_KEY) {
-      const valid = payplus.verifyWebhookSignature(payload);
-      if (!valid) {
-        logger.warn('PayPlus store webhook: invalid signature — processing anyway');
-      }
+    // 1. Verify signature — hard reject if missing or invalid (C1)
+    if (!process.env.PAYPLUS_SECRET_KEY) {
+      logger.warn('PayPlus store webhook: PAYPLUS_SECRET_KEY not configured');
+      return res.status(400).json({ message: 'Webhook secret not configured' });
+    }
+    const valid = payplus.verifyWebhookSignature(payload);
+    if (!valid) {
+      logger.warn('PayPlus store webhook: invalid signature');
+      return res.status(400).json({ message: 'Invalid signature' });
     }
 
     // 2. Parse more_info to extract orderId and flow discriminator
@@ -328,6 +362,11 @@ router.post(
     if (!order) {
       logger.warn(`PayPlus store webhook: order ${orderId} not found`);
       return res.status(404).json({ message: 'Order not found' });
+    }
+
+    // Idempotency guard — already processed (C2)
+    if (order.paymentStatus === 'paid') {
+      return res.json({ received: true });
     }
 
     // 4. Determine payment outcome — PayPlus status_code '000' = success
@@ -369,36 +408,102 @@ router.post(
         }
       })();
 
-      // Fire-and-forget: auto-send to supplier when supplier is exclusive
+      // Fire-and-forget: order confirmation receipt to the client
       ;(async () => {
         try {
-          if (order.supplierId) {
-            const { rows: supRows } = await pool.query(
-              'SELECT is_exclusive FROM suppliers WHERE id = $1',
-              [order.supplierId],
+          const { rows: clientRows } = await pool.query(
+            'SELECT c.name, c.email FROM clients c JOIN store_orders o ON o.client_id = c.id WHERE o.id = $1',
+            [orderId],
+          );
+          const clientRow = clientRows[0];
+          if (!clientRow?.email) return;
+
+          const { rows: itemRows } = await pool.query(
+            `SELECT i.quantity, i.unit_client_price, p.name AS product_name
+               FROM store_order_items i
+               JOIN supplier_products p ON p.id = i.product_id
+              WHERE i.order_id = $1`,
+            [orderId],
+          );
+          const admin = await Admin.findById(order.adminId);
+
+          const { sendOrderConfirmationEmail } = require('../services/emailService');
+          await sendOrderConfirmationEmail({
+            clientName:  clientRow.name,
+            clientEmail: clientRow.email,
+            studioName:  admin?.studioName || admin?.name || '',
+            orderId,
+            items: itemRows.map((r) => ({
+              productName: r.product_name,
+              quantity:    r.quantity,
+              unitPrice:   r.unit_client_price,
+            })),
+            totalAmount:     order.totalAmount,
+            currency:        order.currency || 'ILS',
+            shippingAddress: order.shippingAddress,
+          });
+        } catch (err) {
+          logger.warn(`Order confirmation email failed for store order ${orderId}: ${err.message}`);
+        }
+      })();
+
+      // Fire-and-forget: formal receipt (קבלה) to the client for the payment
+      ;(async () => {
+        try {
+          const { rows: clientRows } = await pool.query(
+            'SELECT c.name, c.id, c.email FROM clients c JOIN store_orders o ON o.client_id = c.id WHERE o.id = $1',
+            [orderId],
+          );
+          const clientRow = clientRows[0];
+          if (!clientRow?.email) return;
+          const { rows: itemRows } = await pool.query(
+            `SELECT i.quantity, i.unit_client_price, p.name AS product_name
+               FROM store_order_items i JOIN supplier_products p ON p.id = i.product_id
+              WHERE i.order_id = $1`,
+            [orderId],
+          );
+          const invoiceService = require('../services/invoiceService');
+          await invoiceService.issueReceipt({
+            sourceKind: 'store_order',
+            sourceId:   orderId,
+            recipientKind: 'client',
+            recipient: { id: clientRow.id, name: clientRow.name, email: clientRow.email },
+            items: itemRows.map((r) => ({ name: r.product_name, quantity: r.quantity, unitPrice: r.unit_client_price })),
+            amount: order.totalAmount,
+          });
+        } catch (err) {
+          logger.warn(`Receipt issuance failed for store order ${orderId}: ${err.message}`);
+        }
+      })();
+
+      // Auto-send to exclusive supplier — sequential after payment update (C3)
+      if (order.supplierId) {
+        try {
+          const { rows: supRows } = await pool.query(
+            'SELECT is_exclusive FROM suppliers WHERE id = $1',
+            [order.supplierId],
+          );
+          if (supRows[0]?.is_exclusive) {
+            await pool.query(
+              `UPDATE store_orders
+               SET status              = 'sent_to_supplier',
+                   sent_to_supplier_at = NOW(),
+                   updated_at          = NOW()
+               WHERE id = $1`,
+              [orderId],
             );
-            if (supRows[0]?.is_exclusive) {
-              await pool.query(
-                `UPDATE store_orders
-                 SET status              = 'sent_to_supplier',
-                     sent_to_supplier_at = NOW(),
-                     updated_at          = NOW()
-                 WHERE id = $1`,
-                [orderId],
-              );
-              logger.info(`Store order ${orderId} auto-sent to exclusive supplier`);
-            }
+            logger.info(`Store order ${orderId} auto-sent to exclusive supplier`);
           }
         } catch (err) {
           logger.warn(`Auto-send to supplier failed for order ${orderId}: ${err.message}`);
         }
-      })();
+      }
     } else {
-      // Payment failed or declined
+      // Payment failed or declined — use 'failed', not 'refunded' (C6)
       await pool.query(
         `UPDATE store_orders
          SET status         = 'cancelled',
-             payment_status = 'refunded',
+             payment_status = 'failed',
              updated_at     = NOW()
          WHERE id = $1`,
         [orderId],

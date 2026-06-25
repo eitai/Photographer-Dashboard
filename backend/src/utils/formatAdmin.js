@@ -16,6 +16,18 @@ function formatAdmin(a) {
     ssoEnabled: a.ssoEnabled ?? false,
     firstLogin: a.firstLogin ?? true,
     googleEmail: a.googleEmail || null,
+    addressStreet: a.addressStreet || null,
+    addressApartment: a.addressApartment || null,
+    addressCity: a.addressCity || null,
+    addressZip: a.addressZip || null,
+    addressCountry: a.addressCountry || null,
+    // Billing / permissions (never expose the raw card token)
+    canOrderSupplier: a.canOrderSupplier ?? true,
+    clientsCanOrder: a.clientsCanOrder ?? true,
+    billingBlocked: a.billingBlocked ?? false,
+    hasCardOnFile: !!a.payplusCardToken,
+    cardLast4: a.cardLast4 || null,
+    cardBrand: a.cardBrand || null,
   };
   if (a.storageQuotaBytes !== undefined) result.storageQuotaBytes = Number(a.storageQuotaBytes);
   if (a.storageUsedBytes  !== undefined) result.storageUsedBytes  = Number(a.storageUsedBytes);

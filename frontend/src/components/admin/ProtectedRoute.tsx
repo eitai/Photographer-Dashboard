@@ -15,7 +15,7 @@ export const ProtectedRoute = ({ children, superadminOnly = false }: { children:
   const admin = storeAdmin ?? queryAdmin;
 
   if (loading || (!admin && isVerifying)) return <div className="min-h-screen flex items-center justify-center text-warm-gray">{t('admin.common.loading')}</div>;
-  if (!admin) return <Navigate to="/admin" replace />;
+  if (!admin) return <Navigate to={superadminOnly ? '/admin' : '/login'} replace />;
   if (superadminOnly && admin.role !== 'superadmin') return <Navigate to="/admin/dashboard" replace />;
 
   return <>{children}</>;

@@ -39,6 +39,7 @@
     "pg-boss": "^9.0.0",
     "sharp": "^0.34.5",
     "slugify": "^1.6.6",
+    "socket.io": "^4.8.3",
     "twilio": "^5.13.1",
     "winston": "^3.19.0",
     "winston-daily-rotate-file": "^5.0.0"

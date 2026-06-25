@@ -24,6 +24,7 @@ const supplierProtect = async (req, res, next) => {
   try {
     const supplier = await Supplier.findById(decoded.id);
     if (!supplier) return res.status(401).json({ message: 'Supplier not found' });
+    if (!supplier.isActive) return res.status(401).json({ message: 'Account is inactive' });
     // password is already scrubbed by Supplier.findById
     req.supplier = supplier;
     next();

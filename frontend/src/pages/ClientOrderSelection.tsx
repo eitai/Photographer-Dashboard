@@ -79,6 +79,24 @@ export const ClientOrderSelection = () => {
       setError(dir === 'rtl' ? 'יש למלא שם, רחוב ועיר' : 'Please fill in name, street and city');
       return;
     }
+    // Per-product photo count requirements
+    for (const item of data.order.items) {
+      const count = (selected[item.id] ?? []).length;
+      const min = item.product.minPhotos ?? 0;
+      const max = item.product.maxPhotos ?? 0;
+      if (min > 0 && count < min) {
+        setError(
+          (dir === 'rtl'
+            ? t('store.photos_min_only').replace('{min}', String(min))
+            : t('store.photos_min_only').replace('{min}', String(min))) + ` — ${item.product.name}`
+        );
+        return;
+      }
+      if (max > 0 && count > max) {
+        setError(t('store.photos_max_only').replace('{max}', String(max)) + ` — ${item.product.name}`);
+        return;
+      }
+    }
     setError('');
     setSubmitting(true);
 
@@ -110,7 +128,7 @@ export const ClientOrderSelection = () => {
 
   if (isLoading) {
     return (
-      <div className='min-h-screen bg-ivory flex items-center justify-center'>
+      <div data-theme="bw" className='min-h-screen bg-ivory flex items-center justify-center'>
         <div className='w-full max-w-2xl p-6 space-y-4'>
           <Skeleton className='h-10 w-64 mx-auto' />
           <Skeleton className='h-48 w-full' />
@@ -122,7 +140,7 @@ export const ClientOrderSelection = () => {
 
   if (isError || !data) {
     return (
-      <div className='min-h-screen bg-ivory flex items-center justify-center'>
+      <div data-theme="bw" className='min-h-screen bg-ivory flex items-center justify-center'>
         <div className='text-center space-y-3 p-6'>
           <h1 className='font-serif text-2xl text-charcoal'>{t('gallery.not_found')}</h1>
           <p className='text-warm-gray'>{t('gallery.link_expired')}</p>
@@ -133,7 +151,7 @@ export const ClientOrderSelection = () => {
 
   if (submitted) {
     return (
-      <div className='min-h-screen bg-ivory flex items-center justify-center'>
+      <div data-theme="bw" className='min-h-screen bg-ivory flex items-center justify-center'>
         <div className='text-center space-y-4 p-6 max-w-md'>
           <div className='text-5xl'>🤍</div>
           <h1 className='font-serif text-3xl text-charcoal'>{t('selection.submitted.title')}</h1>
@@ -146,13 +164,13 @@ export const ClientOrderSelection = () => {
   const { order, galleryImages } = data;
 
   return (
-    <div className='min-h-screen bg-ivory' dir={dir}>
+    <div data-theme="bw" className='min-h-screen bg-ivory' dir={dir}>
       <div className='max-w-3xl mx-auto px-4 py-10 space-y-10'>
         {/* Header */}
         <div className='text-center space-y-2'>
           <h1 className='font-serif text-3xl text-charcoal'>{t('selection.title')}</h1>
           <p className='text-warm-gray'>{t('selection.subtitle')}</p>
-          <p className='text-sm text-warm-gray'>{order.gallery.name}</p>
+          <p className='text-sm text-warm-gray'>{order.gallery?.name ?? ''}</p>
         </div>
 
         {/* Items */}
@@ -286,12 +304,31 @@ const ItemSelectionSection = ({
   onNoteChange,
   dir,
 }: ItemSelectionSectionProps) => {
+  const { t } = useI18n();
+  const minPhotos = item.product.minPhotos ?? 0;
+  const maxPhotos = item.product.maxPhotos ?? 0;
+  const atMax = maxPhotos > 0 && selectedIds.length >= maxPhotos;
+  const countOk = selectedIds.length >= minPhotos && (maxPhotos === 0 || selectedIds.length <= maxPhotos);
+  const requirementText =
+    minPhotos > 0 && maxPhotos > 0
+      ? t('store.photos_requirement').replace('{min}', String(minPhotos)).replace('{max}', String(maxPhotos))
+      : minPhotos > 0
+      ? t('store.photos_min_only').replace('{min}', String(minPhotos))
+      : maxPhotos > 0
+      ? t('store.photos_max_only').replace('{max}', String(maxPhotos))
+      : null;
+
   return (
     <div className='bg-white rounded-xl border border-border p-6 space-y-4'>
       <div className={`flex items-start justify-between gap-2 ${dir === 'rtl' ? 'flex-row-reverse' : ''}`}>
         <div>
           <h2 className='font-serif text-lg text-charcoal'>{item.product.name}</h2>
           <p className='text-warm-gray text-sm'>{item.product.type} — ×{item.quantity}</p>
+          {requirementText && (
+            <p className={`text-xs mt-0.5 ${countOk ? 'text-muted-foreground' : 'text-flag-ink font-medium'}`}>
+              {requirementText}
+            </p>
+          )}
         </div>
         <span className='text-sm font-medium text-blush whitespace-nowrap'>
           {selectedIds.length} {dir === 'rtl' ? 'נבחרו' : 'selected'}
@@ -309,9 +346,10 @@ const ItemSelectionSection = ({
                 <button
                   type='button'
                   onClick={() => onToggle(img.id)}
+                  disabled={!isSelected && atMax}
                   className={`w-full aspect-square rounded-lg overflow-hidden border-2 transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-blush ${
                     isSelected ? 'border-blush shadow-md' : 'border-transparent hover:border-zinc-300'
-                  }`}
+                  } ${!isSelected && atMax ? 'opacity-40 cursor-not-allowed' : ''}`}
                   aria-label={`${isSelected ? 'Deselect' : 'Select'} image ${img.filename}`}
                 >
                   <img

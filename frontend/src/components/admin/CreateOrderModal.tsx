@@ -1,18 +1,22 @@
 import { useState } from 'react';
 import { useI18n } from '@/lib/i18n';
-import { useClients, useGalleriesByClient, useCreateOrder } from '@/hooks/useQueries';
+import { useClients, useGalleriesByClient, useCreateOrder, useAdminSupplierProducts } from '@/hooks/useQueries';
+import type { AdminSupplierProduct } from '@/lib/api';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { Plus, Trash2 } from 'lucide-react';
 
 interface ProductRow {
   productId: string;
   quantity: number;
+  unitCostPrice: number | null;
+  unitClientPrice: number | null;
 }
 
 interface CreateOrderModalProps {
@@ -29,21 +33,42 @@ export const CreateOrderModal = ({ isOpen, onClose, defaultClientId, defaultGall
   const [clientId, setClientId] = useState(defaultClientId ?? '');
   const [galleryId, setGalleryId] = useState(defaultGalleryId ?? '');
   const [photographerNote, setPhotographerNote] = useState('');
-  const [products, setProducts] = useState<ProductRow[]>([{ productId: '', quantity: 1 }]);
+  const [products, setProducts] = useState<ProductRow[]>([{ productId: '', quantity: 1, unitCostPrice: null, unitClientPrice: null }]);
 
   const { data: clients = [] } = useClients();
   const { data: galleries = [] } = useGalleriesByClient(clientId);
+  const { data: supplierProducts = [], isLoading: productsLoading } = useAdminSupplierProducts();
   const createOrder = useCreateOrder();
 
-  const addProduct = () => setProducts((prev) => [...prev, { productId: '', quantity: 1 }]);
+  const addProduct = () =>
+    setProducts((prev) => [...prev, { productId: '', quantity: 1, unitCostPrice: null, unitClientPrice: null }]);
 
   const removeProduct = (idx: number) =>
     setProducts((prev) => prev.filter((_, i) => i !== idx));
 
-  const updateProduct = (idx: number, field: keyof ProductRow, value: string | number) =>
+  const updateQuantity = (idx: number, value: number) =>
     setProducts((prev) =>
-      prev.map((p, i) => (i === idx ? { ...p, [field]: value } : p)),
+      prev.map((p, i) => (i === idx ? { ...p, quantity: value } : p)),
     );
+
+  const favoriteProducts = supplierProducts.filter((sp: AdminSupplierProduct) => sp.isFavorite);
+  const otherProducts = supplierProducts.filter((sp: AdminSupplierProduct) => !sp.isFavorite);
+
+  const selectProduct = (idx: number, productId: string) => {
+    const found = supplierProducts.find((sp: AdminSupplierProduct) => sp.id === productId);
+    setProducts((prev) =>
+      prev.map((p, i) =>
+        i === idx
+          ? {
+              ...p,
+              productId,
+              unitCostPrice: found?.costPrice ?? null,
+              unitClientPrice: found?.clientPrice ?? null,
+            }
+          : p,
+      ),
+    );
+  };
 
   const handleSubmit = () => {
     if (!clientId || !galleryId) {
@@ -61,7 +86,7 @@ export const CreateOrderModal = ({ isOpen, onClose, defaultClientId, defaultGall
         clientId,
         galleryId,
         photographerNote: photographerNote.trim() || undefined,
-        items: validProducts.map((p) => ({ productId: p.productId.trim(), quantity: p.quantity })),
+        items: validProducts.map((p) => ({ productId: p.productId, quantity: p.quantity })),
       },
       {
         onSuccess: () => {
@@ -78,7 +103,7 @@ export const CreateOrderModal = ({ isOpen, onClose, defaultClientId, defaultGall
     setClientId(defaultClientId ?? '');
     setGalleryId(defaultGalleryId ?? '');
     setPhotographerNote('');
-    setProducts([{ productId: '', quantity: 1 }]);
+    setProducts([{ productId: '', quantity: 1, unitCostPrice: null, unitClientPrice: null }]);
     onClose();
   };
 
@@ -124,33 +149,80 @@ export const CreateOrderModal = ({ isOpen, onClose, defaultClientId, defaultGall
           <div className='space-y-2'>
             <Label>{t('orders.select_product')}</Label>
             {products.map((product, idx) => (
-              <div key={idx} className={`flex items-center gap-2 ${dir === 'rtl' ? 'flex-row-reverse' : ''}`}>
-                <Input
-                  className='flex-1'
-                  placeholder={dir === 'rtl' ? 'מזהה מוצר (Product ID)' : 'Product ID'}
-                  value={product.productId}
-                  onChange={(e) => updateProduct(idx, 'productId', e.target.value)}
-                />
-                <Input
-                  type='number'
-                  min={1}
-                  className='w-20'
-                  value={product.quantity}
-                  onChange={(e) => updateProduct(idx, 'quantity', parseInt(e.target.value, 10) || 1)}
-                />
-                {products.length > 1 && (
-                  <Button
-                    type='button'
-                    variant='ghost'
-                    size='icon'
-                    className='shrink-0 text-red-500 hover:text-red-600'
-                    onClick={() => removeProduct(idx)}
-                  >
-                    <Trash2 size={15} />
-                  </Button>
+              <div key={idx} className='space-y-1'>
+                <div className={`flex items-center gap-2 ${dir === 'rtl' ? 'flex-row-reverse' : ''}`}>
+                  {/* Product dropdown */}
+                  {productsLoading ? (
+                    <Skeleton className='h-9 flex-1' />
+                  ) : (
+                    <Select
+                      value={product.productId}
+                      onValueChange={(v) => selectProduct(idx, v)}
+                    >
+                      <SelectTrigger className='flex-1'>
+                        <SelectValue
+                          placeholder={dir === 'rtl' ? '— בחר מוצר —' : '— Select product —'}
+                        />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {favoriteProducts.length > 0 && (
+                          <SelectGroup>
+                            <SelectLabel>★ {t('orders.favorites_group')}</SelectLabel>
+                            {favoriteProducts.map((sp: AdminSupplierProduct) => (
+                              <SelectItem key={sp.id} value={sp.id}>
+                                {sp.name} — {sp.type} — ₪{sp.costPrice}
+                              </SelectItem>
+                            ))}
+                          </SelectGroup>
+                        )}
+                        {otherProducts.length > 0 && (
+                          <SelectGroup>
+                            {favoriteProducts.length > 0 && <SelectLabel>{t('orders.all_products_group')}</SelectLabel>}
+                            {otherProducts.map((sp: AdminSupplierProduct) => (
+                              <SelectItem key={sp.id} value={sp.id}>
+                                {sp.name} — {sp.type} — ₪{sp.costPrice}
+                              </SelectItem>
+                            ))}
+                          </SelectGroup>
+                        )}
+                      </SelectContent>
+                    </Select>
+                  )}
+
+                  {/* Quantity input */}
+                  <Input
+                    type='number'
+                    min={1}
+                    className='w-20'
+                    value={product.quantity}
+                    onChange={(e) => updateQuantity(idx, parseInt(e.target.value, 10) || 1)}
+                  />
+
+                  {/* Remove row */}
+                  {products.length > 1 && (
+                    <Button
+                      type='button'
+                      variant='ghost'
+                      size='icon'
+                      className='shrink-0 text-destructive hover:text-destructive/80'
+                      onClick={() => removeProduct(idx)}
+                    >
+                      <Trash2 size={15} />
+                    </Button>
+                  )}
+                </div>
+
+                {/* Auto-populated price hint */}
+                {product.unitCostPrice !== null && (
+                  <p className={`text-xs text-muted-foreground ${dir === 'rtl' ? 'text-right' : ''}`}>
+                    {dir === 'rtl'
+                      ? `עלות: ₪${product.unitCostPrice}${product.unitClientPrice != null ? ` · מחיר ללקוח: ₪${product.unitClientPrice}` : ''}`
+                      : `Cost: ₪${product.unitCostPrice}${product.unitClientPrice != null ? ` · Client price: ₪${product.unitClientPrice}` : ''}`}
+                  </p>
                 )}
               </div>
             ))}
+
             <Button
               type='button'
               variant='outline'

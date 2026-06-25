@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { toast } from 'sonner';
-import { Plus, Pencil, Trash2, Loader2 } from 'lucide-react';
+import { Pencil, Trash2, Loader2, Package, ImageOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import {
@@ -11,15 +11,6 @@ import {
   DialogDescription,
   DialogFooter,
 } from '@/components/ui/dialog';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
-import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useI18n } from '@/lib/i18n';
 import { API_BASE } from '@/lib/api';
@@ -31,12 +22,12 @@ import {
 } from '@/hooks/useQueries';
 import { ProductFormModal } from '@/components/supplier/ProductFormModal';
 
-const TYPE_COLORS: Record<SupplierProduct['type'], string> = {
-  print: 'bg-blue-100 text-blue-700',
-  canvas: 'bg-purple-100 text-purple-700',
-  album: 'bg-pink-100 text-pink-700',
-  digital: 'bg-green-100 text-green-700',
-  other: 'bg-zinc-100 text-zinc-600',
+const TYPE_COLORS: Record<SupplierProduct['type'], { bg: string; text: string }> = {
+  print:   { bg: '#f4f4f5', text: '#18181b' },
+  canvas:  { bg: '#f4f4f5', text: '#18181b' },
+  album:   { bg: '#f4f4f5', text: '#18181b' },
+  digital: { bg: '#f4f4f5', text: '#18181b' },
+  other:   { bg: '#f4f4f5', text: '#71717a' },
 };
 
 export const SupplierProducts = () => {
@@ -49,11 +40,6 @@ export const SupplierProducts = () => {
   const [editingProduct, setEditingProduct] = useState<SupplierProduct | undefined>();
   const [deleteTarget, setDeleteTarget] = useState<SupplierProduct | null>(null);
   const [togglingId, setTogglingId] = useState<string | null>(null);
-
-  const handleOpenAdd = () => {
-    setEditingProduct(undefined);
-    setModalOpen(true);
-  };
 
   const handleOpenEdit = (product: SupplierProduct) => {
     setEditingProduct(product);
@@ -90,11 +76,11 @@ export const SupplierProducts = () => {
 
   const typeLabel = (type: SupplierProduct['type']): string => {
     const map: Record<SupplierProduct['type'], string> = {
-      print: t('supplier.products.type_print'),
-      canvas: t('supplier.products.type_canvas'),
-      album: t('supplier.products.type_album'),
+      print:   t('supplier.products.type_print'),
+      canvas:  t('supplier.products.type_canvas'),
+      album:   t('supplier.products.type_album'),
       digital: t('supplier.products.type_digital'),
-      other: t('supplier.products.type_other'),
+      other:   t('supplier.products.type_other'),
     };
     return map[type];
   };
@@ -103,134 +89,155 @@ export const SupplierProducts = () => {
     path.startsWith('/') ? `${API_BASE}${path}` : path;
 
   return (
-    <div className='p-6'>
-      {/* Header */}
-      <div className='flex items-center justify-between mb-6'>
-        <h1 className='font-serif text-2xl text-charcoal'>
-          {t('supplier.products.title')}
-        </h1>
+    <div className='p-6 md:p-8'>
+      {/* Page header */}
+      <div className='mb-8 flex justify-between items-start'>
+        <div>
+          <h1 className='text-2xl font-semibold text-zinc-900 tracking-tight'>
+            {t('supplier.products.title')}
+          </h1>
+          {!isLoading && products && products.length > 0 && (
+            <p className='text-sm text-zinc-500 mt-0.5'>
+              {products.length} {products.length === 1 ? 'product' : 'products'}
+            </p>
+          )}
+        </div>
         <Button
-          onClick={handleOpenAdd}
-          className='bg-blush text-white hover:bg-blush/90 gap-2'
+          className='bg-foreground text-background hover:bg-foreground/90'
+          onClick={() => { setEditingProduct(undefined); setModalOpen(true); }}
         >
-          <Plus size={16} />
-          {t('supplier.products.add')}
+          + {t('supplier.products.add')}
         </Button>
       </div>
 
-      {/* Loading skeleton */}
+      {/* Loading skeleton grid */}
       {isLoading && (
-        <div className='space-y-3'>
-          {[...Array(4)].map((_, i) => (
-            <Skeleton key={i} className='h-12 w-full rounded-lg' />
+        <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4'>
+          {[...Array(8)].map((_, i) => (
+            <div key={i} className='bg-white rounded-2xl border border-zinc-100 p-4 space-y-3'>
+              <Skeleton className='aspect-square w-full rounded-xl' />
+              <Skeleton className='h-4 w-3/4 rounded' />
+              <Skeleton className='h-3 w-1/2 rounded' />
+              <div className='flex justify-between items-center'>
+                <Skeleton className='h-3 w-16 rounded' />
+                <Skeleton className='h-5 w-9 rounded-full' />
+              </div>
+            </div>
           ))}
         </div>
       )}
 
       {/* Empty state */}
       {!isLoading && (!products || products.length === 0) && (
-        <div className='text-center py-16 text-zinc-400'>
-          <p>{t('supplier.products.empty')}</p>
+        <div className='flex flex-col items-center justify-center py-24 text-center'>
+          <div className='w-16 h-16 rounded-2xl bg-zinc-100 flex items-center justify-center mb-4'>
+            <Package size={28} className='text-zinc-400' />
+          </div>
+          <h3 className='text-base font-semibold text-zinc-700 mb-1'>
+            {t('supplier.products.empty')}
+          </h3>
+          <p className='text-sm text-zinc-400 max-w-xs'>
+            Products assigned to you will appear here.
+          </p>
         </div>
       )}
 
-      {/* Table */}
+      {/* Product grid */}
       {!isLoading && products && products.length > 0 && (
-        <div className='bg-white rounded-xl border border-zinc-200 overflow-hidden'>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className='w-12'>{t('supplier.products.image')}</TableHead>
-                <TableHead>{t('supplier.products.name')}</TableHead>
-                <TableHead>{t('supplier.products.type')}</TableHead>
-                <TableHead>{t('supplier.products.sku')}</TableHead>
-                <TableHead>{t('supplier.products.cost_price')}</TableHead>
-                <TableHead>{t('supplier.products.client_price')}</TableHead>
-                <TableHead>{t('supplier.products.active')}</TableHead>
-                <TableHead className='w-20'></TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {products.map((product) => (
-                <TableRow key={product.id}>
-                  {/* Thumbnail */}
-                  <TableCell>
-                    {product.imagePreviewPath ? (
-                      <img
-                        src={resolveImageUrl(product.imagePreviewPath)}
-                        alt={product.name}
-                        className='h-10 w-10 rounded object-cover'
-                      />
-                    ) : (
-                      <div className='h-10 w-10 rounded bg-zinc-100 flex items-center justify-center text-zinc-300'>
-                        <Plus size={14} />
-                      </div>
-                    )}
-                  </TableCell>
+        <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4'>
+          {products.map((product) => {
+            const typeStyle = TYPE_COLORS[product.type];
+            return (
+              <div
+                key={product.id}
+                className='group bg-white rounded-2xl border border-zinc-100 overflow-hidden transition-shadow duration-200 hover:shadow-md'
+              >
+                {/* Product image */}
+                <div className='relative aspect-square bg-zinc-50 overflow-hidden'>
+                  {product.imagePreviewPath ? (
+                    <img
+                      src={resolveImageUrl(product.imagePreviewPath)}
+                      alt={product.name}
+                      className='h-full w-full object-cover transition-transform duration-300 group-hover:scale-105'
+                    />
+                  ) : (
+                    <div className='h-full w-full flex flex-col items-center justify-center gap-2 text-zinc-300'>
+                      <ImageOff size={32} />
+                    </div>
+                  )}
+
+                  {/* Active badge overlay */}
+                  <div className='absolute top-2.5 end-2.5'>
+                    <span
+                      className='inline-block w-2 h-2 rounded-full ring-2 ring-white'
+                      style={{ backgroundColor: product.isActive ? '#18181b' : '#d4d4d8' }}
+                    />
+                  </div>
+                </div>
+
+                {/* Card body */}
+                <div className='p-4'>
+                  {/* Type badge */}
+                  <span
+                    className='inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium mb-2'
+                    style={{ backgroundColor: typeStyle.bg, color: typeStyle.text }}
+                  >
+                    {typeLabel(product.type)}
+                  </span>
 
                   {/* Name */}
-                  <TableCell className='font-medium text-charcoal'>{product.name}</TableCell>
-
-                  {/* Type badge */}
-                  <TableCell>
-                    <span
-                      className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${TYPE_COLORS[product.type]}`}
-                    >
-                      {typeLabel(product.type)}
-                    </span>
-                  </TableCell>
+                  <h3 className='text-sm font-semibold text-zinc-900 truncate leading-snug mb-1'>
+                    {product.name}
+                  </h3>
 
                   {/* SKU */}
-                  <TableCell className='text-zinc-500 text-sm'>
-                    {product.sku ?? '—'}
-                  </TableCell>
+                  {product.sku && (
+                    <p className='text-xs text-zinc-400 mb-2 font-mono'>
+                      {product.sku}
+                    </p>
+                  )}
 
-                  {/* Cost price */}
-                  <TableCell className='text-sm'>
-                    ₪{product.costPrice.toFixed(2)}
-                  </TableCell>
+                  {/* Price row */}
+                  <div className='flex items-baseline gap-2 mb-3'>
+                    <span className='text-sm font-semibold text-zinc-900'>
+                      ₪{product.costPrice.toFixed(2)}
+                    </span>
+                    {product.clientPrice !== null && (
+                      <span className='text-xs text-zinc-400'>
+                        / ₪{product.clientPrice.toFixed(2)}
+                      </span>
+                    )}
+                  </div>
 
-                  {/* Client price */}
-                  <TableCell className='text-sm'>
-                    {product.clientPrice !== null ? `₪${product.clientPrice.toFixed(2)}` : '—'}
-                  </TableCell>
-
-                  {/* Active toggle */}
-                  <TableCell>
+                  {/* Footer: active toggle + actions */}
+                  <div className='flex items-center justify-between pt-3 border-t border-zinc-50'>
                     <Switch
                       checked={product.isActive}
                       onCheckedChange={() => handleToggleActive(product)}
                       disabled={togglingId === product.id}
                       aria-label={t('supplier.products.active')}
                     />
-                  </TableCell>
-
-                  {/* Actions */}
-                  <TableCell>
-                    <div className='flex items-center gap-1'>
-                      <Button
-                        variant='ghost'
-                        size='icon'
+                    <div className='flex items-center gap-0.5'>
+                      <button
                         onClick={() => handleOpenEdit(product)}
                         aria-label={t('supplier.products.edit')}
+                        className='p-1.5 rounded-lg text-zinc-400 hover:text-zinc-700 hover:bg-zinc-100 transition-colors duration-150 cursor-pointer'
                       >
-                        <Pencil size={15} />
-                      </Button>
-                      <Button
-                        variant='ghost'
-                        size='icon'
-                        className='text-red-500 hover:text-red-600 hover:bg-red-50'
+                        <Pencil size={14} />
+                      </button>
+                      <button
                         onClick={() => setDeleteTarget(product)}
                         aria-label={t('supplier.products.delete')}
+                        className='p-1.5 rounded-lg text-zinc-400 hover:text-red-500 hover:bg-red-50 transition-colors duration-150 cursor-pointer'
                       >
-                        <Trash2 size={15} />
-                      </Button>
+                        <Trash2 size={14} />
+                      </button>
                     </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
         </div>
       )}
 

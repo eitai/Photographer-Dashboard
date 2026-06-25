@@ -48,20 +48,31 @@ const api = axios.create({
 // Use replace() so the login page is not on the history stack —
 // pressing Back must not return to a protected route.
 function clearAuthAndRedirect() {
+  let role: string | null = null;
+  try { role = JSON.parse(localStorage.getItem('koral_admin_user') ?? '').role; } catch { /* no cached user */ }
   localStorage.removeItem('koral_admin_token');
   localStorage.removeItem('koral_admin_user');
-  window.location.replace('/admin');
+  window.location.replace(role === 'superadmin' ? '/admin' : '/login');
 }
 
 // Handle 401 — clear local user state and redirect to login.
 // Skip cancelled requests: when queryClient.clear() aborts an in-flight /auth/me
 // during logout, we don't want that stale 401 to interrupt a concurrent login.
+// Supplier endpoints get their own redirect so they don't land on the admin login page.
 api.interceptors.response.use(
   (res) => res,
   (err) => {
     if (err.code === 'ERR_CANCELED') return Promise.reject(err);
     if (err.response?.status === 401) {
-      clearAuthAndRedirect();
+      const url: string = (err.config?.url ?? '') + (err.config?.baseURL ?? '');
+      const isSupplierRequest = url.includes('supplier');
+      if (isSupplierRequest) {
+        if (window.location.pathname !== '/supplier/login') {
+          window.location.replace('/supplier/login');
+        }
+      } else {
+        clearAuthAndRedirect();
+      }
     }
     return Promise.reject(err);
   }
@@ -72,6 +83,14 @@ api.interceptors.response.use(
 // when queryClient.clear() is called (e.g. on logout).
 export const verifyAuth = ({ signal }: { signal: AbortSignal }): Promise<{ admin: import('@/store/authStore').AdminUser }> =>
   api.get('/auth/me', { signal }).then((r) => r.data);
+
+export const registerPhotographer = (data: {
+  name: string;
+  studioName?: string;
+  email: string;
+  password: string;
+}): Promise<{ admin: import('@/store/authStore').AdminUser }> =>
+  api.post('/auth/register', data).then((r) => r.data);
 
 // ---- Storage ----
 export const getMyStorage = (): Promise<import('@/types/admin').StorageStats> =>
@@ -161,7 +180,7 @@ export interface AdminSubscription {
 export const getAdminSubscriptions = (): Promise<AdminSubscription[]> =>
   api.get('/plans/admin/subscriptions').then((r) => r.data);
 
-export const overrideAdminSubscription = (adminId: string, data: { planId: string; billingInterval?: string }) =>
+export const overrideAdminSubscription = (adminId: string, data: { planId: string; billingInterval?: string; customStorageGb?: number }) =>
   api.patch(`/plans/admin/subscriptions/${adminId}`, data).then((r) => r.data);
 
 // PayPlus billing
@@ -330,6 +349,10 @@ export interface SupplierProduct {
   imagePreviewPath: string | null;
   isActive: boolean;
   sortOrder: number;
+  minPhotos: number;
+  maxPhotos: number;
+  productionDays: number | null;
+  variations: { name: string; options: string[] }[];
 }
 
 export const supplierLogin = (email: string, password: string): Promise<{ supplier: Supplier }> =>
@@ -340,6 +363,12 @@ export const supplierLogout = (): Promise<void> =>
 
 export const getSupplierMe = (): Promise<{ supplier: Supplier }> =>
   api.get('/supplier/auth/me').then((r) => r.data);
+
+export const updateSupplierProfile = (data: { name?: string; phone?: string | null; contactPerson?: string | null }): Promise<{ supplier: Supplier }> =>
+  api.patch('/supplier/auth/me', data).then((r) => r.data);
+
+export const changeSupplierPassword = (currentPassword: string, newPassword: string): Promise<{ message: string }> =>
+  api.post('/supplier/auth/change-password', { currentPassword, newPassword }).then((r) => r.data);
 
 export const getSupplierProducts = (): Promise<SupplierProduct[]> =>
   api.get('/supplier/products').then((r) => r.data);
@@ -403,19 +432,30 @@ export interface StoreOrderItem {
     sku: string | null;
     specs: Record<string, unknown>;
     imagePreviewPath: string | null;
+    minPhotos?: number;
+    maxPhotos?: number;
+    productionDays?: number | null;
+    variations?: ProductVariation[];
   };
+}
+
+export interface ProductVariation {
+  name: string;
+  options: string[];
 }
 
 export interface StoreOrder {
   id: string;
   adminId: string;
-  clientId: string;
-  galleryId: string;
+  clientId: string | null;
+  galleryId: string | null;
   supplierId: string | null;
   flow: 'photographer' | 'client';
-  status: 'draft' | 'pending_selection' | 'selection_submitted' | 'approved' | 'sent_to_supplier' | 'in_production' | 'shipped' | 'delivered' | 'cancelled';
-  paymentStatus: 'not_required' | 'pending' | 'paid' | 'refunded';
+  isDirect?: boolean;
+  status: 'draft' | 'pending_selection' | 'selection_submitted' | 'approved' | 'sent_to_supplier' | 'in_production' | 'ready_to_ship' | 'shipped' | 'delivered' | 'cancelled';
+  paymentStatus: 'not_required' | 'pending' | 'paid' | 'refunded' | 'failed' | 'refund_pending';
   totalAmount: number | null;
+  costTotal?: number;
   currency: string;
   selectionToken: string | null;
   clientNote: string | null;
@@ -433,12 +473,13 @@ export interface StoreOrder {
     phone?: string;
   } | null;
   sentToSupplierAt: string | null;
+  inProductionAt: string | null;
   shippedAt: string | null;
   deliveredAt: string | null;
   createdAt: string;
   updatedAt: string;
-  client: { name: string; email: string; phone: string | null; addressStreet?: string; addressCity?: string; addressZip?: string; addressCountry?: string; addressApartment?: string };
-  gallery: { name: string };
+  client: { name: string; email: string; phone: string | null; addressStreet?: string; addressCity?: string; addressZip?: string; addressCountry?: string; addressApartment?: string } | null;
+  gallery: { name: string } | null;
   supplier: { name: string } | null;
   items: StoreOrderItem[];
   itemsCount?: number;
@@ -466,11 +507,31 @@ export interface OrderSelectionData {
 
 // ---- Store Orders — Photographer API ----
 
-export const getOrders = (params?: { clientId?: string; galleryId?: string; status?: string; flow?: string; page?: number; limit?: number }) =>
+export const getOrders = (params?: { clientId?: string; galleryId?: string; status?: string; flow?: string; from?: string; to?: string; page?: number; limit?: number }) =>
   api.get<StoreOrdersResponse>('/orders', { params }).then((r) => r.data);
 
 export const getOrder = (id: string) =>
   api.get<StoreOrder>(`/orders/${id}`).then((r) => r.data);
+
+export interface OrderReportRow {
+  id: string;
+  status: string;
+  flow: string;
+  totalAmount: number | null;
+  currency: string;
+  createdAt: string;
+  photographerNote: string | null;
+  clientName: string | null;
+  galleryName: string | null;
+  itemsCount: number;
+}
+export interface OrdersReport {
+  rows: OrderReportRow[];
+  summary: { count: number; totalAmount: number; byStatus: Record<string, { count: number; total: number }> };
+  capped: boolean;
+}
+export const getOrdersReport = (params?: { status?: string; flow?: string; from?: string; to?: string }) =>
+  api.get<OrdersReport>('/orders/report', { params }).then((r) => r.data);
 
 export const createOrder = (data: { clientId: string; galleryId: string; items: { productId: string; quantity: number; productOptions?: Record<string, unknown> }[]; photographerNote?: string }) =>
   api.post<StoreOrder>('/orders', data).then((r) => r.data);
@@ -493,6 +554,194 @@ export const sendOrderToSupplier = (id: string) =>
 export const cancelOrder = (id: string) =>
   api.post(`/orders/${id}/cancel`).then((r) => r.data);
 
+// Get all active supplier products (for order creation dropdown + favorites picker).
+// Favorites of the requesting admin sort first and carry isFavorite: true.
+export type AdminSupplierProduct = SupplierProduct & { supplierName: string; isFavorite: boolean };
+
+export const getAdminSupplierProducts = (): Promise<AdminSupplierProduct[]> =>
+  api.get('/admin-products/supplier-products').then((r) => r.data);
+
+// ---- Flow 3: photographer direct ordering ----
+
+export interface DirectOrderItem {
+  productId: string;
+  quantity: number;
+  selectedImageIds: string[];
+  productOptions?: Record<string, string>;
+}
+
+export const createDirectOrder = (data: {
+  items: DirectOrderItem[];
+  shippingAddress: { name: string; street: string; apartment?: string; city: string; zip?: string; country?: string; phone?: string };
+  photographerNote?: string;
+}): Promise<StoreOrder> =>
+  api.post('/orders/direct', data).then((r) => r.data);
+
+export interface DirectUploadResult {
+  galleryId: string;
+  images: { id: string; filename: string; path: string; thumbnailPath: string | null; previewPath: string | null }[];
+}
+
+export const uploadDirectOrderImages = (
+  files: File[],
+  onProgress?: (percent: number) => void,
+): Promise<DirectUploadResult> => {
+  const form = new FormData();
+  files.forEach((f) => form.append('images', f));
+  return api.post('/orders/direct/uploads', form, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+    onUploadProgress: (e) => {
+      if (onProgress && e.total) onProgress(Math.round((e.loaded / e.total) * 100));
+    },
+  }).then((r) => r.data);
+};
+
+export const setSupplierProductFavorite = (productId: string, favorite: boolean): Promise<{ ok: boolean; isFavorite: boolean }> =>
+  favorite
+    ? api.post(`/admin-products/favorites/${productId}`).then((r) => r.data)
+    : api.delete(`/admin-products/favorites/${productId}`).then((r) => r.data);
+
+// ---- Billing (photographer) ----
+
+export interface PhotographerInvoice {
+  id: string;
+  periodStart: string;
+  periodEnd: string;
+  totalAmount: number;
+  currency: string;
+  status: 'pending_payment' | 'paid' | 'failed' | 'cancelled';
+  dueAt: string | null;
+  paidAt: string | null;
+  payplusLink: string | null;
+  createdAt: string;
+}
+
+export interface BillingMe {
+  accrued: { total: number; count: number };
+  invoices: PhotographerInvoice[];
+  hasCardOnFile: boolean;
+  cardLast4: string | null;
+  cardBrand: string | null;
+  billingBlocked: boolean;
+  canOrderSupplier: boolean;
+}
+
+export const getBillingMe = (): Promise<BillingMe> =>
+  api.get('/billing/me').then((r) => r.data);
+
+export const startAddCard = (): Promise<{ url: string }> =>
+  api.post('/billing/card').then((r) => r.data);
+
+// ---- Billing (superadmin) ----
+
+export interface BillingOverviewRow {
+  adminId: string;
+  name: string;
+  email: string;
+  billingBlocked: boolean;
+  hasCard: boolean;
+  accrued: number;
+  unpaidTotal: number;   // existing pending/failed invoices
+  outstanding: number;   // accrued + unpaidTotal = total owed
+  latestInvoice: { id: string; status: string; totalAmount: number; periodStart: string; dueAt: string | null } | null;
+}
+
+export const getBillingOverview = (): Promise<BillingOverviewRow[]> =>
+  api.get('/admin/billing/overview').then((r) => r.data);
+
+export const closeBillingCycle = (body?: { periodStart?: string; periodEnd?: string }): Promise<{ invoiced: number; paid: number; failed: number }> =>
+  api.post('/admin/billing/close-cycle', body || {}).then((r) => r.data);
+
+export const chargePhotographers = (adminIds?: string[]): Promise<{ invoiced: number; paid: number; failed: number }> =>
+  api.post('/admin/billing/charge', adminIds && adminIds.length ? { adminIds } : {}).then((r) => r.data);
+
+export const markInvoicePaid = (id: string): Promise<PhotographerInvoice> =>
+  api.post(`/admin/billing/invoices/${id}/mark-paid`).then((r) => r.data);
+
+export const unblockPhotographer = (adminId: string): Promise<{ ok: boolean }> =>
+  api.post(`/admin/billing/admins/${adminId}/unblock`).then((r) => r.data);
+
+export interface SettlementRow {
+  supplierId: string;
+  name: string;
+  open: { total: number; orderCount: number };
+  history: { id: string; periodStart: string; periodEnd: string; totalCost: number; orderCount: number; status: string; settledAt: string | null }[];
+}
+
+export const getSettlements = (): Promise<SettlementRow[]> =>
+  api.get('/admin/billing/settlements').then((r) => r.data);
+
+export interface BillingReport {
+  period: { from: string | null; to: string | null };
+  photographers: { adminId: string; name: string; email: string; paidInPeriod: number; accrued: number; unpaidTotal: number; outstanding: number }[];
+  suppliers: { supplierId: string; name: string; openBalance: number; settledInPeriod: number }[];
+  totals: { revenuePaid: number; revenuePending: number; revenueFailed: number; openAccrual: number; outstanding: number; supplierOwed: number; supplierSettled: number };
+}
+export const getBillingReport = (params?: { from?: string; to?: string }): Promise<BillingReport> =>
+  api.get('/admin/billing/report', { params }).then((r) => r.data);
+
+export const createSettlement = (supplierId: string): Promise<unknown> =>
+  api.post('/admin/billing/settlements', { supplierId }).then((r) => r.data);
+
+export const markSettlementSettled = (id: string, note?: string): Promise<unknown> =>
+  api.post(`/admin/billing/settlements/${id}/settle`, { note }).then((r) => r.data);
+
+// ---- Accounting documents (receipts / invoices) ----
+
+export interface IssuedDocument {
+  id: string;
+  docType: 'receipt' | 'tax_invoice_receipt' | 'order_confirmation';
+  amount: number;
+  vatAmount: number;
+  currency: string;
+  status: 'pending' | 'issued' | 'failed' | 'skipped';
+  documentNumber: string | null;
+  pdfUrl: string | null;
+  sourceKind: string;
+  createdAt: string;
+  issuedAt: string | null;
+}
+
+export const getMyDocuments = (): Promise<IssuedDocument[]> =>
+  api.get('/billing/documents').then((r) => r.data);
+
+export const getAllDocuments = (status?: string): Promise<IssuedDocument[]> =>
+  api.get('/admin/billing/documents', { params: status ? { status } : {} }).then((r) => r.data);
+
+export const backfillDocuments = (): Promise<{ issued?: number; failed?: number; total?: number; skipped?: boolean; reason?: string }> =>
+  api.post('/admin/billing/documents/backfill').then((r) => r.data);
+
+export const retryDocument = (id: string): Promise<IssuedDocument> =>
+  api.post(`/admin/billing/documents/${id}/retry`).then((r) => r.data);
+
+// Supplier's own settlement statement (read-only)
+export interface SupplierSettlementView {
+  open: { total: number; orderCount: number };
+  history: { id: string; periodStart: string; periodEnd: string; totalCost: number; orderCount: number; status: string; settledAt: string | null }[];
+}
+
+export const getSupplierSettlement = (): Promise<SupplierSettlementView> =>
+  api.get('/supplier/settlement').then((r) => r.data);
+
+// Fetch a gallery's images for the direct-order photo picker
+export interface AdminGalleryImage {
+  id?: string;
+  _id?: string;
+  filename: string;
+  path: string;
+  thumbnailPath: string | null;
+}
+
+export const getGalleryImages = (galleryId: string): Promise<AdminGalleryImage[]> =>
+  api.get(`/galleries/${galleryId}/images?limit=200`).then((r) => {
+    const d = r.data;
+    return Array.isArray(d) ? d : (d.images ?? []);
+  });
+
+// Manually notify client about current order status
+export const notifyOrderClient = (id: string): Promise<{ ok: boolean }> =>
+  api.post(`/orders/${id}/notify-client`).then((r) => r.data);
+
 // ---- Store Orders — Public client selection ----
 
 export const getOrderSelection = (token: string) =>
@@ -506,8 +755,26 @@ export const submitOrderSelection = (token: string, data: {
 
 // ---- Store Orders — Supplier API ----
 
-export const getSupplierOrders = (params?: { status?: string; page?: number; limit?: number }) =>
+export const getSupplierOrders = (params?: { status?: string; from?: string; to?: string; page?: number; limit?: number }) =>
   api.get<StoreOrdersResponse>('/supplier/orders', { params }).then((r) => r.data);
+
+export interface SupplierOrderReportRow {
+  id: string;
+  status: string;
+  createdAt: string;
+  currency: string;
+  photographerName: string | null;
+  studioName: string | null;
+  itemsCount: number;
+  costTotal: number;
+}
+export interface SupplierOrdersReport {
+  rows: SupplierOrderReportRow[];
+  summary: { count: number; totalToPay: number; byStatus: Record<string, { count: number; total: number }> };
+  capped: boolean;
+}
+export const getSupplierOrdersReport = (params?: { status?: string; from?: string; to?: string }) =>
+  api.get<SupplierOrdersReport>('/supplier/orders/report', { params }).then((r) => r.data);
 
 export const getSupplierOrder = (id: string) =>
   api.get<StoreOrder>(`/supplier/orders/${id}`).then((r) => r.data);
@@ -531,6 +798,10 @@ export interface StoreProduct {
   clientPrice: number;
   imagePreviewPath: string | null;
   sortOrder: number;
+  minPhotos: number;
+  maxPhotos: number;
+  productionDays: number | null;
+  variations: { name: string; options: string[] }[];
 }
 
 export interface StoreProductsResponse {
@@ -569,13 +840,14 @@ export interface StoreCheckoutResponse {
 export interface StoreOrderStatus {
   id: string;
   status: string;
-  paymentStatus: string;
+  paymentStatus: 'not_required' | 'pending' | 'paid' | 'refunded' | 'failed' | 'refund_pending';
   totalAmount: number | null;
   currency: string;
   trackingNumber: string | null;
   trackingCarrier: string | null;
   shippedAt: string | null;
   createdAt: string;
+  receiptUrl?: string | null;
 }
 
 export const getStoreProducts = (galleryToken: string) =>

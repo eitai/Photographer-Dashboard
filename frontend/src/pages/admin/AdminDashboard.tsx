@@ -14,6 +14,8 @@ import { ClientRow } from './dashboard/ClientRow';
 import { QuickAddClient } from './dashboard/QuickAddClient';
 import { CreateClientWizard } from '@/components/admin/CreateClientWizard';
 import { ActivityPanel } from './dashboard/ActivityPanel';
+import { UpcomingShoots } from './dashboard/UpcomingShoots';
+import { WaitingForDelivery } from './dashboard/WaitingForDelivery';
 import { type FilterChip, type RichGallery, getClientFilter, matchesClient } from './dashboard/types';
 import type { Client } from '@/types/admin';
 
@@ -80,7 +82,7 @@ export const AdminDashboard = () => {
       {/* Full-height shell — no outer scroll */}
       <div className='flex flex-col h-full -mx-4 md:-mx-8 -my-6 overflow-hidden bg-muted/30'>
         {/* ── Fixed top section: landing link + stat cards ── */}
-        <div className='shrink-0 px-4 md:px-8 pt-6 pb-4 space-y-4'>
+        <div className='shrink-0 px-4 md:px-8 pt-4 pb-3 space-y-3'>
           {admin?.id && (
             <Tooltip>
               <TooltipTrigger asChild>
@@ -101,18 +103,21 @@ export const AdminDashboard = () => {
           )}
 
           {isLoading ? (
-            <div className='grid grid-cols-1 sm:grid-cols-3 gap-4'>
+            <div className='grid grid-cols-1 sm:grid-cols-3 gap-3'>
               {[0, 1, 2].map((i) => (
-                <div key={i} className='bg-card rounded-xl shadow-sm p-5 space-y-3'>
-                  <Skeleton className='h-8 w-16' />
-                  <Skeleton className='h-4 w-24' />
-                  <Skeleton className='h-3 w-32' />
+                <div key={i} className='bg-card rounded-xl shadow-sm px-4 py-3 flex items-center gap-3'>
+                  <Skeleton className='h-9 w-9 rounded-full shrink-0' />
+                  <div className='space-y-2'>
+                    <Skeleton className='h-5 w-12' />
+                    <Skeleton className='h-3 w-20' />
+                  </div>
                 </div>
               ))}
             </div>
           ) : (
-            <div className='grid grid-cols-1 sm:grid-cols-3 gap-4'>
+            <div className='grid grid-cols-1 sm:grid-cols-3 gap-3'>
               <StatCard
+                compact
                 label={t('admin.dashboard.clients')}
                 value={clients.length}
                 icon={Users}
@@ -121,6 +126,7 @@ export const AdminDashboard = () => {
                 sub={t('admin.dashboard.stat_clients_sub')}
               />
               <StatCard
+                compact
                 label={t('admin.dashboard.galleries')}
                 value={galleries.length}
                 icon={Images}
@@ -129,6 +135,7 @@ export const AdminDashboard = () => {
                 sub={t('admin.dashboard.stat_galleries_sub')}
               />
               <StatCard
+                compact
                 label={t('admin.dashboard.pending')}
                 value={pendingCount}
                 icon={CheckSquare}
@@ -203,6 +210,12 @@ export const AdminDashboard = () => {
               <QuickAddClient />
             </div>
           </div>
+        </div>
+
+        {/* ── Bottom: upcoming shoots + awaiting delivery ── */}
+        <div className='shrink-0 px-4 md:px-8 pb-4 grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-4xl'>
+          <UpcomingShoots clients={clients} galleries={galleries} />
+          <WaitingForDelivery galleries={galleries} />
         </div>
       </div>
 

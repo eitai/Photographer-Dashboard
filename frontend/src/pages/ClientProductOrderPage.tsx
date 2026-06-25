@@ -1,57 +1,51 @@
-import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { Package, ShoppingBag } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
 import { FadeIn } from '@/components/FadeIn';
-import { fetchProductOrderByOrderToken, type ProductOrder } from '@/services/productOrderService';
+import { useI18n } from '@/lib/i18n';
+import { fetchProductOrderByOrderToken } from '@/services/productOrderService';
 import { OrderPanel } from '@/pages/ClientProductsPage';
 
 export const ClientProductOrderPage = () => {
   const { orderToken } = useParams<{ orderToken: string }>();
-  const [order, setOrder] = useState<ProductOrder | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { t } = useI18n();
 
-  useEffect(() => {
-    if (!orderToken) return;
-    (async () => {
-      try {
-        const data = await fetchProductOrderByOrderToken(orderToken);
-        setOrder(data);
-      } catch (err: unknown) {
-        const status = (err as { response?: { status?: number } })?.response?.status;
-        setError(status === 403 ? 'inactive' : 'notfound');
-      } finally {
-        setLoading(false);
-      }
-    })();
-  }, [orderToken]);
+  const { data: order, isLoading, error } = useQuery({
+    queryKey: ['productOrder', orderToken],
+    queryFn: () => fetchProductOrderByOrderToken(orderToken!),
+    enabled: !!orderToken,
+    refetchInterval: 30_000,
+    refetchOnWindowFocus: true,
+    retry: (count, err: unknown) => {
+      const status = (err as { response?: { status?: number } })?.response?.status;
+      if (status === 403 || status === 404) return false;
+      return count < 2;
+    },
+  });
 
   const handleSubmitted = () => {
-    if (order) setOrder({ ...order, status: 'submitted' });
+    // optimistic update handled locally by OrderPanel; query will sync on next poll
   };
 
-  if (loading) {
+  if (isLoading) {
     return (
-      <main className='min-h-screen flex items-center justify-center' style={{ backgroundColor: '#FAF8F4' }}>
-        <div className='w-8 h-8 border-2 border-t-transparent rounded-full animate-spin' style={{ borderColor: '#E7B8B5', borderTopColor: 'transparent' }} />
+      <main data-theme="bw" className='min-h-screen flex items-center justify-center bg-background'>
+        <div className='w-8 h-8 border-2 border-foreground border-t-transparent rounded-full animate-spin' />
       </main>
     );
   }
 
   if (error || !order) {
+    const status = (error as { response?: { status?: number } })?.response?.status;
     return (
-      <main className='min-h-screen flex items-center justify-center px-6' style={{ backgroundColor: '#FAF8F4' }}>
+      <main data-theme="bw" className='min-h-screen flex items-center justify-center px-6 bg-background'>
         <FadeIn>
           <div className='text-center'>
-            <Package size={40} className='mx-auto mb-4 text-beige' />
-            <p className='text-2xl text-charcoal mb-2'>
-              {error === 'inactive' ? 'Link not active' : 'Order not found'}
+            <Package size={40} className='mx-auto mb-4 text-muted-foreground' />
+            <p className='text-2xl font-semibold text-foreground mb-2'>
+              {status === 403 ? t('products.no_products_title') : t('products.no_products_title')}
             </p>
-            <p className='text-sm text-warm-gray'>
-              {error === 'inactive'
-                ? 'This link has been deactivated by your photographer.'
-                : 'This link may have expired or is invalid. Please contact your photographer.'}
-            </p>
+            <p className='text-sm text-muted-foreground'>{t('products.no_products_desc')}</p>
           </div>
         </FadeIn>
       </main>
@@ -59,24 +53,24 @@ export const ClientProductOrderPage = () => {
   }
 
   return (
-    <main className='min-h-screen' style={{ backgroundColor: '#FAF8F4' }}>
-      <header className='border-b border-beige bg-white/70 backdrop-blur-sm sticky top-0 z-20'>
+    <main data-theme="bw" className='min-h-screen bg-background'>
+      <header className='border-b border-border bg-background sticky top-0 z-20'>
         <div className='max-w-5xl mx-auto px-4 sm:px-6 py-4 flex items-center gap-3'>
-          <div className='w-8 h-8 rounded-full flex items-center justify-center shrink-0' style={{ backgroundColor: '#E7B8B5' }}>
-            <ShoppingBag size={15} className='text-white' />
+          <div className='w-8 h-8 rounded-full bg-foreground flex items-center justify-center shrink-0'>
+            <ShoppingBag size={15} className='text-background' />
           </div>
-          <h1 className='text-lg text-charcoal leading-tight'>{order.name}</h1>
+          <h1 className='text-lg font-semibold text-foreground leading-tight'>{order.name}</h1>
         </div>
       </header>
 
       <div className='max-w-5xl mx-auto px-4 sm:px-6 py-8'>
         <FadeIn>
-          <OrderPanel order={order} onSubmitted={handleSubmitted} />
+          <OrderPanel order={order} onSubmitted={handleSubmitted} stickyTop='top-16' />
         </FadeIn>
       </div>
 
       <footer className='text-center py-8 mt-4'>
-        <p className='text-xs text-warm-gray/60'>LIGHT STUDIO</p>
+        <p className='text-xs text-muted-foreground tracking-widest uppercase'>Light Studio</p>
       </footer>
     </main>
   );

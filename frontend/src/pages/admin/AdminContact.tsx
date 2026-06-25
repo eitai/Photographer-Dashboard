@@ -92,14 +92,14 @@ export const AdminContact = () => {
                 <tr key={msg._id} className='border-b border-beige/60 last:border-0 hover:bg-ivory/40 transition-colors'>
                   <td className='px-4 py-3 font-medium text-charcoal whitespace-nowrap'>{msg.name}</td>
                   <td className='px-4 py-3'>
-                    <a href={`mailto:${msg.email}`} className='text-blush hover:underline'>
+                    <a href={`mailto:${msg.email}`} className='text-charcoal hover:text-warm-gray hover:underline'>
                       {msg.email}
                     </a>
                   </td>
                   <td className='px-4 py-3 text-warm-gray whitespace-nowrap'>{msg.phone ?? '—'}</td>
                   <td className='px-4 py-3'>
                     {msg.sessionType ? (
-                      <span className='bg-blush/15 text-blush px-2 py-0.5 rounded-full text-xs whitespace-nowrap'>
+                      <span className='bg-blush/20 text-charcoal px-2 py-0.5 rounded-full text-xs whitespace-nowrap'>
                         {msg.sessionType}
                       </span>
                     ) : (
@@ -130,7 +130,7 @@ export const AdminContact = () => {
 
       {/* Delete confirmation modal */}
       {deletion.target && (
-        <div className='fixed inset-0 z-50 flex items-center justify-center bg-charcoal/40 backdrop-blur-sm p-4'>
+        <div className='fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4'>
           <div className='bg-card rounded-2xl border border-beige shadow-xl w-full max-w-sm p-6'>
             <h3 className=' text-lg text-charcoal mb-1'>{t('admin.contact.delete_title')}</h3>
             <p className='text-sm text-warm-gray mb-1'>

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
-import { Loader2, Upload } from 'lucide-react';
+import { Loader2, Upload, X } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -36,6 +36,11 @@ interface ProductFormModalProps {
 
 type ProductType = SupplierProduct['type'];
 
+interface VariationRow {
+  name: string;
+  optionsText: string;
+}
+
 interface FormState {
   name: string;
   type: ProductType | '';
@@ -44,6 +49,10 @@ interface FormState {
   costPrice: string;
   clientPrice: string;
   isActive: boolean;
+  minPhotos: string;
+  maxPhotos: string;
+  productionDays: string;
+  variations: VariationRow[];
 }
 
 const INITIAL_STATE: FormState = {
@@ -54,10 +63,14 @@ const INITIAL_STATE: FormState = {
   costPrice: '',
   clientPrice: '',
   isActive: true,
+  minPhotos: '0',
+  maxPhotos: '0',
+  productionDays: '',
+  variations: [],
 };
 
 export const ProductFormModal = ({ open, onClose, product }: ProductFormModalProps) => {
-  const { t } = useI18n();
+  const { t, dir } = useI18n();
   const isEditing = !!product;
 
   const [form, setForm] = useState<FormState>(INITIAL_STATE);
@@ -81,6 +94,13 @@ export const ProductFormModal = ({ open, onClose, product }: ProductFormModalPro
           costPrice: String(product.costPrice),
           clientPrice: product.clientPrice !== null ? String(product.clientPrice) : '',
           isActive: product.isActive,
+          minPhotos: String(product.minPhotos ?? 0),
+          maxPhotos: String(product.maxPhotos ?? 0),
+          productionDays: product.productionDays != null ? String(product.productionDays) : '',
+          variations: (product.variations ?? []).map((v) => ({
+            name: v.name,
+            optionsText: v.options.join(', '),
+          })),
         });
       } else {
         setForm(INITIAL_STATE);
@@ -95,6 +115,9 @@ export const ProductFormModal = ({ open, onClose, product }: ProductFormModalPro
     if (!form.type) next.type = t('admin.common.error');
     const costNum = parseFloat(form.costPrice);
     if (!form.costPrice || isNaN(costNum) || costNum <= 0) next.costPrice = t('admin.common.error');
+    const min = parseInt(form.minPhotos, 10) || 0;
+    const max = parseInt(form.maxPhotos, 10) || 0;
+    if (max > 0 && min > max) next.maxPhotos = t('supplier.products.minmax_error');
     setErrors(next);
     return Object.keys(next).length === 0;
   };
@@ -111,6 +134,15 @@ export const ProductFormModal = ({ open, onClose, product }: ProductFormModalPro
       costPrice: parseFloat(form.costPrice),
       clientPrice: form.clientPrice ? parseFloat(form.clientPrice) : null,
       isActive: form.isActive,
+      minPhotos: parseInt(form.minPhotos, 10) || 0,
+      maxPhotos: parseInt(form.maxPhotos, 10) || 0,
+      productionDays: form.productionDays ? parseInt(form.productionDays, 10) : null,
+      variations: form.variations
+        .map((v) => ({
+          name: v.name.trim(),
+          options: v.optionsText.split(',').map((s) => s.trim()).filter(Boolean),
+        }))
+        .filter((v) => v.name && v.options.length > 0),
     };
 
     try {
@@ -156,9 +188,9 @@ export const ProductFormModal = ({ open, onClose, product }: ProductFormModalPro
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
-      <DialogContent className='max-w-md'>
+      <DialogContent data-theme="bw" dir={dir} className='max-w-md max-h-[90vh] overflow-y-auto'>
         <DialogHeader>
-          <DialogTitle className='font-serif'>
+          <DialogTitle>
             {isEditing ? t('supplier.products.edit') : t('supplier.products.add')}
           </DialogTitle>
         </DialogHeader>
@@ -187,7 +219,7 @@ export const ProductFormModal = ({ open, onClose, product }: ProductFormModalPro
               <SelectTrigger>
                 <SelectValue placeholder='—' />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent data-theme="bw" dir={dir}>
                 {typeOptions.map((o) => (
                   <SelectItem key={o.value} value={o.value}>
                     {o.label}
@@ -252,6 +284,104 @@ export const ProductFormModal = ({ open, onClose, product }: ProductFormModalPro
             </div>
           </div>
 
+          {/* Photo requirements + production time */}
+          <div className='grid grid-cols-3 gap-3'>
+            <div className='space-y-1.5'>
+              <Label htmlFor='product-min-photos'>{t('supplier.products.min_photos')}</Label>
+              <Input
+                id='product-min-photos'
+                type='number'
+                min='0'
+                step='1'
+                value={form.minPhotos}
+                onChange={(e) => setForm((p) => ({ ...p, minPhotos: e.target.value }))}
+                disabled={isSubmitting}
+              />
+            </div>
+            <div className='space-y-1.5'>
+              <Label htmlFor='product-max-photos'>{t('supplier.products.max_photos')}</Label>
+              <Input
+                id='product-max-photos'
+                type='number'
+                min='0'
+                step='1'
+                value={form.maxPhotos}
+                onChange={(e) => setForm((p) => ({ ...p, maxPhotos: e.target.value }))}
+                disabled={isSubmitting}
+              />
+            </div>
+            <div className='space-y-1.5'>
+              <Label htmlFor='product-production-days'>{t('supplier.products.production_days_label')}</Label>
+              <Input
+                id='product-production-days'
+                type='number'
+                min='1'
+                step='1'
+                value={form.productionDays}
+                onChange={(e) => setForm((p) => ({ ...p, productionDays: e.target.value }))}
+                disabled={isSubmitting}
+              />
+            </div>
+          </div>
+          {errors.maxPhotos && <p className='text-red-500 text-xs'>{errors.maxPhotos}</p>}
+
+          {/* Variations editor */}
+          <div className='space-y-2'>
+            <Label>{t('supplier.products.variations')}</Label>
+            {form.variations.map((row, idx) => (
+              <div key={idx} className='flex items-start gap-2'>
+                <Input
+                  value={row.name}
+                  placeholder={t('supplier.products.variation_name')}
+                  className='w-32 shrink-0'
+                  onChange={(e) =>
+                    setForm((p) => ({
+                      ...p,
+                      variations: p.variations.map((v, i) => (i === idx ? { ...v, name: e.target.value } : v)),
+                    }))
+                  }
+                  disabled={isSubmitting}
+                />
+                <Input
+                  value={row.optionsText}
+                  placeholder={t('supplier.products.variation_options_ph')}
+                  className='flex-1'
+                  onChange={(e) =>
+                    setForm((p) => ({
+                      ...p,
+                      variations: p.variations.map((v, i) => (i === idx ? { ...v, optionsText: e.target.value } : v)),
+                    }))
+                  }
+                  disabled={isSubmitting}
+                />
+                <Button
+                  type='button'
+                  variant='ghost'
+                  size='icon'
+                  className='shrink-0 text-red-500 hover:text-red-600'
+                  onClick={() =>
+                    setForm((p) => ({ ...p, variations: p.variations.filter((_, i) => i !== idx) }))
+                  }
+                  disabled={isSubmitting}
+                  aria-label={t('supplier.products.delete')}
+                >
+                  <X className='h-4 w-4' />
+                </Button>
+              </div>
+            ))}
+            <Button
+              type='button'
+              variant='outline'
+              size='sm'
+              onClick={() =>
+                setForm((p) => ({ ...p, variations: [...p.variations, { name: '', optionsText: '' }] }))
+              }
+              disabled={isSubmitting}
+            >
+              + {t('supplier.products.add_variation')}
+            </Button>
+          </div>
+
           {/* Active toggle */}
           <div className='flex items-center gap-3'>
             <Switch
@@ -265,13 +395,13 @@ export const ProductFormModal = ({ open, onClose, product }: ProductFormModalPro
 
           {/* Image section — only when editing */}
           {isEditing && product && (
-            <div className='space-y-2 pt-2 border-t border-zinc-100'>
+            <div className='space-y-2 pt-2 border-t border-border'>
               <Label>{t('supplier.products.image')}</Label>
               {imageUrl && (
                 <img
                   src={imageUrl}
                   alt={product.name}
-                  className='h-20 w-20 object-cover rounded-lg border border-zinc-200'
+                  className='h-20 w-20 object-cover rounded-lg border border-border'
                 />
               )}
               <div>
@@ -308,7 +438,7 @@ export const ProductFormModal = ({ open, onClose, product }: ProductFormModalPro
             <Button
               type='submit'
               disabled={isSubmitting}
-              className='bg-blush text-white hover:bg-blush/90'
+              className='bg-foreground text-background hover:bg-foreground/90'
             >
               {isSubmitting ? (
                 <Loader2 className='h-4 w-4 animate-spin me-2' />

@@ -805,9 +805,377 @@ async function sendOrderToSupplier({
   return true;
 }
 
+// ─── 5. Order status email (to client) ──────────────────────────────────────
+
+/**
+ * Notify a client about their order status change.
+ *
+ * @param {object} opts
+ * @param {string} opts.clientName
+ * @param {string} opts.clientEmail
+ * @param {string} opts.studioName
+ * @param {string} opts.orderId
+ * @param {'in_production'|'shipped'|'delivered'} opts.status
+ * @param {string} [opts.trackingNumber]
+ * @param {string} [opts.trackingCarrier]
+ */
+async function sendOrderStatusEmail({
+  clientName,
+  clientEmail,
+  studioName,
+  orderId,
+  status,
+  trackingNumber,
+  trackingCarrier,
+}) {
+  const variants = {
+    in_production: {
+      subject:  (studio) => `${studio ? studio + ' · ' : ''}Your order is in production`,
+      eyebrow:  'Order Update',
+      heading:  'Your order is in production',
+      bodyText: () =>
+        'Great news — your photo products are now being produced. We\'ll send you another update as soon as they\'re on their way.',
+    },
+    ready_to_ship: {
+      subject:  (studio) => `${studio ? studio + ' · ' : ''}Your order is ready to ship`,
+      eyebrow:  'Order Update',
+      heading:  'Your order is ready to ship',
+      bodyText: () =>
+        'Your photo products are packed and ready — they will be handed to the carrier shortly.',
+    },
+    shipped: {
+      subject:  (studio) => `${studio ? studio + ' · ' : ''}Your order has shipped`,
+      eyebrow:  'Order Shipped',
+      heading:  'Your order has shipped',
+      bodyText: (tracking, carrier) =>
+        tracking
+          ? `Your order is on its way! Tracking: <strong style="color:#111111;">${esc(carrier || '')}${carrier ? ' ' : ''}#${esc(tracking)}</strong>`
+          : 'Your order is on its way!',
+    },
+    delivered: {
+      subject:  (studio) => `${studio ? studio + ' · ' : ''}Your order has been delivered`,
+      eyebrow:  'Delivered',
+      heading:  'Your order has been delivered',
+      bodyText: () =>
+        'Your order has arrived! Thank you for choosing us — we hope you love your photos.',
+    },
+  };
+
+  const variant = variants[status];
+  if (!variant) return;
+
+  const transporter = createTransporter();
+  if (!transporter) {
+    console.warn('[email] SMTP not configured — skipping order status email');
+    return false;
+  }
+
+  const studio   = esc(studioName || 'LightStudio');
+  const orderRef = orderId ? String(orderId).slice(0, 8).toUpperCase() : '';
+
+  const body = `
+    <!-- Header -->
+    <tr>
+      <td align="center" style="padding:40px 40px 24px;background-color:#ffffff;">
+        <p style="margin:0 0 20px;
+                  font-family:'Inter',Arial,sans-serif;
+                  font-size:10px;font-weight:600;
+                  letter-spacing:5px;color:#888888;
+                  text-transform:uppercase;">
+          ${studio}
+        </p>
+        <p style="margin:0 0 10px;
+                  font-family:'Inter',Arial,sans-serif;
+                  font-size:11px;font-weight:500;
+                  letter-spacing:3px;color:#888888;
+                  text-transform:uppercase;">
+          ${esc(variant.eyebrow)}
+        </p>
+        <h1 style="margin:0 0 20px;
+                   font-family:'Playfair Display',Georgia,serif;
+                   font-size:30px;font-weight:400;
+                   color:#111111;line-height:1.2;letter-spacing:-0.3px;">
+          ${esc(variant.heading)}
+        </h1>
+        <table role="presentation" cellpadding="0" cellspacing="0" border="0"
+               style="margin:0 auto;">
+          <tr>
+            <td style="width:40px;height:1px;background-color:#111111;font-size:0;"></td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+
+    <!-- Body -->
+    <tr>
+      <td style="padding:0 40px 40px;">
+        <p style="margin:0 0 16px;
+                  font-family:'Inter',Arial,sans-serif;
+                  font-size:16px;font-weight:500;color:#111111;
+                  line-height:1.5;">
+          Hi ${esc(clientName)},
+        </p>
+        <p style="margin:0 0 20px;
+                  font-family:'Inter',Arial,sans-serif;
+                  font-size:15px;color:#444444;line-height:1.85;">
+          ${variant.bodyText(trackingNumber, trackingCarrier)}
+        </p>
+        ${orderRef ? `
+        <p style="margin:0;
+                  font-family:'Inter',Arial,sans-serif;
+                  font-size:13px;color:#888888;line-height:1.7;">
+          Order reference: <strong style="color:#111111;">#${orderRef}</strong>
+        </p>` : ''}
+      </td>
+    </tr>
+
+    ${emailFooter(studio, false)}
+  `;
+
+  const html = emailWrapper('ltr', 'en', body);
+
+  await transporter.sendMail({
+    from:    process.env.SMTP_FROM || `"${studioName || 'LightStudio'}" <${process.env.SMTP_USER}>`,
+    to:      clientEmail,
+    subject: variant.subject(studioName || ''),
+    html,
+  });
+
+  return true;
+}
+
+/**
+ * Order confirmation receipt — sent to the client right after a successful
+ * store payment (PayPlus webhook).
+ *
+ * @param {object} opts
+ * @param {string} opts.clientName
+ * @param {string} opts.clientEmail
+ * @param {string} opts.studioName
+ * @param {string} opts.orderId
+ * @param {{ productName: string, quantity: number, unitPrice: number|null }[]} opts.items
+ * @param {number} opts.totalAmount
+ * @param {string} [opts.currency]
+ * @param {object} [opts.shippingAddress]
+ */
+async function sendOrderConfirmationEmail({
+  clientName,
+  clientEmail,
+  studioName,
+  orderId,
+  items = [],
+  totalAmount,
+  currency = 'ILS',
+  shippingAddress,
+}) {
+  const transporter = createTransporter();
+  if (!transporter) {
+    console.warn('[email] SMTP not configured — skipping order confirmation email');
+    return false;
+  }
+
+  const studio   = esc(studioName || 'LightStudio');
+  const orderRef = orderId ? String(orderId).slice(0, 8).toUpperCase() : '';
+  const symbol   = currency === 'ILS' ? '₪' : currency + ' ';
+
+  const itemRows = items.map((it) => `
+    <tr>
+      <td style="padding:8px 0;font-family:'Inter',Arial,sans-serif;font-size:14px;color:#111111;">
+        ${esc(it.productName)} ×${it.quantity}
+      </td>
+      <td align="right" style="padding:8px 0;font-family:'Inter',Arial,sans-serif;font-size:14px;color:#444444;" dir="ltr">
+        ${it.unitPrice != null ? `${symbol}${(it.unitPrice * it.quantity).toLocaleString()}` : ''}
+      </td>
+    </tr>`).join('');
+
+  const addressBlock = shippingAddress ? `
+    <p style="margin:20px 0 0;font-family:'Inter',Arial,sans-serif;font-size:13px;color:#888888;line-height:1.7;">
+      Shipping to: <strong style="color:#111111;">${esc(shippingAddress.name || '')}</strong>,
+      ${esc(shippingAddress.street || '')}${shippingAddress.apartment ? ' ' + esc(shippingAddress.apartment) : ''},
+      ${esc(shippingAddress.city || '')}${shippingAddress.zip ? ' ' + esc(shippingAddress.zip) : ''}
+    </p>` : '';
+
+  const body = `
+    <tr>
+      <td align="center" style="padding:40px 40px 24px;background-color:#ffffff;">
+        <p style="margin:0 0 20px;font-family:'Inter',Arial,sans-serif;font-size:10px;font-weight:600;letter-spacing:5px;color:#888888;text-transform:uppercase;">
+          ${studio}
+        </p>
+        <p style="margin:0 0 10px;font-family:'Inter',Arial,sans-serif;font-size:11px;font-weight:500;letter-spacing:3px;color:#888888;text-transform:uppercase;">
+          Order Confirmed
+        </p>
+        <h1 style="margin:0 0 20px;font-family:'Playfair Display',Georgia,serif;font-size:30px;font-weight:400;color:#111111;line-height:1.2;letter-spacing:-0.3px;">
+          Thank you for your order
+        </h1>
+        <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:0 auto;">
+          <tr><td style="width:40px;height:1px;background-color:#111111;font-size:0;"></td></tr>
+        </table>
+      </td>
+    </tr>
+    <tr>
+      <td style="padding:0 40px 40px;">
+        <p style="margin:0 0 16px;font-family:'Inter',Arial,sans-serif;font-size:16px;font-weight:500;color:#111111;line-height:1.5;">
+          Hi ${esc(clientName)},
+        </p>
+        <p style="margin:0 0 20px;font-family:'Inter',Arial,sans-serif;font-size:15px;color:#444444;line-height:1.85;">
+          Your payment was received and your order is being prepared. Here's a summary:
+        </p>
+        <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%"
+               style="border-top:1px solid #eeeeee;border-bottom:1px solid #eeeeee;margin:0 0 16px;">
+          ${itemRows}
+          <tr>
+            <td style="padding:12px 0 8px;font-family:'Inter',Arial,sans-serif;font-size:14px;font-weight:600;color:#111111;border-top:1px solid #eeeeee;">
+              Total
+            </td>
+            <td align="right" style="padding:12px 0 8px;font-family:'Inter',Arial,sans-serif;font-size:14px;font-weight:600;color:#111111;border-top:1px solid #eeeeee;" dir="ltr">
+              ${symbol}${Number(totalAmount || 0).toLocaleString()}
+            </td>
+          </tr>
+        </table>
+        ${orderRef ? `
+        <p style="margin:0;font-family:'Inter',Arial,sans-serif;font-size:13px;color:#888888;line-height:1.7;">
+          Order reference: <strong style="color:#111111;">#${orderRef}</strong>
+        </p>` : ''}
+        ${addressBlock}
+      </td>
+    </tr>
+    ${emailFooter(studio, false)}
+  `;
+
+  const html = emailWrapper('ltr', 'en', body);
+
+  await transporter.sendMail({
+    from:    process.env.SMTP_FROM || `"${studioName || 'LightStudio'}" <${process.env.SMTP_USER}>`,
+    to:      clientEmail,
+    subject: `${studioName ? studioName + ' · ' : ''}Order confirmed${orderRef ? ` #${orderRef}` : ''}`,
+    html,
+  });
+
+  return true;
+}
+
+/**
+ * Monthly invoice notification to the photographer (statement / receipt / failure).
+ *
+ * @param {object} opts
+ * @param {string} opts.adminName
+ * @param {string} opts.adminEmail
+ * @param {string} opts.studioName
+ * @param {number} opts.amount
+ * @param {string} opts.periodStart  ISO date
+ * @param {'charged'|'failed'} opts.outcome
+ * @param {string} [opts.payLink]    hosted payment link (failure case)
+ */
+async function sendInvoiceEmail({ adminName, adminEmail, studioName, amount, periodStart, outcome, payLink }) {
+  const transporter = createTransporter();
+  if (!transporter) {
+    console.warn('[email] SMTP not configured — skipping invoice email');
+    return false;
+  }
+  const studio = esc(studioName || 'LightStudio');
+  const month = new Date(periodStart).toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
+  const charged = outcome === 'charged';
+
+  const body = `
+    <tr><td align="center" style="padding:40px 40px 24px;background-color:#ffffff;">
+      <p style="margin:0 0 20px;font-family:'Inter',Arial,sans-serif;font-size:10px;font-weight:600;letter-spacing:5px;color:#888;text-transform:uppercase;">${studio}</p>
+      <p style="margin:0 0 10px;font-family:'Inter',Arial,sans-serif;font-size:11px;font-weight:500;letter-spacing:3px;color:#888;text-transform:uppercase;">${charged ? 'Invoice Paid' : 'Payment Needed'}</p>
+      <h1 style="margin:0 0 20px;font-family:'Playfair Display',Georgia,serif;font-size:30px;font-weight:400;color:#111;line-height:1.2;">${charged ? `Your ${month} invoice` : 'We could not process your payment'}</h1>
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:0 auto;"><tr><td style="width:40px;height:1px;background-color:#111;font-size:0;"></td></tr></table>
+    </td></tr>
+    <tr><td style="padding:0 40px 40px;">
+      <p style="margin:0 0 16px;font-family:'Inter',Arial,sans-serif;font-size:16px;font-weight:500;color:#111;">Hi ${esc(adminName)},</p>
+      <p style="margin:0 0 20px;font-family:'Inter',Arial,sans-serif;font-size:15px;color:#444;line-height:1.85;">
+        ${charged
+          ? `Your supplier orders for ${month} totaled <strong style="color:#111;">₪${Number(amount).toLocaleString()}</strong> and were charged to your card on file.`
+          : `Your supplier orders for ${month} totaled <strong style="color:#111;">₪${Number(amount).toLocaleString()}</strong>, but the charge to your card did not go through. Ordering is paused until this is settled.`}
+      </p>
+      ${(!charged && payLink) ? `<p style="margin:0;"><a href="${payLink}" style="display:inline-block;background:#111;color:#fff;font-family:'Inter',Arial,sans-serif;font-size:14px;text-decoration:none;padding:12px 28px;border-radius:999px;">Pay now</a></p>` : ''}
+    </td></tr>
+    ${emailFooter(studio, false)}
+  `;
+
+  await transporter.sendMail({
+    from:    process.env.SMTP_FROM || `"${studioName || 'LightStudio'}" <${process.env.SMTP_USER}>`,
+    to:      adminEmail,
+    subject: `${studioName ? studioName + ' · ' : ''}${charged ? `Invoice paid — ${month}` : `Payment needed — ${month}`}`,
+    html:    emailWrapper('ltr', 'en', body),
+  });
+  return true;
+}
+
+/**
+ * Accounting-document email (Hebrew-first): receipt / tax-invoice-receipt.
+ * When `provisional` (PayPlus documents not yet enabled) it's worded as a
+ * payment confirmation; once issued it carries the official PDF link.
+ *
+ * @param {object} opts
+ * @param {string} opts.recipientName
+ * @param {string} opts.recipientEmail
+ * @param {'receipt'|'tax_invoice_receipt'} opts.docType
+ * @param {number} opts.amount
+ * @param {number} [opts.vatAmount]
+ * @param {{ name:string, quantity:number, unitPrice:number|null }[]} [opts.items]
+ * @param {string} [opts.documentNumber]
+ * @param {string} [opts.pdfUrl]
+ * @param {boolean} [opts.provisional]
+ * @param {string} [opts.businessName]
+ */
+async function sendDocumentEmail({
+  recipientName, recipientEmail, docType, amount, vatAmount = 0,
+  items = [], documentNumber, pdfUrl, provisional, businessName,
+}) {
+  const transporter = createTransporter();
+  if (!transporter) {
+    console.warn('[email] SMTP not configured — skipping document email');
+    return false;
+  }
+  const studio = esc(businessName || 'LightStudio');
+  const docLabel = docType === 'tax_invoice_receipt' ? 'חשבונית מס/קבלה' : 'קבלה';
+  const symbol = '₪';
+
+  const itemRows = items.map((it) => `
+    <tr>
+      <td style="padding:8px 0;font-family:Arial,sans-serif;font-size:14px;color:#111;">${esc(it.name)}${it.quantity > 1 ? ` ×${it.quantity}` : ''}</td>
+      <td align="left" style="padding:8px 0;font-family:Arial,sans-serif;font-size:14px;color:#444;" dir="ltr">${it.unitPrice != null ? `${symbol}${(Number(it.unitPrice) * (it.quantity || 1)).toLocaleString()}` : ''}</td>
+    </tr>`).join('');
+
+  const body = `
+    <tr><td align="center" style="padding:40px 40px 24px;background:#fff;">
+      <p style="margin:0 0 20px;font-family:Arial,sans-serif;font-size:10px;font-weight:600;letter-spacing:5px;color:#888;text-transform:uppercase;">${studio}</p>
+      <p style="margin:0 0 10px;font-family:Arial,sans-serif;font-size:11px;font-weight:500;letter-spacing:3px;color:#888;">${provisional ? 'אישור תשלום' : docLabel}</p>
+      <h1 style="margin:0 0 16px;font-family:'Playfair Display',Georgia,serif;font-size:28px;font-weight:400;color:#111;">${provisional ? 'התקבל תשלום' : docLabel}${documentNumber ? ` · ${esc(documentNumber)}` : ''}</h1>
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:0 auto;"><tr><td style="width:40px;height:1px;background:#111;font-size:0;"></td></tr></table>
+    </td></tr>
+    <tr><td style="padding:0 40px 32px;" dir="rtl">
+      <p style="margin:0 0 16px;font-family:Arial,sans-serif;font-size:16px;font-weight:500;color:#111;">שלום ${esc(recipientName || '')},</p>
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-top:1px solid #eee;border-bottom:1px solid #eee;margin:0 0 16px;">
+        ${itemRows}
+        ${vatAmount > 0 ? `<tr><td style="padding:8px 0;font-family:Arial,sans-serif;font-size:13px;color:#888;">מע"מ</td><td align="left" dir="ltr" style="padding:8px 0;font-family:Arial,sans-serif;font-size:13px;color:#888;">${symbol}${Number(vatAmount).toLocaleString()}</td></tr>` : ''}
+        <tr><td style="padding:12px 0 8px;font-family:Arial,sans-serif;font-size:14px;font-weight:600;color:#111;border-top:1px solid #eee;">סה"כ</td><td align="left" dir="ltr" style="padding:12px 0 8px;font-family:Arial,sans-serif;font-size:14px;font-weight:600;color:#111;border-top:1px solid #eee;">${symbol}${Number(amount || 0).toLocaleString()}</td></tr>
+      </table>
+      ${pdfUrl ? `<p style="margin:0;"><a href="${pdfUrl}" style="display:inline-block;background:#111;color:#fff;font-family:Arial,sans-serif;font-size:14px;text-decoration:none;padding:12px 28px;border-radius:999px;">הורדת ${docLabel}</a></p>` : ''}
+      ${provisional ? `<p style="margin:16px 0 0;font-family:Arial,sans-serif;font-size:12px;color:#888;">${docLabel} רשמית תישלח בנפרד.</p>` : ''}
+    </td></tr>
+    ${emailFooter(studio, true)}
+  `;
+
+  await transporter.sendMail({
+    from:    process.env.SMTP_FROM || `"${businessName || 'LightStudio'}" <${process.env.SMTP_USER}>`,
+    to:      recipientEmail,
+    subject: `${businessName ? businessName + ' · ' : ''}${provisional ? 'אישור תשלום' : docLabel}${documentNumber ? ` ${documentNumber}` : ''}`,
+    html:    emailWrapper('rtl', 'he', body),
+  });
+  return true;
+}
+
 module.exports = {
   sendGalleryLink,
   sendProductOrderLinks,
   sendOrderSelectionLink,
   sendOrderToSupplier,
+  sendOrderStatusEmail,
+  sendOrderConfirmationEmail,
+  sendInvoiceEmail,
+  sendDocumentEmail,
 };

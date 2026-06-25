@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useI18n } from '@/lib/i18n';
 import {
@@ -7,25 +8,27 @@ import {
   useSendOrderToSupplier,
   useCancelOrder,
   useDeleteOrder,
+  useNotifyOrderClient,
 } from '@/hooks/useQueries';
 import { AdminLayout } from '@/components/admin/AdminLayout';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
-import { ArrowLeft, ArrowRight } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Bell, Loader2 } from 'lucide-react';
 import type { StoreOrder } from '@/lib/api';
 
 const STATUS_COLORS: Record<StoreOrder['status'], string> = {
-  draft: 'bg-zinc-100 text-zinc-600',
-  pending_selection: 'bg-yellow-100 text-yellow-700',
-  selection_submitted: 'bg-blue-100 text-blue-700',
-  approved: 'bg-green-100 text-green-700',
-  sent_to_supplier: 'bg-purple-100 text-purple-700',
-  in_production: 'bg-orange-100 text-orange-700',
-  shipped: 'bg-sky-100 text-sky-700',
-  delivered: 'bg-emerald-100 text-emerald-800',
-  cancelled: 'bg-red-100 text-red-600',
+  draft: 'bg-ivory text-warm-gray border border-beige',
+  pending_selection: 'bg-amber-50 text-amber-700',
+  selection_submitted: 'bg-blush/15 text-charcoal',
+  approved: 'bg-green-50 text-green-700',
+  sent_to_supplier: 'bg-ivory text-charcoal border border-beige',
+  in_production: 'bg-amber-50 text-amber-700',
+  ready_to_ship: 'bg-indigo-50 text-indigo-700',
+  shipped: 'bg-sky-50 text-sky-700',
+  delivered: 'bg-green-50 text-green-700',
+  cancelled: 'bg-red-50 text-red-600',
 };
 
 const STATUS_STEPS: StoreOrder['status'][] = [
@@ -35,6 +38,7 @@ const STATUS_STEPS: StoreOrder['status'][] = [
   'approved',
   'sent_to_supplier',
   'in_production',
+  'ready_to_ship',
   'shipped',
   'delivered',
 ];
@@ -51,6 +55,8 @@ export const AdminOrderDetail = () => {
   const sendToSupplier = useSendOrderToSupplier();
   const cancel = useCancelOrder();
   const deleteOrder = useDeleteOrder();
+  const notifyMutation = useNotifyOrderClient();
+  const [showNotifyConfirm, setShowNotifyConfirm] = useState(false);
 
   const BackIcon = dir === 'rtl' ? ArrowRight : ArrowLeft;
 
@@ -97,6 +103,15 @@ export const AdminOrderDetail = () => {
 
   const currentStepIdx = STATUS_STEPS.indexOf(order.status);
 
+  const canCancel =
+    order.status !== 'delivered' &&
+    order.status !== 'shipped' &&
+    order.status !== 'cancelled' &&
+    (order.status !== 'in_production' || (
+      order.inProductionAt != null &&
+      Date.now() - new Date(order.inProductionAt).getTime() < 15 * 60 * 1000
+    ));
+
   return (
     <AdminLayout>
       <div className='p-6 space-y-6'>
@@ -112,6 +127,11 @@ export const AdminOrderDetail = () => {
           <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${STATUS_COLORS[order.status]}`}>
             {t(`orders.status.${order.status}`)}
           </span>
+          {order.paymentStatus === 'refund_pending' && (
+            <span className='inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-amber-100 text-amber-700'>
+              {dir === 'rtl' ? 'החזר כספי בהמתנה' : 'Refund Pending'}
+            </span>
+          )}
         </div>
 
         {/* Status timeline */}
@@ -125,9 +145,9 @@ export const AdminOrderDetail = () => {
                 <div key={step} className={`flex items-center gap-1 ${dir === 'rtl' ? 'flex-row-reverse' : ''}`}>
                   <div className={`flex flex-col items-center gap-1`}>
                     <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-colors ${
-                      isCurrent ? 'bg-blush text-white' :
+                      isCurrent ? 'bg-charcoal text-white' :
                       isPast ? 'bg-emerald-500 text-white' :
-                      'bg-zinc-100 text-zinc-400'
+                      'bg-ivory text-warm-gray'
                     }`}>
                       {isPast ? '✓' : idx + 1}
                     </div>
@@ -148,13 +168,21 @@ export const AdminOrderDetail = () => {
         <div className={`grid grid-cols-1 lg:grid-cols-3 gap-6 ${dir === 'rtl' ? 'direction-rtl' : ''}`}>
           {/* Left sidebar */}
           <div className='space-y-4'>
-            {/* Client card */}
+            {/* Client card — direct orders have no client */}
             <div className='bg-white rounded-xl border border-border p-4 space-y-2'>
               <h3 className='font-medium text-charcoal text-sm'>{t('orders.client')}</h3>
-              <p className='text-charcoal font-semibold'>{order.client.name}</p>
-              <p className='text-warm-gray text-sm'>{order.client.email}</p>
-              {order.client.phone && (
-                <p className='text-warm-gray text-sm'>{order.client.phone}</p>
+              {order.client ? (
+                <>
+                  <p className='text-charcoal font-semibold'>{order.client.name}</p>
+                  <p className='text-warm-gray text-sm'>{order.client.email}</p>
+                  {order.client.phone && (
+                    <p className='text-warm-gray text-sm'>{order.client.phone}</p>
+                  )}
+                </>
+              ) : (
+                <span className='inline-block text-xs px-2.5 py-1 rounded-full bg-ivory border border-beige text-warm-gray'>
+                  {t('orders.direct_badge')}
+                </span>
               )}
             </div>
 
@@ -209,7 +237,7 @@ export const AdminOrderDetail = () => {
               {order.status === 'draft' && (
                 <>
                   <Button
-                    className='w-full bg-blush hover:bg-blush/90 text-white'
+                    className='w-full bg-charcoal hover:bg-charcoal/90 text-white'
                     onClick={() =>
                       handleAction(
                         sendToClient as Parameters<typeof handleAction>[0],
@@ -257,7 +285,7 @@ export const AdminOrderDetail = () => {
 
               {order.status === 'approved' && (
                 <Button
-                  className='w-full bg-purple-600 hover:bg-purple-700 text-white'
+                  className='w-full bg-charcoal hover:bg-charcoal/90 text-white'
                   onClick={() =>
                     handleAction(
                       sendToSupplier as Parameters<typeof handleAction>[0],
@@ -271,7 +299,63 @@ export const AdminOrderDetail = () => {
                 </Button>
               )}
 
-              {order.status !== 'delivered' && order.status !== 'shipped' && order.status !== 'cancelled' && (
+              {order.client && (['in_production', 'ready_to_ship', 'shipped', 'delivered'] as StoreOrder['status'][]).includes(order.status) && (
+                <div>
+                  <Button
+                    variant='outline'
+                    className='w-full gap-2'
+                    onClick={() => setShowNotifyConfirm((v) => !v)}
+                    disabled={notifyMutation.isPending}
+                  >
+                    {notifyMutation.isPending ? (
+                      <Loader2 size={16} className='animate-spin' />
+                    ) : (
+                      <Bell size={16} />
+                    )}
+                    {t('orders.action.notify_client')}
+                  </Button>
+                  {showNotifyConfirm && (
+                    <div className='bg-muted rounded-lg p-3 mt-2 text-sm'>
+                      <p className='text-charcoal mb-3'>
+                        {t('orders.notify.confirm').replace('{name}', order.client?.name ?? '')}
+                      </p>
+                      <div className={`flex gap-2 ${dir === 'rtl' ? 'flex-row-reverse' : ''}`}>
+                        <Button
+                          size='sm'
+                          className='bg-charcoal hover:bg-charcoal/90 text-white'
+                          disabled={notifyMutation.isPending}
+                          onClick={() => {
+                            if (!id) return;
+                            notifyMutation.mutate(id, {
+                              onSuccess: () => {
+                                toast({ title: t('orders.notify.sent') });
+                                setShowNotifyConfirm(false);
+                              },
+                              onError: () => toast({ title: t('admin.common.error'), variant: 'destructive' }),
+                            });
+                          }}
+                        >
+                          {notifyMutation.isPending ? (
+                            <Loader2 size={14} className='animate-spin' />
+                          ) : (
+                            dir === 'rtl' ? 'שלח' : 'Send'
+                          )}
+                        </Button>
+                        <Button
+                          size='sm'
+                          variant='ghost'
+                          onClick={() => setShowNotifyConfirm(false)}
+                          disabled={notifyMutation.isPending}
+                        >
+                          {t('admin.common.cancel')}
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {canCancel && (
                 <Button
                   variant='outline'
                   className='w-full text-red-600 border-red-200 hover:bg-red-50'
@@ -303,7 +387,7 @@ export const AdminOrderDetail = () => {
                     <div className={`flex items-start justify-between gap-2 ${dir === 'rtl' ? 'flex-row-reverse' : ''}`}>
                       <div>
                         <p className='font-medium text-charcoal text-sm'>{item.product.name}</p>
-                        <span className='inline-block mt-0.5 bg-zinc-100 text-zinc-600 text-xs px-2 py-0.5 rounded-full'>
+                        <span className='inline-block mt-0.5 bg-ivory text-warm-gray text-xs px-2 py-0.5 rounded-full'>
                           {item.product.type}
                         </span>
                       </div>
@@ -319,6 +403,16 @@ export const AdminOrderDetail = () => {
                       <p className='text-xs text-warm-gray'>
                         {item.selectedImageIds.length} {t('orders.photos.selected')}
                       </p>
+                    )}
+
+                    {Object.keys(item.productOptions ?? {}).length > 0 && (
+                      <div className='flex flex-wrap gap-1.5'>
+                        {Object.entries(item.productOptions).map(([k, v]) => (
+                          <span key={k} className='text-[11px] px-2 py-0.5 rounded-full border border-border bg-ivory text-charcoal'>
+                            {k}: {String(v)}
+                          </span>
+                        ))}
+                      </div>
                     )}
 
                     {Object.keys(item.imageNotes).length > 0 && (

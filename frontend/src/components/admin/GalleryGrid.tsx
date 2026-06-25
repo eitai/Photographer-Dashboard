@@ -10,17 +10,13 @@ interface GalleryGridProps {
   resentId: string | null;
   sendingSmId: string | null;
   sentSmsId: string | null;
-  showDeliveryFormFor: string | null;
-  deliveryHeaderMessage: string;
   creatingDeliveryFor: string | null;
   copyLink: (token: string, galleryId: string) => void;
   whatsAppLink: (token: string) => string;
   resendEmail: (galleryId: string) => void;
   sendSms: (galleryId: string) => void;
   setDeleteGalleryTarget: (id: string | null) => void;
-  setShowDeliveryFormFor: (id: string | null) => void;
-  setDeliveryHeaderMessage: (msg: string) => void;
-  createDeliveryGallery: (originalGalleryId: string) => void;
+  createDeliveryGallery: (originalGalleryId: string, headerMessage: string) => Promise<void>;
   reactivateGallery: (galleryId: string) => void;
   reactivatingId: string | null;
   setDeleteSubTarget: (t: { galleryId: string; submissionId: string } | null) => void;
@@ -35,16 +31,12 @@ export const GalleryGrid = ({
   resentId,
   sendingSmId,
   sentSmsId,
-  showDeliveryFormFor,
-  deliveryHeaderMessage,
   creatingDeliveryFor,
   copyLink,
   whatsAppLink,
   resendEmail,
   sendSms,
   setDeleteGalleryTarget,
-  setShowDeliveryFormFor,
-  setDeliveryHeaderMessage,
   createDeliveryGallery,
   reactivateGallery,
   reactivatingId,
@@ -71,8 +63,6 @@ export const GalleryGrid = ({
     resentId,
     sendingSmId,
     sentSmsId,
-    showDeliveryFormFor,
-    deliveryHeaderMessage,
     creatingDeliveryFor,
     galleries,
     copyLink,
@@ -80,8 +70,6 @@ export const GalleryGrid = ({
     resendEmail,
     sendSms,
     setDeleteGalleryTarget,
-    setShowDeliveryFormFor,
-    setDeliveryHeaderMessage,
     createDeliveryGallery,
     reactivateGallery,
     reactivatingId,

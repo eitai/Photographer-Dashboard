@@ -104,7 +104,7 @@ router.patch('/:id', asyncHandler(async (req, res) => {
   // Password changes must go through PUT /api/auth/password — never handle them here
   // so there is no risk of a partial update leaving the DB in an inconsistent state
   // (profile updated but password not changed, or vice-versa).
-  const { name, email, studioName, username } = req.body;
+  const { name, email, studioName, username, canOrderSupplier, clientsCanOrder } = req.body;
 
   if (username) {
     const conflict = await Admin.findOne({ username: username.toLowerCase() });
@@ -117,6 +117,8 @@ router.patch('/:id', asyncHandler(async (req, res) => {
   if (email !== undefined) update.email = email;
   if (studioName !== undefined) update.studioName = studioName || null;
   if (username !== undefined) update.username = username ? username.toLowerCase() : null;
+  if (canOrderSupplier !== undefined) update.canOrderSupplier = !!canOrderSupplier;
+  if (clientsCanOrder !== undefined) update.clientsCanOrder = !!clientsCanOrder;
 
   const updated = await Admin.findByIdAndUpdate(req.params.id, update);
   if (!updated) return res.status(404).json({ message: 'Admin not found' });

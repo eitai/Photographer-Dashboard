@@ -20,6 +20,10 @@ export interface ProductOrder {
   status: 'pending' | 'submitted' | 'delivered';
   token: string;
   linkEnabled: boolean;
+  storeOrderId?: string | null;
+  supplierStatus?: 'in_production' | 'shipped' | 'delivered' | null;
+  trackingNumber?: string | null;
+  trackingCarrier?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -81,3 +85,9 @@ export const sendProductOrderLinksEmail = (payload: SendLinksEmailPayload): Prom
 
 export const deliverProductOrder = (orderId: string): Promise<ProductOrder> =>
   api.patch(`/product-orders/${orderId}/deliver`).then((r) => r.data);
+
+export const sendProductOrderToSupplier = (
+  orderId: string,
+  options?: { photographerNote?: string },
+): Promise<{ ok: boolean; storeOrderId: string; hasAddress: boolean }> =>
+  api.post(`/product-orders/${orderId}/send-to-supplier`, options || {}).then((r) => r.data);

@@ -1,5 +1,7 @@
+import { useState } from 'react';
 import { UseFormReturn } from 'react-hook-form';
 import { z } from 'zod';
+import { ChevronDown, ChevronUp, MapPin } from 'lucide-react';
 import { useI18n } from '@/lib/i18n';
 import { InputField, TextareaField } from '@/components/admin/InputField';
 import { SessionTypeCombobox } from '@/components/admin/SessionTypeCombobox';
@@ -12,6 +14,11 @@ const clientSchema = z.object({
   sessionType: z.string().optional(),
   notes: z.string().optional(),
   eventDate: z.string().optional(),
+  addressStreet: z.string().optional(),
+  addressApartment: z.string().optional(),
+  addressCity: z.string().optional(),
+  addressZip: z.string().optional(),
+  addressCountry: z.string().optional(),
 });
 
 type ClientFormValues = z.infer<typeof clientSchema>;
@@ -21,11 +28,14 @@ interface WizardStep1Props {
   onNext: () => void;
   onCancel: () => void;
   disabled?: boolean;
+  /** Overrides the default "Next" label (e.g. "Finish & Create" when this is the only step) */
+  nextLabel?: string;
 }
 
-export const WizardStep1 = ({ form, onNext, onCancel, disabled = false }: WizardStep1Props) => {
+export const WizardStep1 = ({ form, onNext, onCancel, disabled = false, nextLabel }: WizardStep1Props) => {
   const { t } = useI18n();
   const { register, formState: { errors } } = form;
+  const [addressOpen, setAddressOpen] = useState(false);
 
   return (
     <div className='space-y-4'>
@@ -67,9 +77,49 @@ export const WizardStep1 = ({ form, onNext, onCancel, disabled = false }: Wizard
         </div>
       </div>
 
+      {/* ── Shipping address (collapsible, optional) ──────────────────────── */}
+      <div className='border border-beige rounded-lg overflow-hidden'>
+        <button
+          type='button'
+          onClick={() => setAddressOpen((o) => !o)}
+          className='w-full flex items-center justify-between px-3 py-2.5 text-xs text-warm-gray hover:bg-ivory/60 transition-colors'
+        >
+          <span className='flex items-center gap-1.5'>
+            <MapPin size={11} />
+            {t('admin.client.address_optional')}
+          </span>
+          {addressOpen ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+        </button>
+
+        {addressOpen && (
+          <div className='grid grid-cols-2 gap-3 px-3 pb-3 pt-1 border-t border-beige'>
+            <div className='col-span-full'>
+              <label className='block text-xs text-warm-gray mb-1'>{t('admin.client.address_street')}</label>
+              <InputField {...register('addressStreet')} disabled={disabled} />
+            </div>
+            <div>
+              <label className='block text-xs text-warm-gray mb-1'>{t('admin.client.address_apartment')}</label>
+              <InputField {...register('addressApartment')} disabled={disabled} />
+            </div>
+            <div>
+              <label className='block text-xs text-warm-gray mb-1'>{t('admin.client.address_city')}</label>
+              <InputField {...register('addressCity')} disabled={disabled} />
+            </div>
+            <div>
+              <label className='block text-xs text-warm-gray mb-1'>{t('admin.client.address_zip')}</label>
+              <InputField {...register('addressZip')} disabled={disabled} />
+            </div>
+            <div>
+              <label className='block text-xs text-warm-gray mb-1'>{t('admin.client.address_country')}</label>
+              <InputField {...register('addressCountry')} placeholder='ישראל' disabled={disabled} />
+            </div>
+          </div>
+        )}
+      </div>
+
       <div className='flex gap-2 pt-1'>
         <Button type='button' variant='primary' size='lg' onClick={onNext} disabled={disabled}>
-          {t('admin.clients.wizard.next')}
+          {nextLabel ?? t('admin.clients.wizard.next')}
         </Button>
         <Button type='button' variant='ghost' size='lg' onClick={onCancel} disabled={disabled}>
           {t('admin.common.cancel')}

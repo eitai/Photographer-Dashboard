@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { AdminLayout } from '@/components/admin/AdminLayout';
 import { useI18n } from '@/lib/i18n';
@@ -7,7 +7,7 @@ import { ArrowLeft, ArrowRight } from 'lucide-react';
 import { ClientInfoCard } from '@/components/admin/ClientInfoCard';
 import { GalleriesSection } from '@/components/admin/GalleriesSection';
 import { ConfirmationModals } from '@/components/admin/ConfirmationModals';
-import { ProductOrdersSection } from '@/components/admin/ProductOrdersSection';
+import { ClientOrdersSection } from '@/components/admin/ClientOrdersSection';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { useQueryClient } from '@tanstack/react-query';
 import {
@@ -51,8 +51,6 @@ export const AdminClientDetail = () => {
   // ---------------------------------------------------------------------------
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState<Partial<Client>>({});
-  const [deliveryHeaderMessage, setDeliveryHeaderMessage] = useState('');
-  const [showDeliveryFormFor, setShowDeliveryFormFor] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [resentId, setResentId] = useState<string | null>(null);
   const [sentSmsId, setSentSmsId] = useState<string | null>(null);
@@ -76,34 +74,49 @@ export const AdminClientDetail = () => {
     setEditing(false);
   };
 
-  const createDeliveryGallery = async (originalGalleryId: string) => {
-    const original = galleries.find((g) => g._id === originalGalleryId);
-    const deliveryName = original ? `${original.name} — ${t('admin.client.delivery_suffix')}` : undefined;
-    await createDelivery.mutateAsync({
-      galleryId: originalGalleryId,
-      data: { headerMessage: deliveryHeaderMessage, name: deliveryName },
-    });
-    setShowDeliveryFormFor(null);
-    setDeliveryHeaderMessage('');
-  };
+  // Handlers passed to memoized GalleryCards — keep references stable so an
+  // unrelated page re-render doesn't re-render every card. mutateAsync is
+  // referentially stable in TanStack Query; the mutation result object is not.
+  const { mutateAsync: createDeliveryAsync } = createDelivery;
+  const { mutateAsync: resendEmailAsync } = resendEmail;
+  const { mutateAsync: sendSmsAsync } = sendSms;
+  const { mutateAsync: reactivateGalleryAsync } = reactivateGalleryMutation;
 
-  const handleResendEmail = async (galleryId: string) => {
-    await resendEmail.mutateAsync(galleryId);
-    setResentId(galleryId);
-    setTimeout(() => setResentId(null), 2500);
-  };
+  const createDeliveryGallery = useCallback(
+    async (originalGalleryId: string, headerMessage: string) => {
+      const original = galleries.find((g) => g._id === originalGalleryId);
+      const deliveryName = original ? `${original.name} — ${t('admin.client.delivery_suffix')}` : undefined;
+      await createDeliveryAsync({
+        galleryId: originalGalleryId,
+        data: { headerMessage, name: deliveryName },
+      });
+    },
+    [galleries, createDeliveryAsync, t],
+  );
 
-  const handleSendSms = async (galleryId: string) => {
-    try {
-      await sendSms.mutateAsync(galleryId);
-      setSentSmsId(galleryId);
-      setTimeout(() => setSentSmsId(null), 2500);
-      toast.success(t('admin.galleries.sms_sent_success').replace('{name}', client?.name ?? ''));
-    } catch (err: unknown) {
-      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
-      toast.error(msg || t('admin.galleries.sms_sent_error').replace('{name}', client?.name ?? ''));
-    }
-  };
+  const handleResendEmail = useCallback(
+    async (galleryId: string) => {
+      await resendEmailAsync(galleryId);
+      setResentId(galleryId);
+      setTimeout(() => setResentId(null), 2500);
+    },
+    [resendEmailAsync],
+  );
+
+  const handleSendSms = useCallback(
+    async (galleryId: string) => {
+      try {
+        await sendSmsAsync(galleryId);
+        setSentSmsId(galleryId);
+        setTimeout(() => setSentSmsId(null), 2500);
+        toast.success(t('admin.galleries.sms_sent_success').replace('{name}', client?.name ?? ''));
+      } catch (err: unknown) {
+        const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
+        toast.error(msg || t('admin.galleries.sms_sent_error').replace('{name}', client?.name ?? ''));
+      }
+    },
+    [sendSmsAsync, t, client?.name],
+  );
 
   const handleDeleteSubmission = async () => {
     if (!deleteSubTarget) return;
@@ -117,9 +130,12 @@ export const AdminClientDetail = () => {
     setDeleteGalleryTarget(null);
   };
 
-  const handleReactivateGallery = async (galleryId: string) => {
-    await reactivateGalleryMutation.mutateAsync(galleryId);
-  };
+  const handleReactivateGallery = useCallback(
+    async (galleryId: string) => {
+      await reactivateGalleryAsync(galleryId);
+    },
+    [reactivateGalleryAsync],
+  );
 
   const handleDeleteSubmissionImage = async () => {
     if (!deleteImageTarget) return;
@@ -127,18 +143,21 @@ export const AdminClientDetail = () => {
     setDeleteImageTarget(null);
   };
 
-  const copyLink = (token: string, galleryId: string) => {
+  const copyLink = useCallback((token: string, galleryId: string) => {
     navigator.clipboard.writeText(`${window.location.origin}/gallery/${token}`);
     setCopiedId(galleryId);
     setTimeout(() => setCopiedId(null), 2000);
-  };
+  }, []);
 
-  const whatsAppLink = (token: string) => {
-    const url = `${window.location.origin}/gallery/${token}`;
-    const message = t('admin.galleries.whatsapp_msg').replace('{name}', client.name).replace('{url}', url);
-    const phone = (client.phone || '').replace(/[\s\-().+]/g, '').replace(/^0/, '972');
-    return `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
-  };
+  const whatsAppLink = useCallback(
+    (token: string) => {
+      const url = `${window.location.origin}/gallery/${token}`;
+      const message = t('admin.galleries.whatsapp_msg').replace('{name}', client?.name ?? '').replace('{url}', url);
+      const phone = (client?.phone || '').replace(/[\s\-().+]/g, '').replace(/^0/, '972');
+      return `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
+    },
+    [t, client?.name, client?.phone],
+  );
 
   // ---------------------------------------------------------------------------
   // Loading gate
@@ -178,8 +197,8 @@ export const AdminClientDetail = () => {
               save={save}
             />
           </ErrorBoundary>
-          <ErrorBoundary label='Product Orders'>
-            <ProductOrdersSection clientId={id!} clientName={client.name} galleries={galleries} clientEmail={client.email} />
+          <ErrorBoundary label='Orders'>
+            <ClientOrdersSection clientId={id!} clientName={client.name} galleries={galleries} clientEmail={client.email} />
           </ErrorBoundary>
         </div>
         {/* Galleries below */}
@@ -193,16 +212,12 @@ export const AdminClientDetail = () => {
             resentId={resentId}
             sendingSmId={sendingSmId}
             sentSmsId={sentSmsId}
-            showDeliveryFormFor={showDeliveryFormFor}
-            deliveryHeaderMessage={deliveryHeaderMessage}
             creatingDeliveryFor={creatingDeliveryFor}
             copyLink={copyLink}
             whatsAppLink={whatsAppLink}
             resendEmail={handleResendEmail}
             sendSms={handleSendSms}
             setDeleteGalleryTarget={setDeleteGalleryTarget}
-            setShowDeliveryFormFor={setShowDeliveryFormFor}
-            setDeliveryHeaderMessage={setDeliveryHeaderMessage}
             createDeliveryGallery={createDeliveryGallery}
             reactivateGallery={handleReactivateGallery}
             reactivatingId={reactivatingId}

@@ -154,8 +154,8 @@ function UpgradeModal({ plan, open, onClose }: UpgradeModalProps) {
                 className={cn(
                   'flex-1 rounded-lg border py-2 text-xs font-medium transition-colors',
                   interval === opt
-                    ? 'border-blush bg-blush/10 text-blush'
-                    : 'border-beige bg-white text-warm-gray hover:border-blush/40',
+                    ? 'bg-ivory border-charcoal text-charcoal'
+                    : 'border-border bg-background text-muted-foreground hover:border-primary/40',
                 )}
               >
                 {opt === 'monthly' ? t('admin.billing.upgrade_monthly') : t('admin.billing.upgrade_annual')}
@@ -268,8 +268,8 @@ function UpgradeCard({ plan, isCurrent }: UpgradeCardProps) {
     <>
       <div
         className={cn(
-          'border rounded-xl p-4 flex flex-col gap-2 bg-white',
-          isCurrent ? 'border-blush ring-1 ring-blush/40' : 'border-beige',
+          'border rounded-xl p-4 flex flex-col gap-2 bg-card',
+          isCurrent ? 'border-charcoal ring-1 ring-charcoal/20' : 'border-beige',
         )}
       >
         <div className='flex items-start justify-between gap-2'>
@@ -282,7 +282,7 @@ function UpgradeCard({ plan, isCurrent }: UpgradeCardProps) {
             </p>
           </div>
           {isCurrent && (
-            <Badge variant='outline' className='text-blush border-blush/40 bg-blush/10 text-[10px] shrink-0'>
+            <Badge variant='outline' className='bg-ivory border-beige text-charcoal text-[10px] shrink-0'>
               {t('admin.billing.current_badge')}
             </Badge>
           )}
@@ -375,12 +375,12 @@ function BillingHistory() {
 function BillingPageSkeleton() {
   return (
     <div className='space-y-6 pb-10'>
-      <div className='rounded-2xl border border-beige bg-white p-5 space-y-3'>
+      <div className='rounded-2xl border border-border bg-card p-5 space-y-3'>
         <Skeleton className='h-4 w-32' />
         <Skeleton className='h-6 w-24' />
         <Skeleton className='h-4 w-48' />
       </div>
-      <div className='rounded-2xl border border-beige bg-white p-5 space-y-3'>
+      <div className='rounded-2xl border border-border bg-card p-5 space-y-3'>
         <Skeleton className='h-4 w-32' />
         <Skeleton className='h-2 w-full rounded-full' />
         <Skeleton className='h-3 w-40' />
@@ -459,7 +459,7 @@ export const BillingPage = () => {
         <div className='max-w-2xl mx-auto space-y-6 pb-10 pt-2'>
 
           {/* ── Current Plan card ─────────────────────────────────────── */}
-          <section className='rounded-2xl border border-beige bg-white p-5 space-y-4'>
+          <section className='rounded-2xl border border-border bg-card p-5 space-y-4'>
             <div className='flex items-center gap-2 text-xs font-medium text-warm-gray uppercase tracking-wide'>
               <CreditCard size={14} />
               {t('admin.billing.current_plan')}
@@ -541,7 +541,7 @@ export const BillingPage = () => {
           </section>
 
           {/* ── Storage section ────────────────────────────────────────── */}
-          <section className='rounded-2xl border border-beige bg-white p-5 space-y-3'>
+          <section className='rounded-2xl border border-border bg-card p-5 space-y-3'>
             <div className='flex items-center gap-2 text-xs font-medium text-warm-gray uppercase tracking-wide'>
               <HardDrive size={14} />
               {t('admin.billing.storage_section')}
@@ -562,7 +562,7 @@ export const BillingPage = () => {
 
           {/* ── Upgrade section ────────────────────────────────────────── */}
           {otherPlans.length > 0 && (
-            <section className='rounded-2xl border border-beige bg-white p-5 space-y-4'>
+            <section className='rounded-2xl border border-border bg-card p-5 space-y-4'>
               <div className='text-xs font-medium text-warm-gray uppercase tracking-wide'>
                 {t('admin.billing.upgrade_section')}
               </div>
@@ -579,7 +579,7 @@ export const BillingPage = () => {
           )}
 
           {/* ── Billing History ────────────────────────────────────────── */}
-          <section className='rounded-2xl border border-beige bg-white p-5 space-y-3'>
+          <section className='rounded-2xl border border-border bg-card p-5 space-y-3'>
             <div className='flex items-center gap-2 text-xs font-medium text-warm-gray uppercase tracking-wide'>
               <History size={14} />
               {t('admin.billing.history_section')}

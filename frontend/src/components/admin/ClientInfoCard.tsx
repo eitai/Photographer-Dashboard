@@ -1,4 +1,4 @@
-import { Mail, Phone, Calendar, Tag, Pencil, X } from 'lucide-react';
+import { Mail, Phone, Calendar, Tag, Pencil, X, MapPin } from 'lucide-react';
 import { StatusBadge } from '@/components/admin/StatusBadge';
 import { useI18n } from '@/lib/i18n';
 import type { Client } from '@/types/admin';
@@ -34,7 +34,7 @@ export const ClientInfoCard = ({ client, editing, setEditing, form, setForm, sav
             <h2 className=' text-xl text-charcoal truncate'>{client.name}</h2>
             <div className='flex items-center gap-2 mt-1.5 flex-wrap'>
               {/* Session type pill */}
-              <span className='inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-blush/20 text-rose-700'>
+              <span className='inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-blush/20 text-charcoal'>
                 <Tag size={10} className='shrink-0' />
                 {displaySessionType(client.sessionType)} {t('admin.client.session_label')}
               </span>
@@ -82,7 +82,7 @@ export const ClientInfoCard = ({ client, editing, setEditing, form, setForm, sav
                     type={type}
                     value={(form as Record<string, string>)[field] || ''}
                     onChange={(e) => setForm({ ...form, [field]: e.target.value })}
-                    className='w-full px-3 py-2 rounded-lg border border-beige bg-ivory text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-blush/50'
+                    className='w-full px-3 py-2 rounded-lg border border-beige bg-ivory text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-blush/40'
                   />
                 </div>
               ))}
@@ -98,7 +98,7 @@ export const ClientInfoCard = ({ client, editing, setEditing, form, setForm, sav
                 <select
                   value={form.status}
                   onChange={(e) => setForm({ ...form, status: e.target.value })}
-                  className='w-full px-3 py-2 rounded-lg border border-beige bg-ivory text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-blush/50'
+                  className='w-full px-3 py-2 rounded-lg border border-beige bg-ivory text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-blush/40'
                 >
                   {STATUSES.map((s) => (
                     <option key={s} value={s}>
@@ -113,7 +113,7 @@ export const ClientInfoCard = ({ client, editing, setEditing, form, setForm, sav
                   type='date'
                   value={form.eventDate || ''}
                   onChange={(e) => setForm({ ...form, eventDate: e.target.value })}
-                  className='w-full px-3 py-2 rounded-lg border border-beige bg-ivory text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-blush/50'
+                  className='w-full px-3 py-2 rounded-lg border border-beige bg-ivory text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-blush/40'
                 />
               </div>
             </div>
@@ -124,8 +124,63 @@ export const ClientInfoCard = ({ client, editing, setEditing, form, setForm, sav
                 value={form.notes || ''}
                 onChange={(e) => setForm({ ...form, notes: e.target.value })}
                 rows={4}
-                className='w-full px-3 py-2 rounded-lg border border-beige bg-ivory text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-blush/50 resize-none'
+                className='w-full px-3 py-2 rounded-lg border border-beige bg-ivory text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-blush/40 resize-none'
               />
+            </div>
+
+            {/* ── Address section ──────────────────────────────────────────── */}
+            <div>
+              <p className='text-xs font-medium text-warm-gray mb-2 flex items-center gap-1.5'>
+                <MapPin size={11} />
+                {t('admin.client.address_section')}
+              </p>
+              <div className='grid grid-cols-2 gap-3'>
+                <div className='col-span-full'>
+                  <label className='block text-xs text-warm-gray mb-1'>{t('admin.client.address_street')}</label>
+                  <input
+                    type='text'
+                    value={form.addressStreet || ''}
+                    onChange={(e) => setForm({ ...form, addressStreet: e.target.value || null })}
+                    className='w-full px-3 py-2 rounded-lg border border-beige bg-ivory text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-blush/40'
+                  />
+                </div>
+                <div>
+                  <label className='block text-xs text-warm-gray mb-1'>{t('admin.client.address_apartment')}</label>
+                  <input
+                    type='text'
+                    value={form.addressApartment || ''}
+                    onChange={(e) => setForm({ ...form, addressApartment: e.target.value || null })}
+                    className='w-full px-3 py-2 rounded-lg border border-beige bg-ivory text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-blush/40'
+                  />
+                </div>
+                <div>
+                  <label className='block text-xs text-warm-gray mb-1'>{t('admin.client.address_city')}</label>
+                  <input
+                    type='text'
+                    value={form.addressCity || ''}
+                    onChange={(e) => setForm({ ...form, addressCity: e.target.value || null })}
+                    className='w-full px-3 py-2 rounded-lg border border-beige bg-ivory text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-blush/40'
+                  />
+                </div>
+                <div>
+                  <label className='block text-xs text-warm-gray mb-1'>{t('admin.client.address_zip')}</label>
+                  <input
+                    type='text'
+                    value={form.addressZip || ''}
+                    onChange={(e) => setForm({ ...form, addressZip: e.target.value || null })}
+                    className='w-full px-3 py-2 rounded-lg border border-beige bg-ivory text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-blush/40'
+                  />
+                </div>
+                <div>
+                  <label className='block text-xs text-warm-gray mb-1'>{t('admin.client.address_country')}</label>
+                  <input
+                    type='text'
+                    value={form.addressCountry ?? 'ישראל'}
+                    onChange={(e) => setForm({ ...form, addressCountry: e.target.value || null })}
+                    className='w-full px-3 py-2 rounded-lg border border-beige bg-ivory text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-blush/40'
+                  />
+                </div>
+              </div>
             </div>
 
             <button
@@ -146,7 +201,7 @@ export const ClientInfoCard = ({ client, editing, setEditing, form, setForm, sav
             <div className='px-6 py-4 flex flex-col gap-3'>
               {client.email && (
                 <div className='flex items-center gap-3'>
-                  <span className='flex items-center justify-center w-7 h-7 rounded-full bg-blush/15 text-rose-600 shrink-0'>
+                  <span className='flex items-center justify-center w-7 h-7 rounded-full bg-blush/20 text-charcoal shrink-0'>
                     <Mail size={13} />
                   </span>
                   <span className='text-sm text-charcoal break-all'>{client.email}</span>
@@ -162,7 +217,7 @@ export const ClientInfoCard = ({ client, editing, setEditing, form, setForm, sav
               )}
               {client.phone && (
                 <div className='flex items-center gap-3'>
-                  <span className='flex items-center justify-center w-7 h-7 rounded-full bg-blush/15 text-rose-600 shrink-0'>
+                  <span className='flex items-center justify-center w-7 h-7 rounded-full bg-blush/20 text-charcoal shrink-0'>
                     <Phone size={13} />
                   </span>
                   <span className='text-sm text-charcoal'>{client.phone}</span>
@@ -211,6 +266,31 @@ export const ClientInfoCard = ({ client, editing, setEditing, form, setForm, sav
               <div className='px-6 py-4'>
                 <p className='text-xs text-warm-gray mb-1.5'>{t('admin.common.notes')}</p>
                 <p className='text-sm text-charcoal leading-relaxed whitespace-pre-wrap'>{client.notes}</p>
+              </div>
+            )}
+
+            {/* Address — shown only when at least one field is set */}
+            {(client.addressStreet || client.addressCity) && (
+              <div className='px-6 py-4'>
+                <p className='text-xs text-warm-gray mb-1.5'>{t('admin.client.address_section')}</p>
+                <div className='flex items-start gap-3'>
+                  <span className='flex items-center justify-center w-7 h-7 rounded-full bg-blush/20 text-charcoal shrink-0 mt-0.5'>
+                    <MapPin size={13} />
+                  </span>
+                  <p className='text-sm text-charcoal leading-relaxed'>
+                    {[
+                      client.addressStreet,
+                      client.addressApartment,
+                      client.addressCity,
+                      client.addressZip,
+                    ]
+                      .filter(Boolean)
+                      .join(', ')}
+                    {client.addressCountry && client.addressCountry !== 'ישראל' && (
+                      <>, {client.addressCountry}</>
+                    )}
+                  </p>
+                </div>
               </div>
             )}
           </div>

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { X, Download, ChevronLeft, ChevronRight, Check, Star, MessageCircle } from "lucide-react";
+import { X, Download, ChevronLeft, ChevronRight, Check, Heart, Star, MessageCircle } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import { BeforeAfterSlider } from "./BeforeAfterSlider";
 
@@ -166,21 +166,23 @@ export const Lightbox = ({
         onClick={(e) => e.stopPropagation()}
       >
 
-        {/* Selection toggle */}
+        {/* Selection toggle — amber heart, mirrors the gallery cards */}
         {onToggleSelect && (
           isSelected ? (
             <button
               onClick={onToggleSelect}
-              className="flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium bg-[#E7B8B5] text-charcoal transition-colors"
+              aria-pressed='true'
+              className="flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium bg-flag text-white transition-colors"
             >
-              <Check size={14} /> {t("gallery.photo_selected")}
+              <Heart size={14} fill="currentColor" /> {t("gallery.photo_selected")}
             </button>
           ) : !isBlocked ? (
             <button
               onClick={onToggleSelect}
+              aria-pressed='false'
               className="flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium text-white bg-white/10 hover:bg-white/20 transition-colors"
             >
-              <Check size={14} /> {t("gallery.select_photo")}
+              <Heart size={14} /> {t("gallery.select_photo")}
             </button>
           ) : (
             <p className="text-white/60 text-sm">{t("gallery.max_reached")}</p>
@@ -193,7 +195,7 @@ export const Lightbox = ({
             onClick={onToggleHero}
             className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-colors ${
               isHero
-                ? "bg-amber-400 text-white"
+                ? "bg-flag text-white"
                 : "text-white bg-white/10 hover:bg-white/20"
             }`}
             title="Mark as hero photo"
@@ -209,7 +211,7 @@ export const Lightbox = ({
             onClick={() => setShowComment((v) => !v)}
             className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-colors ${
               comment?.trim()
-                ? "bg-[#E7B8B5] text-charcoal"
+                ? "bg-flag text-white"
                 : "text-white bg-white/10 hover:bg-white/20"
             }`}
           >
@@ -223,7 +225,7 @@ export const Lightbox = ({
           isFeatured ? (
             <button
               onClick={onToggleFeatured}
-              className="flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium bg-[#E7B8B5] text-charcoal transition-colors"
+              className="flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium bg-flag text-white transition-colors"
             >
               <Check size={14} /> בגלריית ראווה
             </button>

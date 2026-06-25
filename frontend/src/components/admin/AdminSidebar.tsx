@@ -1,7 +1,23 @@
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useI18n } from '@/lib/i18n';
-import { LayoutDashboard, Users, Settings, LogOut, Languages, Star, Shield, Mail, CreditCard, LayoutList, Moon, Sun, Store, ShoppingBag } from 'lucide-react';
+import {
+  LayoutDashboard,
+  Users,
+  Settings,
+  LogOut,
+  Languages,
+  Star,
+  Shield,
+  Mail,
+  CreditCard,
+  LayoutList,
+  Moon,
+  Sun,
+  Store,
+  ShoppingBag,
+  Wallet,
+} from 'lucide-react';
 import { useMyStorage } from '@/hooks/useQueries';
 import { StorageBar } from '@/components/admin/StorageBar';
 import { useAuthStore } from '@/store/authStore';
@@ -25,11 +41,15 @@ export const AdminSidebar = ({ isOpen, onClose }: AdminSidebarProps) => {
           { to: '/admin/users', label: t('admin.nav.users'), icon: Shield },
           { to: '/admin/plans', label: t('admin.nav.plans'), icon: LayoutList },
           { to: '/admin/suppliers', label: t('admin.nav.suppliers'), icon: Store },
+          { to: '/admin/collection', label: t('admin.nav.collection'), icon: CreditCard },
+          { to: '/admin/settlements', label: t('admin.settlement.title'), icon: Wallet },
         ]
       : [
           { to: '/admin/dashboard', label: t('admin.nav.dashboard'), icon: LayoutDashboard },
           { to: '/admin/clients', label: t('admin.nav.clients'), icon: Users },
           { to: '/admin/orders', label: t('admin.nav.orders'), icon: ShoppingBag },
+          { to: '/admin/store', label: t('admin.nav.store'), icon: Store },
+          { to: '/admin/billing-store', label: t('admin.billing.store_title'), icon: CreditCard },
           { to: '/admin/showcase', label: t('admin.nav.showcase'), icon: Star },
           { to: '/admin/contact', label: t('admin.nav.contact'), icon: Mail },
           { to: '/admin/billing', label: t('admin.nav.billing'), icon: CreditCard },
@@ -53,7 +73,12 @@ export const AdminSidebar = ({ isOpen, onClose }: AdminSidebarProps) => {
     >
       {/* Logo */}
       <div className='h-16 px-6 border-b border-border flex items-center'>
-        <img src='/logos/03_logo_horizontal_transparent.png' alt='LIGHT STUDIO' className='h-full w-full object-contain py-2 transition-transform duration-200 hover:scale-110' />
+        <img
+          src='/logos/logoToTheSide.png'
+          style={{ mixBlendMode: 'multiply' }}
+          alt='LIGHT STUDIO'
+          className='h-26 w-full object-contain py-2 transition-transform duration-200 hover:scale-110'
+        />
       </div>
 
       {/* Navigation */}
@@ -65,7 +90,7 @@ export const AdminSidebar = ({ isOpen, onClose }: AdminSidebarProps) => {
             onClick={onClose}
             className={({ isActive }) =>
               `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-sans transition-colors duration-150 ${
-                isActive ? 'bg-blush/20 text-charcoal font-medium' : 'text-warm-gray hover:bg-ivory hover:text-charcoal'
+                isActive ? 'bg-ivory text-charcoal font-medium' : 'text-warm-gray hover:bg-ivory hover:text-charcoal'
               }`
             }
           >
@@ -84,12 +109,7 @@ export const AdminSidebar = ({ isOpen, onClose }: AdminSidebarProps) => {
         {/* Storage bar — only for non-superadmin users */}
         {admin?.role === 'admin' && storage && (
           <div className='px-3 mb-3'>
-            <StorageBar
-              usedGB={storage.usedGB}
-              quotaGB={storage.quotaGB}
-              percentUsed={storage.percentUsed}
-              compact
-            />
+            <StorageBar usedGB={storage.usedGB} quotaGB={storage.quotaGB} percentUsed={storage.percentUsed} compact />
           </div>
         )}
         {/* Language toggle */}
@@ -106,7 +126,7 @@ export const AdminSidebar = ({ isOpen, onClose }: AdminSidebarProps) => {
           className='flex items-center gap-3 w-full px-3 py-2 rounded-xl text-sm font-sans text-warm-gray hover:bg-ivory hover:text-charcoal transition-colors duration-150 mb-1'
         >
           {darkMode ? <Sun size={17} /> : <Moon size={17} />}
-          {darkMode ? (lang === 'he' ? 'מצב בהיר' : 'Light mode') : (lang === 'he' ? 'מצב כהה' : 'Dark mode')}
+          {darkMode ? (lang === 'he' ? 'מצב בהיר' : 'Light mode') : lang === 'he' ? 'מצב כהה' : 'Dark mode'}
         </button>
         <button
           onClick={handleLogout}

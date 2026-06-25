@@ -28,6 +28,7 @@ const JOB_NAMES = Object.freeze({
   COMPRESSION_VERIFY:    'compression.verify',
   COMPRESSION_CLEANUP:   'compression.cleanup',
   FACE_RECOGNITION:      'face.recognition',
+  BILLING_MONTHLY:       'billing.monthly',
 });
 
 // Same sslmode rewrite as src/config/db.js — pg-connection-string maps

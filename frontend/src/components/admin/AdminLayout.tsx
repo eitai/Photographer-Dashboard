@@ -36,7 +36,7 @@ export const AdminLayout = ({ children, title, actions }: AdminLayoutProps) => {
         <div className='h-16 flex items-center gap-4 px-6 bg-background border-b border-border shrink-0'>
           {/* Hamburger — mobile only */}
           <button
-            className='md:hidden p-2 rounded-xl text-warm-gray hover:bg-beige/30 transition-colors shrink-0'
+            className='md:hidden p-2 rounded-xl text-warm-gray hover:bg-ivory transition-colors shrink-0'
             onClick={() => setSidebarOpen(true)}
           >
             <Menu size={20} />

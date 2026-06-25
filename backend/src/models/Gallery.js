@@ -16,6 +16,7 @@ function toRow(data) {
     deliveryOf: 'delivery_of',
     lastEmailSentAt: 'last_email_sent_at',
     selectionEnabled: 'selection_enabled',
+    isSystem: 'is_system',
   };
   const row = {};
   for (const [k, v] of Object.entries(data)) {
@@ -73,6 +74,8 @@ async function find(filter = {}, { populate } = {}) {
 
   if (filter.adminId) { conditions.push(`admin_id = $${i++}`); vals.push(filter.adminId); }
   if (filter.clientId) { conditions.push(`client_id = $${i++}`); vals.push(filter.clientId); }
+  // Hidden holding galleries (direct-order uploads) never appear in lists
+  if (!filter.includeSystem) { conditions.push('is_system = false'); }
 
   const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
   const { rows } = await pool.query(
@@ -94,7 +97,7 @@ async function create(data, client = null) {
   const optionals = [
     'client_id', 'client_name', 'header_message', 'is_active',
     'expires_at', 'status', 'max_selections', 'session_type', 'is_delivery',
-    'delivery_of', 'last_email_sent_at', 'videos', 'selection_enabled',
+    'delivery_of', 'last_email_sent_at', 'videos', 'selection_enabled', 'is_system',
   ];
 
   for (const col of optionals) {
@@ -217,6 +220,26 @@ async function save(gallery, client = null) {
   return gallery;
 }
 
+/**
+ * Returns the admin's hidden holding gallery for direct-order uploads,
+ * creating it on first use. Never listed (is_system) and never publicly
+ * reachable (is_active = false).
+ */
+async function ensureSystemGallery(adminId) {
+  const { rows } = await pool.query(
+    'SELECT * FROM galleries WHERE admin_id = $1 AND is_system = true LIMIT 1',
+    [adminId]
+  );
+  if (rows[0]) return rowToCamel(rows[0]);
+  return create({
+    name: 'הזמנות ישירות',
+    adminId,
+    isSystem: true,
+    isActive: false,
+    status: 'draft',
+  });
+}
+
 async function findOneAndDelete(filter) {
   const id = filter._id || filter.id;
   const adminId = filter.adminId || filter.admin_id;
@@ -240,4 +263,5 @@ module.exports = {
   findOneAndUpdate,
   findOneAndDelete,
   findByIdAndUpdate,
+  ensureSystemGallery,
 };

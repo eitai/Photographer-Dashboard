@@ -16,6 +16,10 @@ export default {
       fontFamily: {
         serif: ["Playfair Display", "Georgia", "serif"],
         sans: ["Inter", "system-ui", "sans-serif"],
+        heading: ["Playfair Display", "Georgia", "serif"],
+        // Landing page only — Hebrew-native pairing (Playfair/Inter have no Hebrew glyphs)
+        display: ["Frank Ruhl Libre", "Georgia", "serif"],
+        body: ["Heebo", "system-ui", "sans-serif"],
       },
       colors: {
         border: "var(--border)",
@@ -52,6 +56,11 @@ export default {
           foreground: "var(--card-foreground)",
         },
         blush: "var(--blush)",
+        // Exhibition-white selection accent (bw theme pages; landing amber)
+        flag: {
+          DEFAULT: "var(--flag)",
+          ink: "var(--flag-ink)",
+        },
         beige: "var(--beige)",
         ivory: "var(--ivory)",
         charcoal: "var(--charcoal)",

@@ -45,8 +45,11 @@ export const ClientGallery = () => {
   const hasStore = !!(storeData?.products?.length && storeData.products.length > 0);
 
   const header = (
-    <header className='h-20 shrink-0 flex items-center px-6 bg-white border-b border-beige'>
-      <img src='/logos/03_logo_horizontal_transparent.png' alt='LIGHT STUDIO' className='h-14 w-auto' />
+    <header className='h-20 shrink-0 flex items-center justify-between px-6 bg-background border-b border-border'>
+      <img src='/logos/logo.png' style={{ mixBlendMode: 'multiply' }} alt='LIGHT STUDIO' className='h-14 w-auto' />
+      {gallery && (
+        <p className='font-body text-sm text-muted-foreground truncate ms-4'>{gallery.name}</p>
+      )}
     </header>
   );
 
@@ -93,25 +96,29 @@ export const ClientGallery = () => {
   // Selection gallery — with optional Store tab
   if (hasStore && token) {
     const tabBar = (
-      <div className='flex border-b border-beige bg-white shrink-0'>
+      <div className='flex border-b border-border bg-background shrink-0' role='tablist'>
         <button
           type='button'
+          role='tab'
+          aria-selected={activeTab === 'gallery'}
           onClick={() => setActiveTab('gallery')}
-          className={`px-6 py-3 text-sm font-sans font-medium transition-colors ${
+          className={`px-6 py-3 text-sm font-body font-medium -mb-px border-b-2 transition-colors ${
             activeTab === 'gallery'
-              ? 'border-b-2 border-charcoal text-charcoal'
-              : 'text-warm-gray hover:text-charcoal'
+              ? 'border-foreground text-foreground'
+              : 'border-transparent text-muted-foreground hover:text-foreground'
           }`}
         >
           {t('gallery.tab')}
         </button>
         <button
           type='button'
+          role='tab'
+          aria-selected={activeTab === 'store'}
           onClick={() => setActiveTab('store')}
-          className={`px-6 py-3 text-sm font-sans font-medium transition-colors ${
+          className={`px-6 py-3 text-sm font-body font-medium -mb-px border-b-2 transition-colors ${
             activeTab === 'store'
-              ? 'border-b-2 border-charcoal text-charcoal'
-              : 'text-warm-gray hover:text-charcoal'
+              ? 'border-foreground text-foreground'
+              : 'border-transparent text-muted-foreground hover:text-foreground'
           }`}
         >
           {t('store.tab')}

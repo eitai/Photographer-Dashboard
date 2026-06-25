@@ -15,24 +15,26 @@ import { ArrowLeft, ArrowRight, Download } from 'lucide-react';
 import type { StoreOrder } from '@/lib/api';
 
 const STATUS_COLORS: Record<string, string> = {
-  draft: 'bg-zinc-100 text-zinc-600',
+  draft: 'bg-muted text-muted-foreground',
   pending_selection: 'bg-yellow-100 text-yellow-700',
   selection_submitted: 'bg-blue-100 text-blue-700',
   approved: 'bg-green-100 text-green-700',
   sent_to_supplier: 'bg-purple-100 text-purple-700',
   in_production: 'bg-orange-100 text-orange-700',
+  ready_to_ship: 'bg-indigo-100 text-indigo-700',
   shipped: 'bg-sky-100 text-sky-700',
   delivered: 'bg-emerald-100 text-emerald-800',
   cancelled: 'bg-red-100 text-red-600',
 };
 
-type SupplierStatus = 'in_production' | 'shipped' | 'delivered';
+type SupplierStatus = 'in_production' | 'ready_to_ship' | 'shipped' | 'delivered';
 
 const NEXT_STATUSES: Record<string, SupplierStatus[]> = {
-  sent_to_supplier: ['in_production'],
-  in_production: ['shipped'],
-  shipped: ['delivered'],
-  delivered: [],
+  sent_to_supplier: ['in_production', 'shipped', 'delivered'],
+  in_production:    ['ready_to_ship', 'shipped', 'delivered'],
+  ready_to_ship:    ['shipped'],
+  shipped:          ['delivered'],
+  delivered:        [],
 };
 
 export const SupplierOrderDetail = () => {
@@ -135,7 +137,7 @@ export const SupplierOrderDetail = () => {
 
   if (!order) {
     return (
-      <div className='p-6 text-center text-warm-gray'>{t('admin.common.error')}</div>
+      <div className='p-6 text-center text-muted-foreground'>{t('admin.common.error')}</div>
     );
   }
 
@@ -149,7 +151,7 @@ export const SupplierOrderDetail = () => {
           <BackIcon size={16} />
           {dir === 'rtl' ? 'חזרה' : 'Back'}
         </Button>
-        <h1 className='font-serif text-xl text-charcoal'>
+        <h1 className='font-serif text-xl text-foreground'>
           {t('supplier.orders.detail.title')} #{order.id.slice(-6)}
         </h1>
         <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${STATUS_COLORS[order.status] ?? ''}`}>
@@ -162,13 +164,15 @@ export const SupplierOrderDetail = () => {
         {/* Sidebar */}
         <div className='space-y-4'>
           {/* Client + shipping */}
-          <div className='bg-white rounded-xl border border-border p-4 space-y-3'>
-            <h3 className='font-medium text-charcoal text-sm'>{t('orders.client')}</h3>
-            <p className='font-semibold text-charcoal'>{order.client.name}</p>
+          <div className='bg-card rounded-xl border border-border p-4 space-y-3'>
+            <h3 className='font-medium text-foreground text-sm'>{t('orders.client')}</h3>
+            <p className='font-semibold text-foreground'>
+              {order.client?.name ?? order.shippingAddress?.name ?? t('orders.direct_badge')}
+            </p>
 
             {order.shippingAddress && (
-              <div className='space-y-0.5 text-sm text-warm-gray'>
-                <p className='font-medium text-charcoal text-xs uppercase tracking-wide mt-2 mb-1'>
+              <div className='space-y-0.5 text-sm text-muted-foreground'>
+                <p className='font-medium text-foreground text-xs uppercase tracking-wide mt-2 mb-1'>
                   {t('orders.shipping')}
                 </p>
                 {order.shippingAddress.name && <p>{order.shippingAddress.name}</p>}
@@ -185,20 +189,20 @@ export const SupplierOrderDetail = () => {
           </div>
 
           {/* Order meta */}
-          <div className='bg-white rounded-xl border border-border p-4 space-y-2'>
+          <div className='bg-card rounded-xl border border-border p-4 space-y-2'>
             <div className={`flex justify-between text-sm ${dir === 'rtl' ? 'flex-row-reverse' : ''}`}>
-              <span className='text-warm-gray'>{t('orders.created')}</span>
+              <span className='text-muted-foreground'>{t('orders.created')}</span>
               <span>{new Date(order.createdAt).toLocaleDateString(dir === 'rtl' ? 'he-IL' : 'en-GB')}</span>
             </div>
             {order.sentToSupplierAt && (
               <div className={`flex justify-between text-sm ${dir === 'rtl' ? 'flex-row-reverse' : ''}`}>
-                <span className='text-warm-gray'>{dir === 'rtl' ? 'נשלח לספק' : 'Sent to supplier'}</span>
+                <span className='text-muted-foreground'>{dir === 'rtl' ? 'נשלח לספק' : 'Sent to supplier'}</span>
                 <span>{new Date(order.sentToSupplierAt).toLocaleDateString(dir === 'rtl' ? 'he-IL' : 'en-GB')}</span>
               </div>
             )}
             {order.totalAmount != null && (
               <div className={`flex justify-between text-sm ${dir === 'rtl' ? 'flex-row-reverse' : ''}`}>
-                <span className='text-warm-gray'>{t('orders.total')}</span>
+                <span className='text-muted-foreground'>{t('orders.total')}</span>
                 <span className='font-semibold'>₪{order.totalAmount.toLocaleString()}</span>
               </div>
             )}
@@ -221,43 +225,52 @@ export const SupplierOrderDetail = () => {
         {/* Main content */}
         <div className='lg:col-span-2 space-y-4'>
           {/* Products list */}
-          <div className='bg-white rounded-xl border border-border p-4 space-y-3'>
-            <h3 className='font-medium text-charcoal'>{t('orders.items')}</h3>
+          <div className='bg-card rounded-xl border border-border p-4 space-y-3'>
+            <h3 className='font-medium text-foreground'>{t('orders.items')}</h3>
             {order.items.map((item) => (
               <div key={item.id} className='border border-border rounded-lg p-3 space-y-1'>
                 <div className={`flex items-start justify-between gap-2 ${dir === 'rtl' ? 'flex-row-reverse' : ''}`}>
                   <div>
-                    <p className='font-medium text-sm text-charcoal'>{item.product.name}</p>
-                    <span className='text-xs text-warm-gray'>{item.product.type}</span>
+                    <p className='font-medium text-sm text-foreground'>{item.product.name}</p>
+                    <span className='text-xs text-muted-foreground'>{item.product.type}</span>
                     {item.product.sku && (
-                      <span className='text-xs text-warm-gray mx-2'>SKU: {item.product.sku}</span>
+                      <span className='text-xs text-muted-foreground mx-2'>SKU: {item.product.sku}</span>
                     )}
                   </div>
-                  <div className={`text-sm text-warm-gray text-right ${dir === 'rtl' ? 'text-left' : ''}`}>
+                  <div className={`text-sm text-muted-foreground text-right ${dir === 'rtl' ? 'text-left' : ''}`}>
                     <p>{t('orders.quantity')}: {item.quantity}</p>
                     {item.selectedImageIds.length > 0 && (
                       <p className='text-xs'>{item.selectedImageIds.length} {t('orders.photos.selected')}</p>
                     )}
                   </div>
                 </div>
+                {Object.keys(item.productOptions ?? {}).length > 0 && (
+                  <div className='flex flex-wrap gap-1.5 pt-1'>
+                    {Object.entries(item.productOptions).map(([k, v]) => (
+                      <span key={k} className='text-[11px] px-2 py-0.5 rounded-full border border-border bg-muted text-foreground'>
+                        {k}: {String(v)}
+                      </span>
+                    ))}
+                  </div>
+                )}
               </div>
             ))}
           </div>
 
           {/* Notes */}
           {(order.photographerNote || order.clientNote) && (
-            <div className='bg-white rounded-xl border border-border p-4 space-y-3'>
-              <h3 className='font-medium text-charcoal'>{dir === 'rtl' ? 'הערות' : 'Notes'}</h3>
+            <div className='bg-card rounded-xl border border-border p-4 space-y-3'>
+              <h3 className='font-medium text-foreground'>{dir === 'rtl' ? 'הערות' : 'Notes'}</h3>
               {order.photographerNote && (
                 <div>
-                  <p className='text-xs font-medium text-warm-gray mb-1'>{t('orders.note.photographer')}</p>
-                  <p className='text-sm text-charcoal bg-ivory rounded-lg px-3 py-2'>{order.photographerNote}</p>
+                  <p className='text-xs font-medium text-muted-foreground mb-1'>{t('orders.note.photographer')}</p>
+                  <p className='text-sm text-foreground bg-muted rounded-lg px-3 py-2'>{order.photographerNote}</p>
                 </div>
               )}
               {order.clientNote && (
                 <div>
-                  <p className='text-xs font-medium text-warm-gray mb-1'>{t('orders.note.client')}</p>
-                  <p className='text-sm text-charcoal bg-ivory rounded-lg px-3 py-2'>{order.clientNote}</p>
+                  <p className='text-xs font-medium text-muted-foreground mb-1'>{t('orders.note.client')}</p>
+                  <p className='text-sm text-foreground bg-muted rounded-lg px-3 py-2'>{order.clientNote}</p>
                 </div>
               )}
             </div>
@@ -265,29 +278,29 @@ export const SupplierOrderDetail = () => {
 
           {/* Tracking info (existing) */}
           {(order.trackingNumber || order.trackingCarrier) && (
-            <div className='bg-white rounded-xl border border-border p-4 space-y-2'>
-              <h3 className='font-medium text-charcoal'>{dir === 'rtl' ? 'מעקב משלוח' : 'Shipping Tracking'}</h3>
+            <div className='bg-card rounded-xl border border-border p-4 space-y-2'>
+              <h3 className='font-medium text-foreground'>{dir === 'rtl' ? 'מעקב משלוח' : 'Shipping Tracking'}</h3>
               {order.trackingCarrier && (
-                <p className='text-sm text-warm-gray'>{t('orders.tracking.carrier')}: <span className='text-charcoal'>{order.trackingCarrier}</span></p>
+                <p className='text-sm text-muted-foreground'>{t('orders.tracking.carrier')}: <span className='text-foreground'>{order.trackingCarrier}</span></p>
               )}
               {order.trackingNumber && (
-                <p className='text-sm text-warm-gray'>{t('orders.tracking')}: <span className='text-charcoal font-mono'>{order.trackingNumber}</span></p>
+                <p className='text-sm text-muted-foreground'>{t('orders.tracking')}: <span className='text-foreground font-mono'>{order.trackingNumber}</span></p>
               )}
             </div>
           )}
 
           {/* Status update form */}
           {availableStatuses.length > 0 && (
-            <div className='bg-white rounded-xl border border-border p-4 space-y-4'>
-              <h3 className='font-medium text-charcoal'>{t('supplier.orders.update_status')}</h3>
+            <div className='bg-card rounded-xl border border-border p-4 space-y-4'>
+              <h3 className='font-medium text-foreground'>{t('supplier.orders.update_status')}</h3>
 
               <div className='space-y-1.5'>
                 <Label>{dir === 'rtl' ? 'סטטוס חדש' : 'New Status'}</Label>
-                <Select value={newStatus} onValueChange={(v) => setNewStatus(v as SupplierStatus)}>
+                <Select value={newStatus} onValueChange={(v) => setNewStatus(v as SupplierStatus)} dir={dir}>
                   <SelectTrigger>
                     <SelectValue placeholder={dir === 'rtl' ? '— בחר סטטוס —' : '— Select status —'} />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent data-theme="bw" dir={dir}>
                     {availableStatuses.map((s) => (
                       <SelectItem key={s} value={s}>{t(`orders.status.${s}`)}</SelectItem>
                     ))}
@@ -327,7 +340,7 @@ export const SupplierOrderDetail = () => {
               </div>
 
               <Button
-                className='bg-blush hover:bg-blush/90 text-white'
+                className='bg-primary hover:bg-primary/90 text-primary-foreground'
                 onClick={handleUpdateStatus}
                 disabled={!newStatus || updateStatus.isPending}
               >

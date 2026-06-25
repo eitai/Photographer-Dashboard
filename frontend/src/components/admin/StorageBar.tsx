@@ -12,7 +12,7 @@ interface StorageBarProps {
 function getFillClass(percentUsed: number): string {
   if (percentUsed >= 90) return 'bg-red-400';
   if (percentUsed >= 75) return 'bg-amber-400';
-  return 'bg-[#E7B8B5]';
+  return 'bg-blush';
 }
 
 export function StorageBar({ usedGB, quotaGB, percentUsed, unlimited = false, compact = false }: StorageBarProps) {
@@ -31,7 +31,7 @@ export function StorageBar({ usedGB, quotaGB, percentUsed, unlimited = false, co
           <span className='font-medium text-charcoal'>∞</span>
         </div>
         <div dir='ltr' className={cn('w-full rounded-full bg-beige overflow-hidden', 'h-2')}>
-          <div className='h-full rounded-full bg-[#E7B8B5]' style={{ width: '4%' }} />
+          <div className='h-full rounded-full bg-blush' style={{ width: '4%' }} />
         </div>
       </div>
     );

@@ -11,17 +11,15 @@ import { BulkActionBar } from '@/components/admin/BulkActionBar';
 import { UploadProgressToast } from '@/components/admin/UploadProgressToast';
 import { FolderSidebar } from '@/components/admin/FolderSidebar';
 import { FaceFilterStrip } from '@/components/gallery/FaceFilterStrip';
+import { GalleryHeaderControls } from '@/components/admin/GalleryHeaderControls';
+import { GalleryVideosTab } from '@/components/admin/GalleryVideosTab';
 import { useGalleryUpload } from '@/hooks/useGalleryUpload';
 import { useGalleryData } from '@/hooks/useGalleryData';
 import { useImageDeletion } from '@/hooks/useImageDeletion';
-import { useVideoUpload } from '@/hooks/useVideoUpload';
 import { useQueryClient } from '@tanstack/react-query';
-import { useUpdateGallery } from '@/hooks/useQueries';
 import { useFolders } from '@/hooks/useFolders';
 import { useI18n } from '@/lib/i18n';
-import { getImageUrl } from '@/lib/api';
-import { ArrowLeft, CloudUpload, Video, Trash2, X, Images, Eye, Infinity as InfinityIcon } from 'lucide-react';
-import { Button } from '@/components/admin/Button';
+import { ArrowLeft, CloudUpload, Images, Video } from 'lucide-react';
 
 /** Convert an ISO/DB timestamp to the value format expected by datetime-local inputs (YYYY-MM-DDTHH:mm). */
 function toDatetimeLocal(isoString: string | null | undefined): string {
@@ -49,13 +47,7 @@ export const AdminGalleryUpload = () => {
     setSelectedIds(new Set());
     loadImages();
   });
-  const { videoInputRef, videoQueue, deletingFilename, handleVideoUpload, handleVideoDelete, cancelUpload } = useVideoUpload(
-    id,
-    setGallery,
-  );
-
   const queryClient = useQueryClient();
-  const updateGallery = useUpdateGallery();
 
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
@@ -154,18 +146,6 @@ export const AdminGalleryUpload = () => {
       </AdminLayout>
     );
 
-  const handleSaveExpiry = async () => {
-    try {
-      const expiresAt = expiresAtInput ? new Date(expiresAtInput).toISOString() : null;
-      await updateGallery.mutateAsync({ id: id!, data: { expiresAt } });
-      toast.success(t('admin.gallery.expires_at_saved'));
-    } catch {
-      toast.error(t('admin.gallery.expires_at_save_failed'));
-    }
-  };
-
-  const videoCount = (gallery.videos ?? []).length;
-
   return (
     <AdminLayout>
       {/* Fills the layout content area — no outer scroll */}
@@ -185,113 +165,13 @@ export const AdminGalleryUpload = () => {
 
           {/* Two-column body: management controls (left) + status & upload (right) */}
           <div className='flex flex-col md:flex-row items-start gap-4 mb-3'>
-
-            {/* ── Left: gallery info + all management controls ── */}
-            <div className='w-full md:flex-1 md:min-w-0 space-y-3'>
-              {/* Title */}
-              <div>
-                <h1 className='text-xl font-semibold text-charcoal truncate leading-tight'>{gallery.name}</h1>
-                {gallery.clientName && <p className='text-sm text-warm-gray mt-0.5 truncate'>{gallery.clientName}</p>}
-              </div>
-
-              {/* Selection enabled toggle */}
-              <div className='flex items-center gap-2'>
-                <label className='text-xs text-warm-gray shrink-0'>{t('admin.gallery.selection_enabled')}</label>
-                <button
-                  type='button'
-                  onClick={async () => {
-                    const next = gallery.selectionEnabled === false ? true : false;
-                    try {
-                      await updateGallery.mutateAsync({ id: id!, data: { selectionEnabled: next } });
-                      toast.success(t('admin.gallery.selection_saved'));
-                    } catch {
-                      toast.error(t('admin.gallery.selection_save_failed'));
-                    }
-                  }}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs transition-colors ${
-                    gallery.selectionEnabled !== false
-                      ? 'border-blush bg-blush/10 text-charcoal'
-                      : 'border-beige bg-muted/20 text-warm-gray'
-                  }`}
-                >
-                  {gallery.selectionEnabled !== false ? <Images size={12} className='text-blush' /> : <Eye size={12} />}
-                  {gallery.selectionEnabled !== false ? t('admin.gallery.selection_enabled_on') : t('admin.gallery.selection_enabled_off')}
-                </button>
-              </div>
-
-              {/* Max selections */}
-              <div className='flex items-center gap-2 flex-wrap'>
-                <label className='text-xs text-warm-gray shrink-0'>{t('admin.client.max_selections')}</label>
-                <input
-                  type='number'
-                  min={1}
-                  max={500}
-                  disabled={!gallery.selectionEnabled || (gallery.maxSelections ?? 10) === 0}
-                  value={(gallery.maxSelections ?? 10) === 0 ? '' : (gallery.maxSelections ?? 10)}
-                  onChange={(e) => setGallery((prev: typeof gallery) => prev ? { ...prev, maxSelections: Number(e.target.value) } : prev)}
-                  onBlur={async (e) => {
-                    const val = Number(e.target.value);
-                    if (!val || val < 1) return;
-                    try {
-                      await updateGallery.mutateAsync({ id: id!, data: { maxSelections: val } });
-                      toast.success(t('admin.gallery.selection_saved'));
-                    } catch {
-                      toast.error(t('admin.gallery.selection_save_failed'));
-                    }
-                  }}
-                  placeholder='10'
-                  className='w-20 px-2.5 py-1.5 rounded-lg border border-beige bg-muted/30 text-xs text-charcoal focus:outline-none focus:ring-2 focus:ring-blush/50 disabled:opacity-40 disabled:cursor-not-allowed'
-                />
-                <button
-                  type='button'
-                  title={t('admin.users.unlimited_label')}
-                  disabled={!gallery.selectionEnabled}
-                  onClick={async () => {
-                    const next = (gallery.maxSelections ?? 10) === 0 ? 10 : 0;
-                    try {
-                      await updateGallery.mutateAsync({ id: id!, data: { maxSelections: next } });
-                    } catch {
-                      toast.error(t('admin.gallery.selection_save_failed'));
-                    }
-                  }}
-                  className={`shrink-0 p-1.5 rounded-lg border transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
-                    (gallery.maxSelections ?? 10) === 0
-                      ? 'bg-blush text-white border-blush'
-                      : 'border-beige text-warm-gray hover:border-blush hover:text-blush'
-                  }`}
-                >
-                  <InfinityIcon size={14} />
-                </button>
-              </div>
-
-              {/* Expiry date */}
-              <div className='flex items-center gap-2 flex-wrap'>
-                <label className='text-xs text-warm-gray shrink-0'>{t('admin.gallery.expires_at_label')}</label>
-                <input
-                  type='datetime-local'
-                  value={expiresAtInput}
-                  onChange={(e) => setExpiresAtInput(e.target.value)}
-                  className='px-2.5 py-1.5 rounded-lg border border-beige bg-muted/30 text-xs text-charcoal focus:outline-none focus:ring-2 focus:ring-blush/50'
-                />
-                {expiresAtInput && (
-                  <button
-                    type='button'
-                    onClick={() => setExpiresAtInput('')}
-                    className='text-xs text-warm-gray hover:text-rose-500 transition-colors px-2 py-1 rounded-lg border border-beige hover:border-rose-200 hover:bg-rose-50'
-                  >
-                    {t('admin.gallery.expires_at_clear')}
-                  </button>
-                )}
-                <button
-                  type='button'
-                  onClick={handleSaveExpiry}
-                  disabled={updateGallery.isPending}
-                  className='text-xs bg-blush text-white px-3 py-1.5 rounded-lg hover:bg-blush/80 transition-colors disabled:opacity-60'
-                >
-                  {updateGallery.isPending ? t('admin.gallery.expires_at_saving') : t('admin.gallery.expires_at_save')}
-                </button>
-              </div>
-            </div>
+            <GalleryHeaderControls
+              gallery={gallery}
+              galleryId={id!}
+              setGallery={setGallery}
+              expiresAtInput={expiresAtInput}
+              setExpiresAtInput={setExpiresAtInput}
+            />
 
             {/* ── Right: status badge + upload box ── */}
             <div className='w-full md:w-auto md:shrink-0 flex flex-col items-center gap-2'>
@@ -308,7 +188,7 @@ export const AdminGalleryUpload = () => {
                   if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); inputRef.current?.click(); }
                 }}
                 className={`w-full md:w-48 h-48 flex flex-col items-center justify-center gap-2 border-2 border-dashed rounded-2xl cursor-pointer transition-colors ${
-                  dragging ? 'border-blush bg-blush/10' : 'border-beige hover:border-blush/50 bg-muted/30'
+                  dragging ? 'border-charcoal bg-ivory' : 'border-beige hover:border-charcoal/30 bg-muted/30'
                 }`}
               >
                 <CloudUpload size={28} className='text-warm-gray shrink-0' />
@@ -326,7 +206,7 @@ export const AdminGalleryUpload = () => {
                 />
               </div>
               {activeFolderId && (
-                <p className='text-[10px] text-blush font-medium text-center leading-tight'>
+                <p className='text-[10px] text-charcoal font-medium text-center leading-tight'>
                   {folders.find((f) => f._id === activeFolderId)?.name}
                 </p>
               )}
@@ -340,7 +220,7 @@ export const AdminGalleryUpload = () => {
               onClick={() => setActiveTab('images')}
               className={`flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-t-xl transition-colors border-b-2 ${
                 activeTab === 'images'
-                  ? 'border-blush text-charcoal bg-card'
+                  ? 'bg-ivory border-b-2 border-charcoal text-charcoal'
                   : 'border-transparent text-warm-gray hover:text-charcoal hover:bg-card/60'
               }`}
             >
@@ -360,19 +240,19 @@ export const AdminGalleryUpload = () => {
               onClick={() => setActiveTab('videos')}
               className={`flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-t-xl transition-colors border-b-2 ${
                 activeTab === 'videos'
-                  ? 'border-blush text-charcoal bg-card'
+                  ? 'bg-ivory border-b-2 border-charcoal text-charcoal'
                   : 'border-transparent text-warm-gray hover:text-charcoal hover:bg-card/60'
               }`}
             >
               <Video size={14} />
               {t('admin.gallery.tab_videos')}
-              {(videoCount > 0 || videoQueue.filter((v) => !v.done && !v.cancelled).length > 0) && (
+              {(gallery.videos ?? []).length > 0 && (
                 <span
                   className={`text-xs px-1.5 py-0.5 rounded-full ${
                     activeTab === 'videos' ? 'bg-blush/20 text-charcoal' : 'bg-beige text-warm-gray'
                   }`}
                 >
-                  {videoCount + videoQueue.filter((v) => !v.done && !v.cancelled).length}
+                  {(gallery.videos ?? []).length}
                 </span>
               )}
             </button>
@@ -482,118 +362,11 @@ export const AdminGalleryUpload = () => {
 
         {/* ── VIDEOS TAB ── */}
         {activeTab === 'videos' && (
-          <div className='flex flex-col flex-1 overflow-hidden bg-background'>
-            {/* Drop zone — compact, fixed */}
-            <div className='shrink-0 px-4 md:px-8 pt-4'>
-              <input
-                ref={videoInputRef}
-                type='file'
-                accept='video/*'
-                multiple
-                className='hidden'
-                onChange={(e) => {
-                  if (e.target.files?.length) handleVideoUpload(e.target.files);
-                  e.target.value = '';
-                }}
-              />
-              <div
-                role='button'
-                tabIndex={0}
-                aria-label={t('admin.gallery.drop_video_label')}
-                onClick={() => videoInputRef.current?.click()}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
-                    videoInputRef.current?.click();
-                  }
-                }}
-                className='flex items-center gap-3 border-2 border-dashed border-beige hover:border-blush/50 rounded-xl px-5 py-3 cursor-pointer transition-colors bg-muted/30'
-              >
-                <Video size={20} className='text-warm-gray shrink-0' />
-                <div>
-                  <p className='text-sm text-charcoal font-medium leading-tight'>{t('admin.gallery.upload_video')}</p>
-                  <p className='text-xs text-warm-gray'>mp4 · mov · avi · webm</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Upload queue — fixed */}
-            {videoQueue.length > 0 && (
-              <div className='shrink-0 px-4 md:px-8 pt-3 space-y-2'>
-                {videoQueue.map((item) => (
-                  <div key={item.id} className='flex items-center gap-3 text-xs bg-muted/30 border border-beige rounded-xl px-3 py-2'>
-                    <span className='text-warm-gray truncate flex-1'>{item.name}</span>
-                    <div className='w-28 h-1.5 bg-beige rounded-full overflow-hidden shrink-0'>
-                      <div
-                        className={`h-full rounded-full transition-all duration-300 ${
-                          item.error ? 'bg-rose-400' : item.cancelled ? 'bg-beige' : 'bg-blush'
-                        }`}
-                        style={{ width: `${item.progress}%` }}
-                      />
-                    </div>
-                    <span
-                      className={`shrink-0 w-16 text-right ${
-                        item.error
-                          ? 'text-rose-500'
-                          : item.cancelled
-                            ? 'text-warm-gray'
-                            : item.done
-                              ? 'text-green-600'
-                              : 'text-charcoal'
-                      }`}
-                    >
-                      {item.error
-                        ? t('admin.upload.error')
-                        : item.cancelled
-                          ? t('admin.gallery.video_cancelled')
-                          : item.done
-                            ? t('admin.upload.done')
-                            : `${item.progress}%`}
-                    </span>
-                    {!item.done && !item.error && !item.cancelled && (
-                      <button
-                        onClick={() => cancelUpload(item.id)}
-                        title={t('admin.gallery.cancel_upload')}
-                        className='shrink-0 flex items-center justify-center w-6 h-6 rounded-full bg-beige hover:bg-rose-100 hover:text-rose-500 text-warm-gray transition-colors'
-                      >
-                        <X size={11} />
-                      </button>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {/* Video list — only scrollable area */}
-            <div className='flex-1 overflow-y-auto px-4 md:px-8 pt-3 pb-6'>
-              {videoCount > 0 ? (
-                <div className='space-y-2'>
-                  {(gallery.videos ?? []).map((v) => (
-                    <div key={v.filename} className='flex items-center gap-3 px-3 py-2 bg-muted/30 border border-beige rounded-xl'>
-                      <video
-                        src={getImageUrl(v.path)}
-                        preload='metadata'
-                        className='w-16 h-10 rounded-lg object-cover shrink-0 bg-black'
-                      />
-                      <span className='text-xs text-charcoal truncate flex-1'>{v.originalName || v.filename}</span>
-                      <Button
-                        variant='danger'
-                        size='sm'
-                        className='shrink-0'
-                        onClick={() => handleVideoDelete(v.filename)}
-                        disabled={deletingFilename === v.filename}
-                      >
-                        <Trash2 size={12} />
-                        {deletingFilename === v.filename ? t('admin.common.deleting') : t('admin.gallery.delete_video')}
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                videoQueue.length === 0 && <p className='text-sm text-warm-gray text-center py-16'>{t('admin.upload.no_images')}</p>
-              )}
-            </div>
-          </div>
+          <GalleryVideosTab
+            galleryId={id!}
+            videos={gallery.videos ?? []}
+            setGallery={setGallery}
+          />
         )}
       </div>
 

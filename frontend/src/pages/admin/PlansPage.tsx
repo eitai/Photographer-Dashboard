@@ -58,7 +58,7 @@ function PlansPageSkeleton() {
   return (
     <div className='space-y-2'>
       {[1, 2, 3, 4, 5].map((i) => (
-        <div key={i} className='flex gap-3 p-3 border border-beige rounded-lg bg-white'>
+        <div key={i} className='flex gap-3 p-3 border border-border rounded-lg bg-card'>
           <Skeleton className='h-4 w-16' />
           <Skeleton className='h-4 w-24' />
           <Skeleton className='h-4 w-16' />
@@ -489,7 +489,7 @@ export const PlansPage = () => {
         {isLoading ? (
           <PlansPageSkeleton />
         ) : (
-          <div className='rounded-2xl border border-beige bg-white overflow-hidden'>
+          <div className='rounded-2xl border border-border bg-card overflow-hidden'>
             {plans.length === 0 ? (
               <p className='text-sm text-warm-gray p-6 text-center'>{t('admin.plans.click_to_edit')}</p>
             ) : (

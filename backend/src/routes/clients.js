@@ -21,11 +21,13 @@ router.get('/', asyncHandler(async (req, res) => {
 
 // POST /api/clients
 router.post('/', asyncHandler(async (req, res) => {
-  const { name, phone, email, sessionType, notes, status, eventDate } = req.body;
+  const { name, phone, email, sessionType, notes, status, eventDate,
+          addressStreet, addressApartment, addressCity, addressZip, addressCountry } = req.body;
   const emailErr = validateEmail(email);
   if (emailErr) return res.status(400).json({ message: emailErr });
   const client = await Client.create({
     name, phone, email, sessionType, notes, status, eventDate,
+    addressStreet, addressApartment, addressCity, addressZip, addressCountry,
     adminId: req.admin.id,
   });
   res.status(201).json(client);
@@ -44,12 +46,24 @@ router.get('/:id', asyncHandler(async (req, res) => {
 router.put('/:id', asyncHandler(async (req, res) => {
   if (!UUID_RE.test(req.params.id))
     return res.status(400).json({ message: 'Invalid ID format' });
-  const { name, phone, email, sessionType, notes, status, eventDate } = req.body;
-  const emailErr = validateEmail(email);
-  if (emailErr) return res.status(400).json({ message: emailErr });
+
+  // Only validate email if it was actually provided
+  if (req.body.email !== undefined) {
+    const emailErr = validateEmail(req.body.email);
+    if (emailErr) return res.status(400).json({ message: emailErr });
+  }
+
+  // Build update object from only the fields present in the body
+  const allowed = ['name','phone','email','sessionType','notes','status','eventDate',
+                   'addressStreet','addressApartment','addressCity','addressZip','addressCountry'];
+  const update = {};
+  for (const key of allowed) {
+    if (key in req.body) update[key] = req.body[key];
+  }
+
   const client = await Client.findOneAndUpdate(
     { _id: req.params.id, adminId: req.admin.id },
-    { name, phone, email, sessionType, notes, status, eventDate }
+    update
   );
   if (!client) return res.status(404).json({ message: 'Client not found' });
   res.json(client);

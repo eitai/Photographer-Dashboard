@@ -1,0 +1,1 @@
+ALTER TABLE store_orders ADD COLUMN IF NOT EXISTS in_production_at TIMESTAMPTZ;

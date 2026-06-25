@@ -30,6 +30,37 @@ async function requireOwnership(req, res) {
   return product;
 }
 
+// Validates the product-configuration fields shared by POST and PUT.
+// Returns an error message string, or null when valid.
+function validateProductConfig(body) {
+  const { minPhotos, maxPhotos, productionDays, variations } = body;
+
+  const isNonNegInt = (v) => Number.isInteger(v) && v >= 0;
+  if (minPhotos !== undefined && !isNonNegInt(minPhotos)) return 'minPhotos must be a non-negative integer';
+  if (maxPhotos !== undefined && !isNonNegInt(maxPhotos)) return 'maxPhotos must be a non-negative integer';
+  const min = minPhotos ?? 0;
+  const max = maxPhotos ?? 0;
+  if (max > 0 && min > max) return 'minPhotos cannot exceed maxPhotos';
+
+  if (productionDays !== undefined && productionDays !== null) {
+    if (!Number.isInteger(productionDays) || productionDays < 1) {
+      return 'productionDays must be null or a positive integer';
+    }
+  }
+
+  if (variations !== undefined) {
+    if (!Array.isArray(variations)) return 'variations must be an array';
+    for (const v of variations) {
+      if (!v || typeof v.name !== 'string' || !v.name.trim()) return 'Each variation needs a name';
+      if (!Array.isArray(v.options) || v.options.length === 0 || !v.options.every((o) => typeof o === 'string' && o.trim())) {
+        return 'Each variation needs at least one non-empty option';
+      }
+    }
+  }
+
+  return null;
+}
+
 // IMPORTANT: /reorder must be declared before /:id so Express does not
 // shadow the literal path with the dynamic segment.
 
@@ -46,7 +77,7 @@ router.put(
         return res.status(400).json({ message: 'Each item must have a valid UUID id and numeric sortOrder' });
       }
     }
-    await SupplierProduct.reorder(items);
+    await SupplierProduct.reorder(items, req.supplier.id);
     res.json({ message: 'Order updated' });
   })
 );
@@ -77,6 +108,8 @@ router.post(
     if (isNaN(parseFloat(costPrice)) || parseFloat(costPrice) < 0) {
       return res.status(400).json({ message: 'costPrice must be a non-negative number' });
     }
+    const configError = validateProductConfig(req.body);
+    if (configError) return res.status(400).json({ message: configError });
     const product = await SupplierProduct.create(req.supplier.id, req.body);
     res.status(201).json(product);
   })
@@ -98,6 +131,8 @@ router.put(
   asyncHandler(async (req, res) => {
     const product = await requireOwnership(req, res);
     if (!product) return;
+    const configError = validateProductConfig({ ...product, ...req.body });
+    if (configError) return res.status(400).json({ message: configError });
     const updated = await SupplierProduct.update(req.params.id, req.body);
     res.json(updated);
   })

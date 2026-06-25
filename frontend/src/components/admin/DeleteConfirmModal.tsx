@@ -27,7 +27,7 @@ export function DeleteConfirmModal({ count, deleting, progress, onConfirm, onCan
             <span>{t('admin.upload.deleting')}</span>
             <span>{progress.done} / {progress.total}</span>
           </div>
-          <div className='h-1.5 bg-beige rounded-full overflow-hidden'>
+          <div className='h-1.5 bg-ivory rounded-full overflow-hidden'>
             <div
               className='h-full bg-rose-400 rounded-full transition-all duration-200'
               style={{ width: `${(progress.done / progress.total) * 100}%` }}

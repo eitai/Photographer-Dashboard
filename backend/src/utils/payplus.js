@@ -164,9 +164,111 @@ async function generateStorePaymentLink({
   return payplusRequest('POST', '/api/v1.0/PaymentPages/generateLink', payload);
 }
 
+/**
+ * Generate a hosted page for a photographer to add a card on file.
+ * PayPlus tokenizes the card on its side; the callback returns a token we store
+ * (we never see the PAN). Uses a small verification charge that the terminal
+ * tokenizes (`create_token: true`).
+ *
+ * NOTE: confirm with the PayPlus account whether token-only (amount 0) is
+ * permitted on the terminal; otherwise the verification amount below is charged
+ * and should be refunded or credited. Adjust TOKENIZE_AMOUNT accordingly.
+ */
+const TOKENIZE_AMOUNT = Number(process.env.PAYPLUS_TOKENIZE_AMOUNT || 1);
+
+async function generateCardTokenPage({ adminId, customerName, successUrl, failureUrl, cancelUrl, callbackUrl }) {
+  const moreInfo = JSON.stringify({ type: 'card_token', adminId });
+  const payload = {
+    payment_page_uid: process.env.PAYPLUS_STORE_PAYMENT_PAGE_UID,
+    amount:            TOKENIZE_AMOUNT,
+    currency_code:     'ILS',
+    create_token:      true,   // ask PayPlus to save the card and return a token
+    sendEmailApproval: false,
+    sendEmailFailure:  false,
+    refURL_success:    successUrl,
+    refURL_failure:    failureUrl,
+    refURL_cancel:     cancelUrl,
+    refURL_callback:   callbackUrl,
+    more_info:         moreInfo,
+    fullName:          customerName || '',
+    items: [{ name: 'Card verification', quantity: 1, price: TOKENIZE_AMOUNT, vat_type: 0 }],
+  };
+  return payplusRequest('POST', '/api/v1.0/PaymentPages/generateLink', payload);
+}
+
+/**
+ * Charge a previously-saved card token for an arbitrary amount (monthly invoice).
+ * Returns the PayPlus transaction result; throws on API error.
+ *
+ * NOTE: token-charge must be enabled on the terminal. Confirm the exact endpoint
+ * and field names with PayPlus support once account access is available.
+ */
+async function chargeByToken({ token, amount, orderRef, moreInfo }) {
+  const payload = {
+    terminal_uid:  process.env.PAYPLUS_TERMINAL_UID,
+    amount,
+    currency_code: 'ILS',
+    use_token:     true,
+    token,
+    more_info:     typeof moreInfo === 'string' ? moreInfo : JSON.stringify(moreInfo || {}),
+    ...(orderRef ? { transaction_origin: orderRef } : {}),
+  };
+  return payplusRequest('POST', '/api/v1.0/Transactions/charge', payload);
+}
+
+/**
+ * Issue an accounting document (receipt / tax-invoice-receipt) via PayPlus.
+ * Returns { documentUid, documentNumber, pdfUrl }.
+ *
+ * NOTE: the PayPlus Documents module must be enabled on the terminal, and the
+ * exact endpoint + field names should be confirmed with PayPlus support once
+ * account access is available (same posture as verifyWebhookSignature). The
+ * shape below follows PayPlus's documented generateDocument call.
+ *
+ * @param {object} opts
+ * @param {'receipt'|'tax_invoice_receipt'} opts.docType
+ * @param {string} opts.customerName
+ * @param {string} [opts.customerEmail]
+ * @param {string} [opts.customerTaxId]
+ * @param {{ name:string, quantity:number, unitPrice:number }[]} opts.items
+ * @param {number} opts.vatAmount       0 for עוסק פטור / exempt
+ */
+async function issueDocument({ docType, customerName, customerEmail, customerTaxId, items, vatAmount }) {
+  // PayPlus document type codes (confirm exact codes with PayPlus):
+  //   קבלה (receipt) and חשבונית מס/קבלה (tax invoice + receipt)
+  const PAYPLUS_DOC_TYPE = { receipt: 'receipt', tax_invoice_receipt: 'invrec' };
+
+  const payload = {
+    terminal_uid:  process.env.PAYPLUS_TERMINAL_UID,
+    document_type: PAYPLUS_DOC_TYPE[docType] || PAYPLUS_DOC_TYPE.receipt,
+    language:      'he',
+    vat_type:      (vatAmount && vatAmount > 0) ? 1 : 0,   // 0 = no VAT (עוסק פטור)
+    customer_name: customerName || '',
+    email:         customerEmail || undefined,
+    send_email:    false, // we send our own branded email; PDF link is attached
+    ...(customerTaxId ? { vat_number: customerTaxId } : {}),
+    items: (items || []).map((i) => ({
+      name:     i.name,
+      quantity: i.quantity || 1,
+      price:    Number(i.unitPrice).toFixed(2),
+    })),
+  };
+
+  const data = await payplusRequest('POST', '/api/v1.0/Documents/generateDocument', payload);
+  const d = data?.data || data || {};
+  return {
+    documentUid:    d.document_uid || d.uid || null,
+    documentNumber: d.document_number || d.number || null,
+    pdfUrl:         d.original_document_url || d.pdf_link || d.document_url || null,
+  };
+}
+
 module.exports = {
   generatePaymentLink,
   generateStorePaymentLink,
+  generateCardTokenPage,
+  chargeByToken,
+  issueDocument,
   setRecurringValid,
   getTransactionDetails,
   verifyWebhookSignature,

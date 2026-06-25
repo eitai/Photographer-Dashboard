@@ -12,6 +12,17 @@ export interface AdminUser {
   ssoEnabled: boolean;
   firstLogin: boolean;
   googleEmail: string | null;
+  addressStreet?: string | null;
+  addressApartment?: string | null;
+  addressCity?: string | null;
+  addressZip?: string | null;
+  addressCountry?: string | null;
+  canOrderSupplier?: boolean;
+  clientsCanOrder?: boolean;
+  billingBlocked?: boolean;
+  hasCardOnFile?: boolean;
+  cardLast4?: string | null;
+  cardBrand?: string | null;
 }
 
 interface AuthState {
@@ -20,6 +31,7 @@ interface AuthState {
   theme: string;
   darkMode: boolean;
   login: (email: string, password: string) => Promise<AdminUser>;
+  loginSuperadmin: (email: string, password: string) => Promise<AdminUser>;
   logout: () => Promise<void>;
   setAdmin: (admin: AdminUser) => void;
   setTheme: (theme: string) => void;
@@ -84,6 +96,16 @@ export const useAuthStore = create<AuthState>((set) => ({
     // Clear stale cache from a previous session AFTER the new credentials arrive,
     // not before — clearing before the POST was causing in-flight /auth/me requests
     // (aborted during logout) to race with the login and trigger clearAuthAndRedirect.
+    queryClient.clear();
+    localStorage.setItem('koral_admin_user', JSON.stringify(adminData));
+    set({ admin: adminData });
+    return adminData;
+  },
+
+  loginSuperadmin: async (email, password) => {
+    const payload = email.includes('@') ? { email, password } : { username: email, password };
+    const res = await api.post('/auth/superadmin-login', payload);
+    const { admin: adminData } = res.data as { admin: AdminUser };
     queryClient.clear();
     localStorage.setItem('koral_admin_user', JSON.stringify(adminData));
     set({ admin: adminData });

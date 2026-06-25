@@ -34,6 +34,10 @@ import api, {
   sendOrderToSupplier,
   cancelOrder,
   deleteOrder,
+  getAdminSupplierProducts,
+  setSupplierProductFavorite,
+  createDirectOrder,
+  notifyOrderClient,
   getSupplierOrders,
   getSupplierOrder,
   updateSupplierOrderStatus,
@@ -137,6 +141,7 @@ export function useSubmissions(galleryId: string) {
     queryKey: queryKeys.submissions(galleryId),
     queryFn: () => galleryService.fetchSubmissions(galleryId),
     enabled: !!galleryId,
+    staleTime: 30_000,
   });
 }
 
@@ -186,22 +191,6 @@ export function useProductOrders(clientId: string) {
   });
 }
 
-export interface AdminProduct {
-  id: string;
-  adminId: string;
-  name: string;
-  type: 'album' | 'print';
-  maxPhotos: number;
-  createdAt: string;
-}
-
-export function useAdminProducts() {
-  return useQuery({
-    queryKey: queryKeys.adminProducts,
-    queryFn: () => api.get<AdminProduct[]>('/admin-products').then((r) => r.data),
-    staleTime: 60_000,
-  });
-}
 
 export function useMyStorage() {
   const pinged = useRef(false);
@@ -572,7 +561,12 @@ export function useUpdateProductOrderGalleries(clientId: string) {
 // ---------------------------------------------------------------------------
 
 export function useOrders(params?: Parameters<typeof getOrders>[0]) {
-  return useQuery({ queryKey: [...queryKeys.orders, params], queryFn: () => getOrders(params) });
+  return useQuery({
+    queryKey: [...queryKeys.orders, params],
+    queryFn: () => getOrders(params),
+    refetchInterval: 15_000,
+    refetchOnWindowFocus: true,
+  });
 }
 
 export function useOrder(id: string) {
@@ -630,8 +624,48 @@ export function useDeleteOrder() {
   });
 }
 
+export function useAdminSupplierProducts() {
+  return useQuery({
+    queryKey: ['admin', 'supplier-products'],
+    queryFn: getAdminSupplierProducts,
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
+export function useCreateDirectOrder() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: createDirectOrder,
+    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.orders }),
+  });
+}
+
+export function useToggleSupplierFavorite() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ productId, favorite }: { productId: string; favorite: boolean }) =>
+      setSupplierProductFavorite(productId, favorite),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['admin', 'supplier-products'] }),
+  });
+}
+
+export function useNotifyOrderClient() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => notifyOrderClient(id),
+    onSuccess: (_, id) => {
+      qc.invalidateQueries({ queryKey: queryKeys.orderDetail(id) });
+    },
+  });
+}
+
 export function useSupplierOrders(params?: Parameters<typeof getSupplierOrders>[0]) {
-  return useQuery({ queryKey: [...queryKeys.supplierOrders, params], queryFn: () => getSupplierOrders(params) });
+  return useQuery({
+    queryKey: [...queryKeys.supplierOrders, params],
+    queryFn: () => getSupplierOrders(params),
+    refetchInterval: 5_000,
+    refetchOnWindowFocus: true,
+  });
 }
 
 export function useSupplierOrder(id: string) {

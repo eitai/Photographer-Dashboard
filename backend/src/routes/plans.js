@@ -1,6 +1,7 @@
 const express = require('express');
 const pool = require('../db');
 const Plan = require('../models/Plan');
+const Admin = require('../models/Admin');
 const Subscription = require('../models/Subscription');
 const asyncHandler = require('../middleware/asyncHandler');
 const { protect, superprotect } = require('../middleware/auth');
@@ -251,6 +252,33 @@ router.post('/webhook', asyncHandler(async (req, res) => {
   let moreInfo = {};
   try { moreInfo = JSON.parse(payload.more_info || '{}'); } catch (_) { /* ignore */ }
 
+  // ── Card-on-file tokenization callback ────────────────────────────────────
+  if (moreInfo.type === 'card_token' && moreInfo.adminId) {
+    const token = payload?.data?.token || payload?.data?.card_information?.token || null;
+    const last4 = payload?.data?.card_information?.four_digits
+               || payload?.data?.four_digits || null;
+    const brand = payload?.data?.card_information?.brand_name
+               || payload?.data?.brand_name || null;
+    const customerUid = payload?.data?.customer?.customer_uid || null;
+    if (token) {
+      await Admin.findByIdAndUpdate(moreInfo.adminId, {
+        payplusCardToken: token,
+        cardLast4: last4 ? String(last4).slice(-4) : null,
+        cardBrand: brand || null,
+        ...(customerUid ? { payplusCustomerUid: customerUid } : {}),
+      });
+    }
+    return res.json({ received: true });
+  }
+
+  // ── Photographer monthly invoice payment (hosted-link fallback) ───────────
+  if (moreInfo.type === 'photographer_invoice' && moreInfo.invoiceId) {
+    const transactionUid = payload?.data?.transaction_uid || null;
+    const PhotographerInvoice = require('../models/PhotographerInvoice');
+    await PhotographerInvoice.markPaid(moreInfo.invoiceId, transactionUid);
+    return res.json({ received: true });
+  }
+
   const { adminId, planId, billingInterval, customStorageGb } = moreInfo;
   if (!adminId || !planId) return res.json({ received: true, skipped: true });
 
@@ -285,6 +313,27 @@ router.post('/webhook', asyncHandler(async (req, res) => {
      FROM subscriptions s WHERE s.admin_id = $1`,
     [adminId, amount, `Plan: ${planId} | ${billingInterval} | tx: ${transactionUid}`]
   );
+
+  // Fire-and-forget: formal receipt (קבלה) for the subscription charge.
+  // sourceId uses the PayPlus transaction UID so each charge gets its own receipt.
+  ;(async () => {
+    try {
+      const adminRec = await Admin.findById(adminId);
+      if (!adminRec?.email) return;
+      const plan = await Plan.findById(planId).catch(() => null);
+      const invoiceService = require('../services/invoiceService');
+      await invoiceService.issueReceipt({
+        sourceKind: 'subscription',
+        sourceId:   transactionUid || `${adminId}-${Date.now()}`,
+        recipientKind: 'admin',
+        recipient: { id: adminRec.id, name: adminRec.name, email: adminRec.email },
+        items: [{ name: `מנוי ${plan?.name || planId} (${billingInterval === 'annual' ? 'שנתי' : 'חודשי'})`, quantity: 1, unitPrice: Number(amount) || 0 }],
+        amount: Number(amount) || 0,
+      });
+    } catch (e) {
+      // best-effort; never fail the webhook
+    }
+  })();
 
   res.json({ received: true });
 }));

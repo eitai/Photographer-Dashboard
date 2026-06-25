@@ -137,7 +137,7 @@ const AddSupplierModal = ({ open, onClose }: AddSupplierModalProps) => {
             <Button
               type='submit'
               disabled={createMutation.isPending}
-              className='bg-blush text-white hover:bg-blush/90'
+              className='bg-primary text-primary-foreground hover:bg-primary/90'
             >
               {createMutation.isPending && <Loader2 className='h-4 w-4 animate-spin me-2' />}
               {t('admin.common.save')}
@@ -238,7 +238,7 @@ const EditSupplierModal = ({ open, onClose, supplier }: EditSupplierModalProps) 
             <Button
               type='submit'
               disabled={updateMutation.isPending}
-              className='bg-blush text-white hover:bg-blush/90'
+              className='bg-primary text-primary-foreground hover:bg-primary/90'
             >
               {updateMutation.isPending && <Loader2 className='h-4 w-4 animate-spin me-2' />}
               {t('admin.common.save')}
@@ -310,7 +310,7 @@ export const AdminSuppliersPage = () => {
           </h1>
           <Button
             onClick={() => setAddOpen(true)}
-            className='bg-blush text-white hover:bg-blush/90 gap-2'
+            className='bg-primary text-primary-foreground hover:bg-primary/90 gap-2'
           >
             <Plus size={16} />
             {t('admin.suppliers.add')}
@@ -328,14 +328,14 @@ export const AdminSuppliersPage = () => {
 
         {/* Empty state */}
         {!isLoading && (!suppliers || suppliers.length === 0) && (
-          <div className='text-center py-16 text-zinc-400'>
+          <div className='text-center py-16 text-muted-foreground'>
             <p>{t('admin.suppliers.empty')}</p>
           </div>
         )}
 
         {/* Table */}
         {!isLoading && suppliers && suppliers.length > 0 && (
-          <div className='bg-white rounded-xl border border-zinc-200 overflow-hidden'>
+          <div className='bg-card rounded-xl border border-border overflow-hidden'>
             <Table>
               <TableHeader>
                 <TableRow>
@@ -355,13 +355,13 @@ export const AdminSuppliersPage = () => {
                     <TableCell className='font-medium text-charcoal'>
                       {supplier.name}
                     </TableCell>
-                    <TableCell className='text-sm text-zinc-600'>
+                    <TableCell className='text-sm text-muted-foreground'>
                       {supplier.email}
                     </TableCell>
-                    <TableCell className='text-sm text-zinc-500'>
+                    <TableCell className='text-sm text-muted-foreground'>
                       {supplier.phone ?? '—'}
                     </TableCell>
-                    <TableCell className='text-sm text-zinc-500'>
+                    <TableCell className='text-sm text-muted-foreground'>
                       {supplier.contactPerson ?? '—'}
                     </TableCell>
 
@@ -373,7 +373,7 @@ export const AdminSuppliersPage = () => {
                           {t('admin.suppliers.exclusive')}
                         </span>
                       ) : (
-                        <span className='text-zinc-400 text-sm'>—</span>
+                        <span className='text-muted-foreground text-sm'>—</span>
                       )}
                     </TableCell>
 
@@ -390,7 +390,7 @@ export const AdminSuppliersPage = () => {
                     </TableCell>
 
                     {/* Order count */}
-                    <TableCell className='text-sm text-zinc-600'>
+                    <TableCell className='text-sm text-muted-foreground'>
                       {supplier.orderCount ?? 0}
                     </TableCell>
 
