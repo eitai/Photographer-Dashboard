@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { memo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { StatusBadge } from '@/components/admin/StatusBadge';
 import { Copy, Check, Mail, ExternalLink, Trash2, Settings, Images, MessageSquare, RotateCcw, Download, Loader2 } from 'lucide-react';
@@ -56,8 +56,6 @@ interface GalleryCardProps {
   resentId: string | null;
   sendingSmId: string | null;
   sentSmsId: string | null;
-  showDeliveryFormFor: string | null;
-  deliveryHeaderMessage: string;
   creatingDeliveryFor: string | null;
   galleries: GalleryData[];
   delivery?: GalleryData;
@@ -66,16 +64,14 @@ interface GalleryCardProps {
   resendEmail: (galleryId: string) => void;
   sendSms: (galleryId: string) => void;
   setDeleteGalleryTarget: (id: string | null) => void;
-  setShowDeliveryFormFor: (id: string | null) => void;
-  setDeliveryHeaderMessage: (msg: string) => void;
-  createDeliveryGallery: (originalGalleryId: string) => void;
+  createDeliveryGallery: (originalGalleryId: string, headerMessage: string) => Promise<void>;
   reactivateGallery: (galleryId: string) => void;
   reactivatingId: string | null;
   setDeleteSubTarget: (t: { galleryId: string; submissionId: string } | null) => void;
   setDeleteImageTarget: (t: { galleryId: string; submissionId: string; imageId: string } | null) => void;
 }
 
-export const GalleryCard = ({
+export const GalleryCard = memo(({
   g,
   client,
   copiedId,
@@ -83,8 +79,6 @@ export const GalleryCard = ({
   resentId,
   sendingSmId,
   sentSmsId,
-  showDeliveryFormFor,
-  deliveryHeaderMessage,
   creatingDeliveryFor,
   galleries,
   delivery,
@@ -93,8 +87,6 @@ export const GalleryCard = ({
   resendEmail,
   sendSms,
   setDeleteGalleryTarget,
-  setShowDeliveryFormFor,
-  setDeliveryHeaderMessage,
   createDeliveryGallery,
   reactivateGallery,
   reactivatingId,
@@ -108,6 +100,15 @@ export const GalleryCard = ({
   const submission = submissions[0] ?? null;
 
   const [dlProgress, setDlProgress] = useState<{ done: number; total: number } | null>(null);
+  // Delivery-form state is local so typing here doesn't re-render the whole page
+  const [showDeliveryForm, setShowDeliveryForm] = useState(false);
+  const [deliveryMsg, setDeliveryMsg] = useState('');
+
+  const handleCreateDelivery = async () => {
+    await createDeliveryGallery(g._id, deliveryMsg);
+    setShowDeliveryForm(false);
+    setDeliveryMsg('');
+  };
 
   const handleDownload = async () => {
     if (!submission) return;
@@ -122,7 +123,7 @@ export const GalleryCard = ({
     <div
       className={`rounded-xl bg-card shadow-sm flex flex-col overflow-hidden border transition-colors hover:bg-muted/20 ${
         g.isDelivery
-          ? 'border-blush/40'
+          ? 'border-beige'
           : g.status === 'delivered'
           ? 'border-border'
           : submission
@@ -156,16 +157,23 @@ export const GalleryCard = ({
         </div>
 
         <div className='flex gap-1.5 overflow-hidden'>
-          {previewImages.length > 0 ? (
-            previewImages.slice(0, 5).map((img) => (
-              <img
-                key={img._id}
-                src={getImageUrl(img.thumbnailPath || img.path)}
-                alt=''
-                className='w-16 h-16 rounded-lg object-cover border border-border shrink-0'
-                onError={(e) => console.error('[GalleryCard] load failed', { src: (e.target as HTMLImageElement).src, thumbnailPath: img.thumbnailPath, path: img.path })}
-              />
-            ))
+          {/* Thumbnails only — falling back to the original would decode a
+              full-resolution file (up to 20MB) for a 64px tile */}
+          {previewImages.some((img) => img.thumbnailPath) ? (
+            previewImages
+              .filter((img) => img.thumbnailPath)
+              .slice(0, 5)
+              .map((img) => (
+                <img
+                  key={img._id}
+                  src={getImageUrl(img.thumbnailPath!)}
+                  alt=''
+                  loading='lazy'
+                  width={64}
+                  height={64}
+                  className='w-16 h-16 rounded-lg object-cover border border-border shrink-0'
+                />
+              ))
           ) : (
             <div className='w-16 h-16 rounded-lg bg-muted border border-border flex items-center justify-center shrink-0'>
               <Images size={14} className='text-muted-foreground/40' />
@@ -234,7 +242,7 @@ export const GalleryCard = ({
             <button
               onClick={() => resendEmail(g._id)}
               disabled={resendingId === g._id}
-              className='p-2 rounded-lg border border-border bg-muted/30 text-warm-gray hover:text-blush hover:bg-blush/10 transition-colors disabled:opacity-50'
+              className='p-2 rounded-lg border border-border bg-muted/30 text-warm-gray hover:text-charcoal hover:bg-ivory transition-colors disabled:opacity-50'
             >
               {resentId === g._id ? <Check size={13} className='text-green-500' /> : <Mail size={13} />}
             </button>
@@ -298,26 +306,26 @@ export const GalleryCard = ({
       {!g.isDelivery &&
         (g.status === 'selection_submitted' || g.status === 'in_editing' || g.status === 'delivered') &&
         !hasDelivery &&
-        (showDeliveryFormFor === g._id ? (
+        (showDeliveryForm ? (
           <div className='px-4 pb-4 pt-0 space-y-2 border-t border-border'>
             <div className='pt-3'>
               <input
-                value={deliveryHeaderMessage}
-                onChange={(e) => setDeliveryHeaderMessage(e.target.value)}
+                value={deliveryMsg}
+                onChange={(e) => setDeliveryMsg(e.target.value)}
                 placeholder={t('admin.client.delivery_header_ph')}
-                className='w-full px-3 py-2 rounded-lg border border-border bg-muted/30 text-xs text-charcoal focus:outline-none focus:ring-2 focus:ring-blush/50'
+                className='w-full px-3 py-2 rounded-lg border border-border bg-muted/30 text-xs text-charcoal focus:outline-none focus:ring-2 focus:ring-blush/40'
               />
             </div>
             <div className='flex gap-2'>
               <button
-                onClick={() => createDeliveryGallery(g._id)}
+                onClick={handleCreateDelivery}
                 disabled={creatingDeliveryFor === g._id}
-                className='flex-1 bg-blush text-white px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-blush/80 transition-colors disabled:opacity-60'
+                className='flex-1 bg-charcoal text-white px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-charcoal/80 transition-colors disabled:opacity-60'
               >
                 {creatingDeliveryFor === g._id ? t('admin.client.creating_delivery') : t('admin.client.create_delivery')}
               </button>
               <button
-                onClick={() => setShowDeliveryFormFor(null)}
+                onClick={() => setShowDeliveryForm(false)}
                 className='px-3 py-1.5 rounded-lg text-xs text-warm-gray border border-border hover:bg-muted/30 transition-colors'
               >
                 {t('admin.common.cancel')}
@@ -326,8 +334,8 @@ export const GalleryCard = ({
           </div>
         ) : (
           <button
-            onClick={() => setShowDeliveryFormFor(g._id)}
-            className='mx-4 mb-4 flex items-center justify-center gap-1.5 w-[calc(100%-2rem)] text-xs text-warm-gray border border-dashed border-border rounded-lg py-2 hover:border-blush hover:text-blush transition-colors'
+            onClick={() => setShowDeliveryForm(true)}
+            className='mx-4 mb-4 flex items-center justify-center gap-1.5 w-[calc(100%-2rem)] text-xs text-warm-gray border border-dashed border-border rounded-lg py-2 hover:border-beige hover:text-charcoal transition-colors'
           >
             + {t('admin.client.create_delivery')}
           </button>
@@ -335,9 +343,9 @@ export const GalleryCard = ({
 
       {/* Embedded delivery gallery */}
       {delivery && (
-        <div className='border-t border-blush/30 bg-blush/5 px-4 py-3 flex flex-col gap-2'>
+        <div className='border-t border-beige bg-ivory/60 px-4 py-3 flex flex-col gap-2'>
           <div className='flex items-center gap-2'>
-            <span className='text-[10px] font-medium text-blush uppercase tracking-wide'>{t('admin.client.delivery_suffix')}</span>
+            <span className='text-[10px] font-medium text-charcoal uppercase tracking-wide'>{t('admin.client.delivery_suffix')}</span>
             <StatusBadge status={delivery.status} />
           </div>
           <div className='flex items-center gap-2'>
@@ -345,7 +353,7 @@ export const GalleryCard = ({
             <Tip label={t('admin.client.delete_gallery')}>
               <button
                 onClick={() => setDeleteGalleryTarget(delivery._id)}
-                className='p-1.5 rounded-lg border border-blush/20 bg-card text-warm-gray hover:text-rose-500 hover:bg-rose-50 transition-colors'
+                className='p-1.5 rounded-lg border border-beige bg-card text-warm-gray hover:text-rose-500 hover:bg-rose-50 transition-colors'
               >
                 <Trash2 size={11} />
               </button>
@@ -354,14 +362,14 @@ export const GalleryCard = ({
               <Link
                 to={`/gallery/${delivery.token}`}
                 target='_blank'
-                className='p-1.5 rounded-lg border border-blush/20 bg-card text-warm-gray hover:text-charcoal hover:bg-muted/30 transition-colors'
+                className='p-1.5 rounded-lg border border-beige bg-card text-warm-gray hover:text-charcoal hover:bg-muted/30 transition-colors'
               >
                 <ExternalLink size={11} />
               </Link>
             </Tip>
             <Link
               to={`/admin/galleries/${delivery._id}`}
-              className='flex items-center gap-1 text-xs bg-card border border-blush/20 text-charcoal px-2.5 py-1 rounded-lg hover:bg-muted/30 transition-colors font-medium'
+              className='flex items-center gap-1 text-xs bg-card border border-beige text-charcoal px-2.5 py-1 rounded-lg hover:bg-muted/30 transition-colors font-medium'
             >
               <Settings size={11} />
               {t('admin.galleries.manage')}
@@ -371,4 +379,6 @@ export const GalleryCard = ({
       )}
     </div>
   );
-};
+});
+
+GalleryCard.displayName = 'GalleryCard';

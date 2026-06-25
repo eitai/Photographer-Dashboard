@@ -233,11 +233,12 @@ Route files live in `backend/src/routes/`. Middleware: `protect` = JWT auth requ
 
 ### Admin Products — `routes/adminProducts.js` (protect)
 
-| Method | Path                      | Notes                                           |
-| ------ | ------------------------- | ----------------------------------------------- |
-| GET    | `/api/admin-products`     | List catalog, auto-seeds defaults on first call |
-| POST   | `/api/admin-products`     | Add product (album or print)                    |
-| DELETE | `/api/admin-products/:id` | Remove product                                  |
+| Method | Path                                       | Notes                                                          |
+| ------ | ------------------------------------------ | -------------------------------------------------------------- |
+| GET    | `/api/admin-products/supplier-products`    | Active supplier products + `isFavorite`; favorites sort first  |
+| POST   | `/api/admin-products/favorites/:productId` | Mark supplier product as favorite                              |
+| DELETE | `/api/admin-products/favorites/:productId` | Unmark favorite                                                |
+| GET    | `/api/admin-products`                      | LEGACY photographer catalog (no UI consumers; kept for mobile) |
 
 ### Other
 
@@ -343,7 +344,7 @@ Files in `backend/src/models/`. All use raw SQL (pg), no ORM.
 | `AdminGalleryLightbox.tsx` | Image viewer with select/deselect             |
 | `BulkActionBar.tsx`        | Multi-select actions bar                      |
 | `SubmissionsSection.tsx`   | Client submissions + selected photos          |
-| `ProductOrdersSection.tsx` | Manage product orders                         |
+| `ClientOrdersSection.tsx`  | Unified orders list (catalog product orders + supplier store orders) |
 | `GalleriesSection.tsx`     | Gallery list section on dashboard             |
 | `DeleteConfirmModal.tsx`   | Confirmation dialog for destructive actions   |
 | `ClientInfoCard.tsx`       | Client details card                           |

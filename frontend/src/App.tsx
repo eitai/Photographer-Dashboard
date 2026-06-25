@@ -8,6 +8,7 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { HelmetProvider } from 'react-helmet-async';
 import { I18nProvider } from '@/lib/i18n';
 import { ProtectedRoute } from '@/components/admin/ProtectedRoute';
+import { SupplierProtectedRoute } from '@/components/supplier/SupplierProtectedRoute';
 import { Navbar } from '@/components/Navbar';
 import { Footer } from '@/components/Footer';
 import { WhatsAppButton } from '@/components/WhatsAppButton';
@@ -22,6 +23,7 @@ const ClientProductOrderPage = lazy(() => import('./pages/ClientProductOrderPage
 const Blog = lazy(() => import('./pages/Blog').then((m) => ({ default: m.Blog })));
 const BlogPost = lazy(() => import('./pages/BlogPost').then((m) => ({ default: m.BlogPost })));
 const NotFound = lazy(() => import('./pages/NotFound').then((m) => ({ default: m.NotFound })));
+const PricingPage = lazy(() => import('./pages/PricingPage').then((m) => ({ default: m.PricingPage })));
 
 // Photographer public pages
 const PhotographerLayout = lazy(() => import('./pages/photographer/PhotographerLayout').then((m) => ({ default: m.PhotographerLayout })));
@@ -33,6 +35,9 @@ const PhotographerContact = lazy(() => import('./pages/photographer/Photographer
 
 // Admin pages
 const AdminLogin = lazy(() => import('./pages/admin/AdminLogin').then((m) => ({ default: m.AdminLogin })));
+const PhotographerLogin = lazy(() => import('./pages/admin/PhotographerLogin').then((m) => ({ default: m.PhotographerLogin })));
+const GetStartedPage = lazy(() => import('./pages/GetStartedPage').then((m) => ({ default: m.GetStartedPage })));
+const OnboardingPage = lazy(() => import('./pages/OnboardingPage').then((m) => ({ default: m.OnboardingPage })));
 const AdminDashboard = lazy(() => import('./pages/admin/AdminDashboard').then((m) => ({ default: m.AdminDashboard })));
 const AdminClients = lazy(() => import('./pages/admin/AdminClients').then((m) => ({ default: m.AdminClients })));
 const AdminClientDetail = lazy(() => import('./pages/admin/AdminClientDetail').then((m) => ({ default: m.AdminClientDetail })));
@@ -44,10 +49,46 @@ const AdminSettings = lazy(() => import('./pages/admin/AdminSettings').then((m) 
 const AdminShowcase = lazy(() => import('./pages/admin/AdminShowcase').then((m) => ({ default: m.AdminShowcase })));
 const AdminUsers = lazy(() => import('./pages/admin/AdminUsers').then((m) => ({ default: m.AdminUsers })));
 const AdminContact = lazy(() => import('./pages/admin/AdminContact').then((m) => ({ default: m.AdminContact })));
+const BillingPage = lazy(() => import('./pages/admin/BillingPage').then((m) => ({ default: m.BillingPage })));
+const PlansPage = lazy(() => import('./pages/admin/PlansPage').then((m) => ({ default: m.PlansPage })));
 // Dev-only test harness for the multipart S3 uploader. Gated by `?s3test=1`
 // query param inside the page itself AND by `import.meta.env.DEV` at the
 // route level, so it cannot ship to production builds.
 const S3UploadTest = lazy(() => import('./pages/admin/_S3UploadTest').then((m) => ({ default: m.S3UploadTest })));
+
+// Supplier panel
+const SupplierLogin = lazy(() => import('./pages/supplier/SupplierLogin').then((m) => ({ default: m.SupplierLogin })));
+const SupplierLayout = lazy(() => import('./pages/supplier/SupplierLayout').then((m) => ({ default: m.SupplierLayout })));
+const SupplierProducts = lazy(() => import('./pages/supplier/SupplierProducts').then((m) => ({ default: m.SupplierProducts })));
+
+// Admin: suppliers management
+const AdminSuppliersPage = lazy(() => import('./pages/admin/AdminSuppliersPage').then((m) => ({ default: m.AdminSuppliersPage })));
+
+// Admin: store orders
+const AdminOrders = lazy(() => import('./pages/admin/AdminOrders').then((m) => ({ default: m.AdminOrders })));
+const AdminOrderDetail = lazy(() => import('./pages/admin/AdminOrderDetail').then((m) => ({ default: m.AdminOrderDetail })));
+
+// Admin: direct ordering store (Flow 3)
+const AdminStore = lazy(() => import('./pages/admin/AdminStore').then((m) => ({ default: m.AdminStore })));
+const AdminStoreOrderComposer = lazy(() => import('./pages/admin/AdminStoreOrderComposer').then((m) => ({ default: m.AdminStoreOrderComposer })));
+
+// Billing & settlement
+const AdminBillingStore = lazy(() => import('./pages/admin/AdminBillingStore').then((m) => ({ default: m.AdminBillingStore })));
+const AdminCollection = lazy(() => import('./pages/admin/AdminCollection').then((m) => ({ default: m.AdminCollection })));
+const AdminSettlements = lazy(() => import('./pages/admin/AdminSettlements').then((m) => ({ default: m.AdminSettlements })));
+const SupplierSettlement = lazy(() => import('./pages/supplier/SupplierSettlement').then((m) => ({ default: m.SupplierSettlement })));
+
+// Public: client order selection
+const ClientOrderSelection = lazy(() => import('./pages/ClientOrderSelection').then((m) => ({ default: m.ClientOrderSelection })));
+
+// Public: store order status (post-PayPlus redirect)
+const StoreOrderStatus = lazy(() => import('./pages/StoreOrderStatus').then((m) => ({ default: m.StoreOrderStatus })));
+
+// Supplier: dashboard + orders + settings
+const SupplierDashboard = lazy(() => import('./pages/supplier/SupplierDashboard').then((m) => ({ default: m.SupplierDashboard })));
+const SupplierOrders = lazy(() => import('./pages/supplier/SupplierOrders').then((m) => ({ default: m.SupplierOrders })));
+const SupplierOrderDetail = lazy(() => import('./pages/supplier/SupplierOrderDetail').then((m) => ({ default: m.SupplierOrderDetail })));
+const SupplierSettings = lazy(() => import('./pages/supplier/SupplierSettings').then((m) => ({ default: m.SupplierSettings })));
 
 // Layout wrapper for public pages (shows Navbar/Footer/WhatsApp)
 const PublicLayout = ({ children }: { children: React.ReactNode }) => (
@@ -103,11 +144,24 @@ export const App = () => (
                     </PublicLayout>
                   }
                 />
+                <Route
+                  path='/pricing'
+                  element={
+                    <PublicLayout>
+                      <PricingPage />
+                    </PublicLayout>
+                  }
+                />
                 <Route path='/gallery/:token' element={<ClientGallery />} />
+                <Route path='/store/order/:orderId' element={<StoreOrderStatus />} />
+                <Route path='/order-selection/:token' element={<ClientOrderSelection />} />
                 <Route path='/products/order/:orderToken' element={<ClientProductOrderPage />} />
                 <Route path='/products/:token' element={<ClientProductsPage />} />
 
                 {/* Admin routes — no Navbar/Footer */}
+                <Route path='/login' element={<PhotographerLogin />} />
+                <Route path='/get-started' element={<GetStartedPage />} />
+                <Route path='/onboarding' element={<ProtectedRoute><OnboardingPage /></ProtectedRoute>} />
                 <Route path='/admin' element={<AdminLogin />} />
                 <Route
                   path='/admin/dashboard'
@@ -199,10 +253,90 @@ export const App = () => (
                   }
                 />
                 <Route
+                  path='/admin/billing'
+                  element={
+                    <ProtectedRoute>
+                      <BillingPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path='/admin/plans'
+                  element={
+                    <ProtectedRoute superadminOnly>
+                      <PlansPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
                   path='/admin/users'
                   element={
                     <ProtectedRoute superadminOnly>
                       <AdminUsers />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path='/admin/suppliers'
+                  element={
+                    <ProtectedRoute superadminOnly>
+                      <AdminSuppliersPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path='/admin/orders'
+                  element={
+                    <ProtectedRoute>
+                      <AdminOrders />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path='/admin/orders/:id'
+                  element={
+                    <ProtectedRoute>
+                      <AdminOrderDetail />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path='/admin/store'
+                  element={
+                    <ProtectedRoute>
+                      <AdminStore />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path='/admin/store/order/:productId'
+                  element={
+                    <ProtectedRoute>
+                      <AdminStoreOrderComposer />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path='/admin/billing-store'
+                  element={
+                    <ProtectedRoute>
+                      <AdminBillingStore />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path='/admin/collection'
+                  element={
+                    <ProtectedRoute>
+                      <AdminCollection />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path='/admin/settlements'
+                  element={
+                    <ProtectedRoute>
+                      <AdminSettlements />
                     </ProtectedRoute>
                   }
                 />
@@ -217,6 +351,24 @@ export const App = () => (
                     }
                   />
                 )}
+
+                {/* Supplier panel — separate auth, placed before /:id to avoid shadowing */}
+                <Route path='/supplier/login' element={<SupplierLogin />} />
+                <Route
+                  path='/supplier'
+                  element={
+                    <SupplierProtectedRoute>
+                      <SupplierLayout />
+                    </SupplierProtectedRoute>
+                  }
+                >
+                  <Route index element={<SupplierDashboard />} />
+                  <Route path='products' element={<SupplierProducts />} />
+                  <Route path='orders' element={<SupplierOrders />} />
+                  <Route path='orders/:id' element={<SupplierOrderDetail />} />
+                  <Route path='settlement' element={<SupplierSettlement />} />
+                  <Route path='settings' element={<SupplierSettings />} />
+                </Route>
 
                 {/* Per-photographer public pages — must be last to avoid shadowing other routes */}
                 <Route path='/:id' element={<PhotographerLayout />}>

@@ -48,4 +48,42 @@ async function sendGallerySms({ clientName, clientPhone, galleryUrl, lang = 'he'
   return true;
 }
 
-module.exports = { sendGallerySms };
+/**
+ * Notify a client about their order status change via SMS.
+ * Returns true on success, false if Twilio is not configured or status unrecognised.
+ */
+async function sendOrderStatusSms({ phone, clientName, studioName, status }) {
+  const messages = {
+    in_production: `Hi ${clientName}, your photo products with ${studioName} are now in production! We'll update you once they ship.`,
+    ready_to_ship: `Hi ${clientName}, your order from ${studioName} is packed and ready to ship!`,
+    shipped:       `Hi ${clientName}, your order from ${studioName} has shipped! Check your email for tracking details.`,
+    delivered:     `Hi ${clientName}, your order from ${studioName} has been delivered! Enjoy your photos.`,
+  };
+
+  const body = messages[status];
+  if (!body) return;
+
+  const client = getClient();
+  if (!client) {
+    console.warn('[sms] Twilio not configured — skipping order status SMS');
+    return false;
+  }
+
+  const from = process.env.TWILIO_FROM_NUMBER;
+  if (!from) {
+    console.warn('[sms] TWILIO_FROM_NUMBER not set — skipping order status SMS');
+    return false;
+  }
+
+  const digits = phone.replace(/\D/g, '');
+  const to = digits.startsWith('972')
+    ? `+${digits}`
+    : digits.startsWith('0')
+    ? `+972${digits.slice(1)}`
+    : `+${digits}`;
+
+  await client.messages.create({ from, to, body });
+  return true;
+}
+
+module.exports = { sendGallerySms, sendOrderStatusSms };

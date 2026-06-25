@@ -58,7 +58,7 @@ export const AdminSelections = () => {
                   key={g._id}
                   onClick={() => setSelected(g._id)}
                   className={`w-full text-left px-3 py-2.5 rounded-xl text-sm transition-colors ${
-                    selected === g._id ? 'bg-blush/20 text-charcoal font-medium' : 'text-charcoal hover:bg-ivory'
+                    selected === g._id ? 'bg-ivory text-charcoal font-medium border-b-2 border-charcoal' : 'text-charcoal hover:bg-ivory'
                   }`}
                 >
                   <p>{g.name}</p>
@@ -133,7 +133,7 @@ export const AdminSelections = () => {
                       return (
                         <div key={img._id} className='relative aspect-square rounded-md overflow-hidden bg-beige group'>
                           <img
-                            src={getImageUrl(img.path)}
+                            src={getImageUrl(img.thumbnailPath || img.path)}
                             alt={img.filename}
                             className='w-full h-full object-cover'
                             loading='lazy'

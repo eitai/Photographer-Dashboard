@@ -264,6 +264,72 @@ async function start() {
   }
 
   try {
+    const migrationSql008 = require('fs').readFileSync(
+      require('path').join(__dirname, 'src/db/migrations/008_store_supplier.sql'),
+      'utf8'
+    );
+    await pool.query(migrationSql008);
+    logger.info('[migrate] store/supplier tables ensured');
+  } catch (err) {
+    logger.warn('[migrate] store/supplier migration skipped:', err.message);
+  }
+
+  try {
+    const migrationSql011 = require('fs').readFileSync(
+      require('path').join(__dirname, 'src/db/migrations/011_product_order_store_link.sql'),
+      'utf8'
+    );
+    await pool.query(migrationSql011);
+    logger.info('[migrate] product_orders.store_order_id column ensured');
+  } catch (err) {
+    logger.warn('[migrate] product_orders.store_order_id migration skipped:', err.message);
+  }
+
+  try {
+    const migrationSql012 = require('fs').readFileSync(
+      require('path').join(__dirname, 'src/db/migrations/012_admin_supplier_favorites.sql'),
+      'utf8'
+    );
+    await pool.query(migrationSql012);
+    logger.info('[migrate] admin_supplier_favorites table ensured');
+  } catch (err) {
+    logger.warn('[migrate] admin_supplier_favorites migration skipped:', err.message);
+  }
+
+  try {
+    const migrationSql013 = require('fs').readFileSync(
+      require('path').join(__dirname, 'src/db/migrations/013_product_config_direct_orders.sql'),
+      'utf8'
+    );
+    await pool.query(migrationSql013);
+    logger.info('[migrate] product config + direct orders columns ensured');
+  } catch (err) {
+    logger.warn('[migrate] product config/direct orders migration skipped:', err.message);
+  }
+
+  try {
+    const migrationSql014 = require('fs').readFileSync(
+      require('path').join(__dirname, 'src/db/migrations/014_billing.sql'),
+      'utf8'
+    );
+    await pool.query(migrationSql014);
+    logger.info('[migrate] billing & settlement tables ensured');
+  } catch (err) {
+    logger.warn('[migrate] billing migration skipped:', err.message);
+  }
+
+  try {
+    const migrationSql015 = require('fs').readFileSync(
+      require('path').join(__dirname, 'src/db/migrations/015_documents.sql'),
+      'utf8'
+    );
+    await pool.query(migrationSql015);
+    logger.info('[migrate] issued_documents table ensured');
+  } catch (err) {
+    logger.warn('[migrate] documents migration skipped:', err.message);
+  }
+
+  try {
     await pool.query(`ALTER TABLE clients ADD COLUMN IF NOT EXISTS event_date DATE`);
     logger.info('[migrate] clients.event_date column ensured');
   } catch (err) {

@@ -1027,6 +1027,14 @@ async function selfTestCjxlJpeg() {
 
 // ── Bootstrap ────────────────────────────────────────────────────────────────
 
+// Monthly billing: close the previous month and charge saved cards.
+async function billingMonthlyHandler(job) {
+  const billingService = require('../services/billingService');
+  const result = await billingService.closeCycle();
+  logger.info(`[worker:billing] ${JSON.stringify(result)}`);
+  return result;
+}
+
 async function main() {
   assertDjxlVersion();
   assertCjxlVersion();
@@ -1048,10 +1056,15 @@ async function main() {
   // teamSize: 1 — TF.js models use ~150-200 MB; limit concurrency to one job at a time
   await boss.work(JOB_NAMES.FACE_RECOGNITION, { teamSize: 1, teamConcurrency: 1 }, faceRecognitionHandler);
 
+  // Monthly photographer billing — close the previous month's cycle, charge
+  // saved cards. Cron is UTC; 06:00 on the 1st. Idempotent (UNIQUE per period).
+  await boss.work(JOB_NAMES.BILLING_MONTHLY, { teamSize: 1, teamConcurrency: 1 }, billingMonthlyHandler);
+  await boss.schedule(JOB_NAMES.BILLING_MONTHLY, '0 6 1 * *', {}, { tz: 'UTC' });
+
   logger.info(
     `[worker] ready — concurrency=${HANDLER_OPTS.teamSize} ` +
     `queues=[${JOB_NAMES.COMPRESSION_TRANSCODE}, ${JOB_NAMES.COMPRESSION_VERIFY}, ` +
-    `${JOB_NAMES.COMPRESSION_CLEANUP}, ${JOB_NAMES.FACE_RECOGNITION}]`
+    `${JOB_NAMES.COMPRESSION_CLEANUP}, ${JOB_NAMES.FACE_RECOGNITION}, ${JOB_NAMES.BILLING_MONTHLY}]`
   );
   // Process stays alive on the queue's polling loop. Do not return.
 }

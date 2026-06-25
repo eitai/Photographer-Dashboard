@@ -140,6 +140,15 @@ app.use('/api/galleries/:galleryId/submit', submissionLimiter);
 app.use('/api/product-orders/:id/selection', submissionLimiter);
 app.use('/api/galleries/token', galleryTokenLimiter);
 
+const storeLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: process.env.NODE_ENV === 'test' ? 10000 : 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { message: 'Too many requests, please try again later.' },
+});
+app.use('/api/store/:galleryToken/checkout', storeLimiter);
+
 // ── Static files ──────────────────────────────────────────────────────────────
 // crossOriginResourcePolicy must be disabled here so browsers can load images
 // from this origin into pages served from a different origin (the frontend).
@@ -176,21 +185,31 @@ v1.use('/galleries', require('./routes/galleries'));
 v1.use('/galleries/:galleryId/images', require('./routes/images'));
 v1.use('/galleries/:galleryId/face-recognition', require('./routes/faceRecognition'));
 v1.use('/galleries/:galleryId/folders', require('./routes/folders'));
-v1.use('/galleries/:galleryId', require('./routes/selections'));
-v1.use('/blog', require('./routes/blog'));
-v1.use('/contact', require('./routes/contact'));
-v1.use('/settings', require('./routes/settings'));
-v1.use('/admins', require('./routes/admins'));
-v1.use('/storage', require('./routes/storage'));
-v1.use('/admin-products', require('./routes/adminProducts'));
-v1.use('/product-orders', require('./routes/productOrders'));
-v1.use('/p/:id', require('./routes/public'));
+v1.use('/galleries/:galleryId',        require('./routes/selections'));
+v1.use('/blog',                        require('./routes/blog'));
+v1.use('/contact',                     require('./routes/contact'));
+v1.use('/settings',                    require('./routes/settings'));
+v1.use('/admins',                      require('./routes/admins'));
+v1.use('/storage',                     require('./routes/storage'));
+v1.use('/admin-products',              require('./routes/adminProducts'));
+v1.use('/product-orders',              require('./routes/productOrders'));
+v1.use('/plans',                       require('./routes/plans'));
+v1.use('/supplier/auth',               require('./routes/supplierAuth'));
+v1.use('/supplier/products',           require('./routes/supplierProducts'));
+v1.use('/admin/suppliers',             require('./routes/adminSuppliers'));
+v1.use('/orders',           require('./routes/orders'));
+v1.use('/supplier/orders',  require('./routes/supplierOrders'));
+v1.use('/store',                       require('./routes/store'));
+v1.use('/billing',                     require('./routes/photographerBilling'));
+v1.use('/admin/billing',               require('./routes/adminBilling'));
+v1.use('/supplier/settlement',         require('./routes/supplierSettlement'));
+v1.use('/p/:id',                       require('./routes/public'));
 
 // Direct browser → Wasabi multipart upload pipeline + pg-boss compression
 // queue. Mounted alongside the legacy /galleries/:id/images flow — both
 // remain active. See services/storage.js, queue/index.js, workers/index.js.
-v1.use('/uploads', require('./routes/uploads'));
-v1.use('/admin/queue', require('./routes/queue'));
+v1.use('/uploads',      require('./routes/uploads'));
+v1.use('/admin/queue',  require('./routes/queue'));
 
 app.use('/api/v1', v1);
 app.use('/api', v1); // backward compat — existing clients keep working

@@ -10,6 +10,11 @@ export interface Client {
   eventDate?: string;
   createdAt?: string;
   faceRecognitionEnabled?: boolean;
+  addressStreet?: string | null;
+  addressApartment?: string | null;
+  addressCity?: string | null;
+  addressZip?: string | null;
+  addressCountry?: string | null;
 }
 
 export interface AdminRecord {
@@ -24,6 +29,10 @@ export interface AdminRecord {
   storageUsedBytes: number;
   ssoEnabled?: boolean;
   googleEmail?: string | null;
+  canOrderSupplier?: boolean;
+  clientsCanOrder?: boolean;
+  billingBlocked?: boolean;
+  hasCardOnFile?: boolean;
 }
 
 export interface StorageStats {

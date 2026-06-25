@@ -3,8 +3,10 @@ const fs = require('fs');
 const jwt = require('jsonwebtoken');
 const pool = require('../db');
 const Admin = require('../models/Admin');
+const { getStorageUsedBytes } = require('../utils/storageUsage');
 const AdminProduct = require('../models/AdminProduct');
 const SiteSettings = require('../models/SiteSettings');
+const Subscription = require('../models/Subscription');
 const { superprotect } = require('../middleware/auth');
 const { uploadImage: upload, validateImageMagicBytes } = require('../middleware/upload');
 const asyncHandler = require('../middleware/asyncHandler');
@@ -58,8 +60,9 @@ router.post('/', asyncHandler(async (req, res) => {
     quotaGB: quotaGB || undefined,
   });
 
-  // Seed default product catalog for the new admin
+  // Seed default product catalog and assign free plan
   await AdminProduct.seedDefaults(admin.id);
+  await Subscription.assignFreePlan(admin.id);
 
   res.status(201).json({
     id: admin.id,
@@ -101,7 +104,7 @@ router.patch('/:id', asyncHandler(async (req, res) => {
   // Password changes must go through PUT /api/auth/password — never handle them here
   // so there is no risk of a partial update leaving the DB in an inconsistent state
   // (profile updated but password not changed, or vice-versa).
-  const { name, email, studioName, username } = req.body;
+  const { name, email, studioName, username, canOrderSupplier, clientsCanOrder } = req.body;
 
   if (username) {
     const conflict = await Admin.findOne({ username: username.toLowerCase() });
@@ -114,6 +117,8 @@ router.patch('/:id', asyncHandler(async (req, res) => {
   if (email !== undefined) update.email = email;
   if (studioName !== undefined) update.studioName = studioName || null;
   if (username !== undefined) update.username = username ? username.toLowerCase() : null;
+  if (canOrderSupplier !== undefined) update.canOrderSupplier = !!canOrderSupplier;
+  if (clientsCanOrder !== undefined) update.clientsCanOrder = !!clientsCanOrder;
 
   const updated = await Admin.findByIdAndUpdate(req.params.id, update);
   if (!updated) return res.status(404).json({ message: 'Admin not found' });
@@ -155,59 +160,29 @@ router.post('/:id/profile-image', upload.single('image'), validateImageMagicByte
 
 // GET /api/admins/:id/storage — superadmin only
 router.get('/:id/storage', asyncHandler(async (req, res) => {
-  const { rows } = await pool.query(
-    `SELECT
-       COALESCE(SUM(gi.size), 0)::bigint
-       + COALESCE((
-           SELECT SUM((v->>'size')::bigint)
-           FROM galleries g2, jsonb_array_elements(g2.videos) v
-           WHERE g2.admin_id = $1 AND (v->>'size') IS NOT NULL
-         ), 0)::bigint AS used,
-       a.storage_quota_bytes AS quota
-     FROM admins a
-     LEFT JOIN galleries g  ON g.admin_id = a.id
-     LEFT JOIN gallery_images gi ON gi.gallery_id = g.id
-     WHERE a.id = $1
-     GROUP BY a.storage_quota_bytes`,
-    [req.params.id]
-  );
-  if (!rows[0]) return res.status(404).json({ message: 'Admin not found' });
+  // Resolve quota from the subscription system (plan-driven), not the legacy column
+  const sub = await Subscription.findByAdminId(req.params.id);
+  // No subscription row: admin pre-dates the migration and was not back-filled.
+  // The back-fill in 005_plans_subscriptions.sql should prevent this in practice.
+  if (!sub) return res.status(404).json({ message: 'No subscription found for this admin' });
 
-  const used  = Number(rows[0].used);
-  const quota = Number(rows[0].quota);
+  const quota = Subscription.resolveQuotaBytes(sub);
+  const used = await getStorageUsedBytes(req.params.id);
+
   res.json({
     adminId:     req.params.id,
     usedBytes:   used,
     quotaBytes:  quota,
-    usedGB:      parseFloat((used  / 1024 ** 3).toFixed(2)),
-    quotaGB:     parseFloat((quota / 1024 ** 3).toFixed(2)),
-    percentUsed: quota > 0 ? parseFloat(((used / quota) * 100).toFixed(1)) : 0,
+    usedGB:      parseFloat((used / 1024 ** 3).toFixed(2)),
+    quotaGB:     quota ? parseFloat((quota / 1024 ** 3).toFixed(2)) : null,
+    percentUsed: quota ? parseFloat(((used / quota) * 100).toFixed(1)) : 0,
+    planSlug:    sub.planSlug,
+    planName:    sub.planName,
   });
 }));
 
-// PATCH /api/admins/:id/quota — superadmin only
-// quotaGB: number = specific GB limit; 0 or null = unlimited
-router.patch('/:id/quota', asyncHandler(async (req, res) => {
-  const raw = req.body.quotaGB;
-  const unlimited = raw === null || raw === 0 || raw === '0';
-  const quotaGB = unlimited ? null : parseFloat(raw);
-  if (!unlimited && (!isFinite(quotaGB) || quotaGB < 0.1 || quotaGB > 10000)) {
-    return res.status(400).json({ message: 'quotaGB must be between 0.1 and 10000, or null for unlimited' });
-  }
-  const quotaBytes = unlimited ? null : Math.round(quotaGB * 1024 ** 3);
-  const { rows } = await pool.query(
-    `UPDATE admins SET storage_quota_bytes = $1, updated_at = NOW()
-     WHERE id = $2 RETURNING id, storage_quota_bytes`,
-    [quotaBytes, req.params.id]
-  );
-  if (!rows[0]) return res.status(404).json({ message: 'Admin not found' });
-  res.json({
-    adminId:    rows[0].id,
-    quotaBytes: rows[0].storage_quota_bytes ? Number(rows[0].storage_quota_bytes) : null,
-    quotaGB,
-    unlimited,
-  });
-}));
+// NOTE: PATCH /api/admins/:id/quota was removed — quota is now entirely driven by the
+// subscription system. Use PATCH /api/plans/admin/subscriptions/:adminId instead.
 
 // ── SSO helpers (mirrors auth.js) ────────────────────────────────────────────
 const _frontendUrl = () => {

@@ -10,6 +10,10 @@ CREATE TABLE IF NOT EXISTS admins (
   studio_name TEXT,
   push_token TEXT,
   storage_quota_bytes BIGINT NOT NULL DEFAULT 10737418240,
+  google_id TEXT UNIQUE,
+  google_email TEXT,
+  sso_enabled BOOLEAN NOT NULL DEFAULT FALSE,
+  first_login BOOLEAN NOT NULL DEFAULT TRUE,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );

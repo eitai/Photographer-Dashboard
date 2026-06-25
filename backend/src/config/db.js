@@ -1,7 +1,12 @@
-const { Pool } = require('pg');
+const { Pool, types } = require('pg');
 const fs = require('fs');
 const path = require('path');
 const logger = require('../utils/logger');
+
+// pg returns NUMERIC/DECIMAL columns as strings to avoid precision loss.
+// All our DECIMAL columns are 2-decimal money amounts, safely within Number
+// range, and the frontend expects numbers (e.g. costPrice.toFixed(2)).
+types.setTypeParser(types.builtins.NUMERIC, (v) => (v === null ? null : parseFloat(v)));
 
 // pg-connection-string treats sslmode=require as verify-full and overrides ssl options.
 // Replace it with no-verify so the driver enables SSL without strict cert checking

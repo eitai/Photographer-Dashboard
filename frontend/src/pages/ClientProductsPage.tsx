@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { Check, Send, ShoppingBag, Package } from 'lucide-react';
+import { Check, Send, ShoppingBag, Package, ChevronDown } from 'lucide-react';
 import Masonry from 'react-masonry-css';
 import api, { getImageUrl } from '@/lib/api';
 import { FadeIn } from '@/components/FadeIn';
@@ -16,7 +16,8 @@ import type { GalleryImage } from '@/types/gallery';
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 interface GalleryTab {
-  _id: string;
+  _id?: string;
+  id?: string;
   name: string;
   isDelivery: boolean;
 }
@@ -30,14 +31,15 @@ interface ImageWithGallery extends GalleryImage {
 export interface OrderPanelProps {
   order: ProductOrder;
   onSubmitted: (orderId: string) => void;
+  /** Offset for the sticky submit bar — should match the page header height */
+  stickyTop?: string;
 }
 
-export const OrderPanel = ({ order, onSubmitted }: OrderPanelProps) => {
+export const OrderPanel = ({ order, onSubmitted, stickyTop = 'top-16' }: OrderPanelProps) => {
+  const { t, dir } = useI18n();
   const galleries = order.allowedGalleryIds as GalleryTab[];
 
-  const [activeGalleryId, setActiveGalleryId] = useState<string | null>(
-    galleries.length > 0 ? null : null, // null = "All"
-  );
+  const [activeGalleryId, setActiveGalleryId] = useState<string | null>(null);
   const [allImages, setAllImages] = useState<ImageWithGallery[]>([]);
   const [imagesLoading, setImagesLoading] = useState(true);
   const [selectedPhotos, setSelectedPhotos] = useState<Map<string, SelectedPhoto>>(
@@ -49,29 +51,27 @@ export const OrderPanel = ({ order, onSubmitted }: OrderPanelProps) => {
 
   const atMax = selectedPhotos.size >= order.maxPhotos;
 
-  // Load images from all allowed galleries in parallel on mount
   useEffect(() => {
-    if (galleries.length === 0) {
-      setImagesLoading(false);
-      return;
-    }
+    if (galleries.length === 0) { setImagesLoading(false); return; }
     (async () => {
       setImagesLoading(true);
       try {
         const results = await Promise.all(
-          galleries.map((g) =>
-            api.get<GalleryImage[]>(`/galleries/${g._id}/images`).then((r) => r.data.map((img) => ({ ...img, galleryId: g._id }))),
-          ),
+          galleries.map((g) => {
+            const gid = (g as GalleryTab & { id?: string })._id || (g as GalleryTab & { id?: string }).id || '';
+            return api
+              .get<GalleryImage[] | { images: GalleryImage[] }>(`/galleries/${gid}/images?limit=300`)
+              .then((r) => {
+                const imgs = Array.isArray(r.data) ? r.data : (r.data as { images: GalleryImage[] }).images;
+                return imgs.map((img) => ({ ...img, galleryId: gid }));
+              });
+          }),
         );
-        // Merge and deduplicate by _id
         const seen = new Set<string>();
         const merged: ImageWithGallery[] = [];
         for (const batch of results) {
           for (const img of batch) {
-            if (!seen.has(img._id)) {
-              seen.add(img._id);
-              merged.push(img);
-            }
+            if (!seen.has(img._id)) { seen.add(img._id); merged.push(img); }
           }
         }
         setAllImages(merged);
@@ -83,16 +83,23 @@ export const OrderPanel = ({ order, onSubmitted }: OrderPanelProps) => {
     })();
   }, [order._id]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const visibleImages = activeGalleryId === null ? allImages : allImages.filter((img) => img.galleryId === activeGalleryId);
+  const visibleImages = useMemo(
+    () => activeGalleryId === null ? allImages : allImages.filter((img) => img.galleryId === activeGalleryId),
+    [allImages, activeGalleryId],
+  );
+
+  const getGid = (g: GalleryTab) => g._id || (g as GalleryTab & { id?: string }).id || '';
+
+  const galleryCounts = useMemo(
+    () => Object.fromEntries(galleries.map((g) => { const gid = getGid(g); return [gid, allImages.filter((img) => img.galleryId === gid).length]; })),
+    [allImages, galleries],
+  );
 
   const togglePhoto = useCallback(
     (img: ImageWithGallery) => {
       setSelectedPhotos((prev) => {
         const next = new Map(prev);
-        if (next.has(img._id)) {
-          next.delete(img._id);
-          return next;
-        }
+        if (next.has(img._id)) { next.delete(img._id); return next; }
         if (next.size >= order.maxPhotos) {
           setMaxReachedFlash(true);
           setTimeout(() => setMaxReachedFlash(false), 1200);
@@ -125,50 +132,60 @@ export const OrderPanel = ({ order, onSubmitted }: OrderPanelProps) => {
     }
   };
 
-  const typeLabel = order.type === 'album' ? 'Album' : 'Print';
-  const typeBadgeClass = 'bg-white/5 text-white/70 border-white/20';
+  const typeLabel = order.type === 'album' ? t('products.album') : t('products.print');
 
   // ── Submitted state ──────────────────────────────────────────────────────────
 
   if (submitted) {
     const submittedPhotos = Array.from(selectedPhotos.values());
+
+    const supplierBanner: Record<string, { label: string; cls: string }> = {
+      in_production: { label: dir === 'rtl' ? '🎨 ההזמנה שלך בייצור' : '🎨 Your order is in production',     cls: 'bg-orange-50 text-orange-700 border-orange-200' },
+      shipped:       { label: dir === 'rtl' ? '📦 ההזמנה שלך נשלחה' : '📦 Your order has shipped',           cls: 'bg-sky-50 text-sky-700 border-sky-200' },
+      delivered:     { label: dir === 'rtl' ? '✅ ההזמנה שלך נמסרה' : '✅ Your order has been delivered',    cls: 'bg-green-50 text-green-700 border-green-200' },
+    };
+    const banner = order.supplierStatus ? supplierBanner[order.supplierStatus] : null;
+
     return (
       <FadeIn>
-        <div className='bg-[#111111] border border-white/10 rounded-2xl overflow-hidden'>
-          {/* Header */}
-          <div className='px-5 py-4 bg-[#0D0D0D] border-b border-white/10 flex items-center gap-3 flex-wrap'>
-            <div className='flex-1 min-w-0'>
-              <div className='flex items-center gap-2 flex-wrap'>
-                <h3 className='font-playfair text-base text-white'>{order.name}</h3>
-                <span className={`text-[11px] px-2 py-0.5 rounded-full border ${typeBadgeClass}`}>{typeLabel}</span>
-                <span className='text-[11px] px-2 py-0.5 rounded-full border bg-white/10 text-white/80 border-white/20 flex items-center gap-1'>
-                  <Check size={10} />
-                  Submitted
+        <div className='bg-card border border-border rounded-2xl'>
+          {banner && (
+            <div className={`px-5 py-3 border-b text-sm font-medium rounded-t-2xl ${banner.cls}`}>
+              {banner.label}
+              {order.supplierStatus === 'shipped' && order.trackingNumber && (
+                <span className='ms-2 font-normal opacity-80'>
+                  {order.trackingCarrier ? `${order.trackingCarrier} — ` : ''}{order.trackingNumber}
                 </span>
-              </div>
-              <p className='text-xs text-white/50 mt-0.5'>
-                {submittedPhotos.length} photo{submittedPhotos.length !== 1 ? 's' : ''} selected
-              </p>
+              )}
             </div>
+          )}
+          <div className={`px-5 py-4 bg-muted/40 border-b border-border ${!banner ? 'rounded-t-2xl' : ''}`}>
+            <div className='flex items-center gap-2 flex-wrap'>
+              <h3 className='text-base font-semibold text-foreground'>{order.name}</h3>
+              <span className='text-[11px] px-2 py-0.5 rounded-full border border-border bg-muted text-muted-foreground'>{typeLabel}</span>
+              <span className='text-[11px] px-2.5 py-0.5 rounded-full bg-foreground text-background flex items-center gap-1'>
+                <Check size={10} />
+                {t('products.submitted')}
+              </span>
+            </div>
+            <p className='text-xs text-muted-foreground mt-1'>
+              {submittedPhotos.length} {t('products.selected_of')} {order.maxPhotos}
+            </p>
           </div>
 
-          {/* Submitted photo strip */}
           {submittedPhotos.length > 0 && (
             <div className='p-4'>
               <div className='grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-2'>
                 {submittedPhotos.map((photo) => (
-                  <div
-                    key={photo.imageId}
-                    className='relative aspect-square rounded-lg overflow-hidden ring-2 ring-white/60'
-                  >
+                  <div key={photo.imageId} className='relative aspect-square rounded-lg overflow-hidden ring-2 ring-foreground'>
                     <img
                       src={getImageUrl(photo.thumbnailPath || photo.path)}
                       alt={photo.filename}
                       className='w-full h-full object-cover'
                       loading='lazy'
                     />
-                    <div className='absolute top-1 end-1 w-5 h-5 rounded-full bg-white flex items-center justify-center'>
-                      <Check size={10} className='text-black' />
+                    <div className='absolute top-1 end-1 w-5 h-5 rounded-full bg-foreground flex items-center justify-center'>
+                      <Check size={10} className='text-background' />
                     </div>
                   </div>
                 ))}
@@ -184,64 +201,54 @@ export const OrderPanel = ({ order, onSubmitted }: OrderPanelProps) => {
 
   return (
     <FadeIn>
-      <div className='bg-[#111111] border border-white/10 rounded-2xl overflow-hidden'>
-        {/* Order header + sticky submit bar */}
-        <div className='sticky top-[69px] z-10 px-5 py-4 bg-[#0D0D0D] border-b border-white/10'>
-          <div className='flex items-start justify-between gap-3 flex-wrap'>
-            <div className='min-w-0'>
-              <div className='flex items-center gap-2 flex-wrap'>
-                <h3 className='font-playfair text-base text-white'>{order.name}</h3>
-                <span className={`text-[11px] px-2 py-0.5 rounded-full border ${typeBadgeClass}`}>{typeLabel}</span>
-              </div>
-              <p className='text-xs text-white/40 mt-0.5'>
-                Select up to {order.maxPhotos} photo{order.maxPhotos !== 1 ? 's' : ''}
-              </p>
-            </div>
+      <div className='bg-card border border-border rounded-2xl'>
 
-            <div className='flex items-center gap-3 shrink-0'>
-              <span
-                className={`text-sm font-medium transition-colors duration-300 ${
-                  maxReachedFlash ? 'text-red-400 scale-105' : atMax ? 'text-red-400' : 'text-white/60'
-                }`}
-              >
-                {selectedPhotos.size} / {order.maxPhotos}
-                {atMax && <span className='ms-2 text-xs font-normal'>— max reached</span>}
+        {/* Sticky submit bar */}
+        <div className={`sticky ${stickyTop} z-10 px-5 py-3 bg-card border-b border-border rounded-t-2xl`}>
+          <div className='flex items-center justify-between gap-3 flex-wrap'>
+            <div className='min-w-0 flex items-center gap-2 flex-wrap'>
+              <h3 className='text-sm font-semibold text-foreground'>{order.name}</h3>
+              <span className='text-[11px] px-2 py-0.5 rounded-full border border-border bg-muted text-muted-foreground'>{typeLabel}</span>
+              <span className={`text-xs transition-colors duration-300 ${maxReachedFlash ? 'text-red-500 font-semibold' : atMax ? 'text-red-500' : 'text-muted-foreground'}`}>
+                {selectedPhotos.size} / {order.maxPhotos} {t('products.max_label')}
+                {atMax && <span className='ms-1.5 font-normal'>— {t('products.max_reached')}</span>}
               </span>
-
-              <button
-                onClick={handleSubmit}
-                disabled={submitting || selectedPhotos.size === 0}
-                className='flex items-center gap-2 px-4 py-2 bg-white text-black text-sm rounded-lg hover:bg-white/90 transition-opacity disabled:opacity-50'
-              >
-                <Send size={13} />
-                {submitting ? 'Submitting…' : 'Submit Selection'}
-              </button>
             </div>
+
+            <button
+              onClick={handleSubmit}
+              disabled={submitting || selectedPhotos.size === 0}
+              className='flex items-center gap-2 px-4 py-2 bg-foreground text-background text-sm font-medium rounded-lg hover:bg-foreground/80 transition-opacity disabled:opacity-40 cursor-pointer shrink-0'
+            >
+              <Send size={13} className={dir === 'rtl' ? 'rotate-180' : ''} />
+              {submitting ? t('products.submitting') : t('products.submit')}
+            </button>
           </div>
 
           {/* Gallery filter tabs */}
           {galleries.length > 1 && (
-            <div className='flex gap-1.5 mt-3 flex-wrap'>
+            <div className='flex gap-1.5 mt-2.5 flex-wrap'>
               <button
                 onClick={() => setActiveGalleryId(null)}
                 className={`px-3 py-1 text-xs rounded-full border transition-colors ${
                   activeGalleryId === null
-                    ? 'bg-white text-black border-white'
-                    : 'border-white/20 text-white/40 hover:text-white hover:border-white/50'
+                    ? 'bg-foreground text-background border-foreground'
+                    : 'border-border text-muted-foreground hover:text-foreground hover:border-foreground'
                 }`}
               >
-                All ({allImages.length})
+                {t('products.choose_gallery') === 'Choose a gallery to browse' ? 'All' : 'הכל'} ({allImages.length})
               </button>
               {galleries.map((g) => {
-                const count = allImages.filter((img) => img.galleryId === g._id).length;
+                const gid = getGid(g);
+                const count = galleryCounts[gid] ?? 0;
                 return (
                   <button
-                    key={g._id}
-                    onClick={() => setActiveGalleryId(g._id)}
+                    key={gid}
+                    onClick={() => setActiveGalleryId(gid)}
                     className={`px-3 py-1 text-xs rounded-full border transition-colors ${
-                      activeGalleryId === g._id
-                        ? 'bg-white text-black border-white'
-                        : 'border-white/20 text-white/40 hover:text-white hover:border-white/50'
+                      activeGalleryId === gid
+                        ? 'bg-foreground text-background border-foreground'
+                        : 'border-border text-muted-foreground hover:text-foreground hover:border-foreground'
                     }`}
                   >
                     {g.name} ({count})
@@ -255,26 +262,28 @@ export const OrderPanel = ({ order, onSubmitted }: OrderPanelProps) => {
         {/* Image grid */}
         <div className='p-4'>
           {imagesLoading ? (
-            <div className='flex items-center justify-center py-16 gap-3'>
-              <div className='w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin' />
-              <p className='text-sm text-white/40'>Loading photos…</p>
+            <div className='flex items-center justify-center py-20 gap-3'>
+              <div className='w-5 h-5 border-2 border-border border-t-foreground rounded-full animate-spin' />
+              <p className='text-sm text-muted-foreground'>{t('products.loading')}</p>
             </div>
           ) : visibleImages.length === 0 ? (
-            <p className='text-center text-sm text-white/40 py-12'>No photos available.</p>
+            <p className='text-center text-sm text-muted-foreground py-16'>{t('products.no_images')}</p>
           ) : (
-            <Masonry breakpointCols={{ default: 4, 1024: 3, 640: 2 }} className='masonry-grid' columnClassName='masonry-grid_column'>
-              {visibleImages.map((img, i) => {
+            <Masonry
+              breakpointCols={{ default: 4, 1024: 3, 640: 2 }}
+              className='masonry-grid'
+              columnClassName='masonry-grid_column'
+            >
+              {visibleImages.map((img) => {
                 const isSelected = selectedPhotos.has(img._id);
                 const isBlocked = !isSelected && atMax;
                 return (
-                  <FadeIn key={img._id} delay={Math.min(i * 0.015, 0.2)}>
+                  <div key={img._id} className='mb-3'>
                     <div
-                      onClick={() => {
-                        if (!isBlocked) togglePhoto(img);
-                      }}
-                      className={`group relative rounded-xl overflow-hidden transition-all duration-200 mb-3 ${
-                        isBlocked ? 'opacity-20 cursor-not-allowed' : 'cursor-pointer'
-                      } ${isSelected ? 'ring-2 ring-white shadow-[0_0_0_2px_rgba(255,255,255,0.8)]' : ''}`}
+                      onClick={() => { if (!isBlocked) togglePhoto(img); }}
+                      className={`group relative rounded-xl overflow-hidden transition-all duration-200 ${
+                        isBlocked ? 'opacity-30 cursor-not-allowed' : 'cursor-pointer'
+                      } ${isSelected ? 'ring-2 ring-foreground ring-offset-1' : ''}`}
                     >
                       <img
                         src={getImageUrl(img.thumbnailPath || img.path)}
@@ -282,31 +291,24 @@ export const OrderPanel = ({ order, onSubmitted }: OrderPanelProps) => {
                         className='w-full h-auto block'
                         loading='lazy'
                       />
-
-                      {/* Hover overlay */}
                       {!isBlocked && (
-                        <div className='absolute inset-0 bg-white/0 group-hover:bg-white/[0.08] transition-colors duration-200 pointer-events-none' />
+                        <div className='absolute inset-0 bg-foreground/0 group-hover:bg-foreground/[0.06] transition-colors duration-200 pointer-events-none' />
                       )}
-
-                      {/* Selected check badge */}
                       {isSelected ? (
-                        <div className='absolute top-2 end-2 w-7 h-7 rounded-full bg-white flex items-center justify-center shadow-sm'>
-                          <Check size={13} className='text-black' />
+                        <div className='absolute top-2 end-2 w-7 h-7 rounded-full bg-foreground flex items-center justify-center shadow-sm'>
+                          <Check size={13} className='text-background' />
                         </div>
                       ) : !isBlocked ? (
                         <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            togglePhoto(img);
-                          }}
-                          className='absolute top-2 end-2 w-7 h-7 rounded-full bg-white/10 border border-white/30 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200'
-                          aria-label='Select photo'
+                          onClick={(e) => { e.stopPropagation(); togglePhoto(img); }}
+                          className='absolute top-2 end-2 w-7 h-7 rounded-full bg-background/80 border border-border text-foreground flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200'
+                          aria-label={t('products.pick_photos')}
                         >
                           <Check size={13} />
                         </button>
                       ) : null}
                     </div>
-                  </FadeIn>
+                  </div>
                 );
               })}
             </Masonry>
@@ -314,6 +316,77 @@ export const OrderPanel = ({ order, onSubmitted }: OrderPanelProps) => {
         </div>
       </div>
     </FadeIn>
+  );
+};
+
+// ── PreviousOrderRow ──────────────────────────────────────────────────────────
+// Compact, expandable row for an already-submitted order. Collapsed it shows
+// just name + status; expanded it reveals the chosen photos and tracking.
+
+const PreviousOrderRow = ({ order }: { order: ProductOrder }) => {
+  const { t, dir } = useI18n();
+  const [open, setOpen] = useState(false);
+
+  const typeLabel = order.type === 'album' ? t('products.album') : t('products.print');
+  const statusLabel = order.supplierStatus
+    ? t(`orders.status.${order.supplierStatus}`)
+    : t('products.submitted');
+  const photos = order.selectedPhotoIds ?? [];
+
+  return (
+    <div className='bg-card border border-border rounded-2xl overflow-hidden'>
+      <button
+        type='button'
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+        className='w-full flex items-center gap-3 px-5 py-3 text-start hover:bg-muted/40 transition-colors'
+      >
+        <span className='min-w-0 flex-1 flex items-center gap-2 flex-wrap'>
+          <span className='text-sm font-medium text-foreground truncate'>{order.name}</span>
+          <span className='text-[11px] px-2 py-0.5 rounded-full border border-border bg-muted text-muted-foreground shrink-0'>{typeLabel}</span>
+        </span>
+        <span className='text-[11px] px-2.5 py-0.5 rounded-full bg-foreground text-background flex items-center gap-1 shrink-0'>
+          <Check size={10} />
+          {statusLabel}
+        </span>
+        <ChevronDown
+          size={15}
+          className={`text-muted-foreground shrink-0 transition-transform duration-200 ${open ? 'rotate-180' : ''}`}
+        />
+      </button>
+
+      {open && (
+        <div className='border-t border-border'>
+          {(order.supplierStatus === 'shipped' || order.supplierStatus === 'delivered') && order.trackingNumber && (
+            <p className='px-5 py-2.5 text-xs text-muted-foreground border-b border-border'>
+              {t('orders.tracking')}:{' '}
+              <span className='text-foreground font-medium' dir='ltr'>
+                {order.trackingCarrier ? `${order.trackingCarrier} — ` : ''}{order.trackingNumber}
+              </span>
+            </p>
+          )}
+          <div className='p-4'>
+            <p className='text-xs text-muted-foreground mb-3'>
+              {photos.length} {t('products.selected_of')} {order.maxPhotos}
+            </p>
+            {photos.length > 0 && (
+              <div className='grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-2' dir={dir}>
+                {photos.map((photo) => (
+                  <div key={photo.imageId} className='relative aspect-square rounded-lg overflow-hidden ring-1 ring-border'>
+                    <img
+                      src={getImageUrl(photo.thumbnailPath || photo.path)}
+                      alt={photo.filename}
+                      className='w-full h-full object-cover'
+                      loading='lazy'
+                    />
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
   );
 };
 
@@ -339,9 +412,7 @@ export const ClientProductsPage = () => {
             try {
               const gRes = await api.get(`/galleries/token/${token}`);
               setClientName(gRes.data.clientName || '');
-            } catch {
-              // optional — silently ignore
-            }
+            } catch { /* optional */ }
           }
         }
       } catch {
@@ -356,86 +427,100 @@ export const ClientProductsPage = () => {
     setOrders((prev) => prev.map((o) => (o._id === orderId ? { ...o, status: 'submitted' as const } : o)));
   };
 
-  // ── Loading ────────────────────────────────────────────────────────────────
-
   if (loading) {
     return (
-      <main className='min-h-screen bg-[#0A0A0A] flex items-center justify-center'>
-        <div className='flex flex-col items-center gap-4'>
-          <div className='w-8 h-8 border-2 border-white/20 border-t-white rounded-full animate-spin' />
-          <p className='text-sm text-white/40'>Loading your products…</p>
-        </div>
+      <main data-theme="bw" className='min-h-screen bg-background flex items-center justify-center'>
+        <div className='w-8 h-8 border-2 border-foreground border-t-transparent rounded-full animate-spin' />
       </main>
     );
   }
-
-  // ── Error ──────────────────────────────────────────────────────────────────
 
   if (error) {
     return (
-      <main className='min-h-screen bg-[#0A0A0A] flex items-center justify-center px-6'>
+      <main data-theme="bw" className='min-h-screen bg-background flex items-center justify-center px-6'>
         <FadeIn>
           <div className='text-center'>
-            <Package size={40} className='mx-auto mb-4 text-white/20' />
-            <p className='font-playfair text-2xl text-white mb-2'>Link not found</p>
-            <p className='text-sm text-white/40'>This link may have expired or is invalid. Please contact your photographer.</p>
+            <Package size={40} className='mx-auto mb-4 text-muted-foreground' />
+            <p className='text-2xl font-semibold text-foreground mb-2'>Link not found</p>
+            <p className='text-sm text-muted-foreground'>This link may have expired or is invalid. Please contact your photographer.</p>
           </div>
         </FadeIn>
       </main>
     );
   }
-
-  // ── Empty ──────────────────────────────────────────────────────────────────
 
   if (orders.length === 0) {
     return (
-      <main className='min-h-screen bg-[#0A0A0A] flex items-center justify-center px-6'>
+      <main data-theme="bw" className='min-h-screen bg-background flex items-center justify-center px-6'>
         <FadeIn>
           <div className='text-center'>
-            <ShoppingBag size={40} className='mx-auto mb-4 text-white/20' />
-            <p className='font-playfair text-2xl text-white mb-2'>{t('products.no_products_title')}</p>
-            <p className='text-sm text-white/40'>{t('products.no_products_desc')}</p>
+            <ShoppingBag size={40} className='mx-auto mb-4 text-muted-foreground' />
+            <p className='text-2xl font-semibold text-foreground mb-2'>{t('products.no_products_title')}</p>
+            <p className='text-sm text-muted-foreground'>{t('products.no_products_desc')}</p>
           </div>
         </FadeIn>
       </main>
     );
   }
 
-  // ── Content ────────────────────────────────────────────────────────────────
-
   const allSubmitted = orders.every((o) => o.status === 'submitted');
+  const pendingOrders = orders.filter((o) => o.status !== 'submitted');
+  const previousOrders = orders.filter((o) => o.status === 'submitted');
 
   return (
-    <main className='min-h-screen bg-[#0A0A0A]'>
-      {/* Page header */}
-      <header className='bg-black border-b border-white/10 backdrop-blur-sm sticky top-0 z-20'>
+    <main data-theme="bw" className='min-h-screen bg-background'>
+      <header className='bg-background border-b border-border sticky top-0 z-20'>
         <div className='max-w-5xl mx-auto px-4 sm:px-6 py-4 flex items-center gap-3'>
-          <ShoppingBag size={18} className='text-white shrink-0' />
+          <ShoppingBag size={18} className='text-foreground shrink-0' />
           <div className='min-w-0'>
-            <h1 className='font-playfair text-lg text-white leading-tight'>Your Products</h1>
-            {clientName && <p className='text-xs text-white/40 truncate'>{clientName}</p>}
+            <h1 className='text-lg font-semibold text-foreground leading-tight'>{t('products.section_title')}</h1>
+            {clientName && <p className='text-xs text-muted-foreground truncate'>{clientName}</p>}
           </div>
           {allSubmitted && (
-            <span className='ms-auto text-xs flex items-center gap-1.5 text-white bg-white/10 border border-white/20 px-3 py-1 rounded-full'>
+            <span className='ms-auto text-xs flex items-center gap-1.5 text-foreground bg-muted border border-border px-3 py-1 rounded-full'>
               <Check size={11} />
-              All submitted
+              {t('products.submitted')}
             </span>
           )}
         </div>
       </header>
 
-      {/* Orders */}
       <div className='max-w-5xl mx-auto px-4 sm:px-6 py-8 space-y-8'>
-        {orders.map((order, i) => (
+        {/* Active orders — full selection panels */}
+        {pendingOrders.map((order, i) => (
           <FadeIn key={order._id} delay={i * 0.08}>
-            <OrderPanel order={order} onSubmitted={handleSubmitted} />
+            <OrderPanel order={order} onSubmitted={handleSubmitted} stickyTop='top-16' />
           </FadeIn>
         ))}
+
+        {pendingOrders.length === 0 && previousOrders.length > 0 && (
+          <FadeIn>
+            <div className='text-center py-10'>
+              <Check size={32} className='mx-auto mb-3 text-muted-foreground' />
+              <p className='text-lg font-semibold text-foreground'>{t('products.all_submitted_title')}</p>
+            </div>
+          </FadeIn>
+        )}
+
+        {/* Previously submitted orders — compact, expandable on demand */}
+        {previousOrders.length > 0 && (
+          <FadeIn>
+            <section>
+              <h2 className='text-xs font-semibold tracking-widest uppercase text-muted-foreground mb-3'>
+                {t('products.previous_orders')} ({previousOrders.length})
+              </h2>
+              <div className='space-y-2'>
+                {previousOrders.map((order) => (
+                  <PreviousOrderRow key={order._id} order={order} />
+                ))}
+              </div>
+            </section>
+          </FadeIn>
+        )}
       </div>
 
-      {/* Footer */}
       <footer className='text-center py-8 mt-4'>
-        <p className='text-white/20 text-xs tracking-widest uppercase'>Light Studio</p>
+        <p className='text-xs text-muted-foreground tracking-widest uppercase'>Light Studio</p>
       </footer>
     </main>
   );

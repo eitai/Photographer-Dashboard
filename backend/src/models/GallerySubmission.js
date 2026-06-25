@@ -5,8 +5,10 @@ async function _populateSelectedImages(submission) {
   if (!submission || !submission.selectedImageIds || !submission.selectedImageIds.length) {
     return submission;
   }
+  // Only the fields the admin UI consumes (display + ZIP download) — a
+  // submission can hold hundreds of images, so SELECT * bloats the response.
   const { rows } = await pool.query(
-    'SELECT * FROM gallery_images WHERE id = ANY($1::uuid[])',
+    'SELECT id, filename, original_name, path, thumbnail_path FROM gallery_images WHERE id = ANY($1::uuid[])',
     [submission.selectedImageIds]
   );
   submission.selectedImageIds = rows.map(rowToCamel);

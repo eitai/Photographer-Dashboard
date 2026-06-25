@@ -14,6 +14,7 @@ const logger = require('../utils/logger');
 const { UUID_RE } = require('../utils/uuid');
 const s3 = require('../config/s3');
 const { getQueue, JOB_NAMES } = require('../queue');
+const { ingestGalleryImages } = require('../utils/ingestGalleryImages');
 const pool = require('../db');
 
 const router = express.Router({ mergeParams: true });
@@ -72,70 +73,13 @@ router.post('/', protect, checkQuota, upload.array('images', 5000), validateImag
     selectedImageMap = Object.fromEntries(originalImages.map((img) => [path.parse(img.filename).name, img]));
   }
 
-  const limit = pLimit(5);
-  const imageDocs = await Promise.all(
-    req.files.map((file, i) => limit(async () => {
-      const thumbFilename = `thumb_${path.parse(file.filename).name}.jpg`;
-
-      // Generate thumbnail and preview buffers from the local temp file before
-      // processUpload deletes it. Both Sharp operations read the same source path.
-      const [thumbBuffer, previewBuffer] = await Promise.all([
-        sharp(file.path)
-          .withMetadata(false)
-          .resize({ width: 800, withoutEnlargement: true })
-          .jpeg({ quality: 78 })
-          .toBuffer(),
-        s3.generatePreview(file.path),
-      ]);
-
-      const previewBasename = path.parse(file.filename).name;
-      const previewFilename = `${previewBasename}.webp`;
-
-      // Store the preview buffer (S3 or local disk fallback).
-      // Buffers are already in memory so processUpload can safely unlink the temp file.
-      async function storePreview() {
-        if (s3.isEnabled()) {
-          try {
-            return await s3.uploadBuffer(
-              previewBuffer,
-              `admins/${req.admin.id}/previews/${previewFilename}`,
-              'image/webp'
-            );
-          } catch (err) {
-            logger.error('[images] storePreview S3 failed, preview will be null:', err.message);
-            return null;
-          }
-        }
-        fs.writeFileSync(path.join(PREVIEW_DIR, previewFilename), previewBuffer);
-        return `/uploads/previews/${previewFilename}`;
-      }
-
-      // Upload original, thumbnail, and preview concurrently.
-      const [imagePath, thumbnailPath, previewPath] = await Promise.all([
-        s3.processUpload(file, req.admin.id),
-        s3.processThumbnail(thumbBuffer, thumbFilename, THUMB_DIR, req.admin.id),
-        storePreview(),
-      ]);
-      const nameWithoutExt = path.parse(file.originalname).name;
-      const matchedOriginal = selectedImageMap[nameWithoutExt];
-
-      const folderId = req.body.folderId && UUID_RE.test(req.body.folderId) ? req.body.folderId : null;
-      return {
-        galleryId,
-        filename: file.filename,
-        originalName: file.originalname,
-        path: imagePath,
-        thumbnailPath,
-        previewPath,
-        beforePath: matchedOriginal ? matchedOriginal.path : undefined,
-        sortOrder: i,
-        size: file.size,
-        folderIds: folderId ? [folderId] : [],
-      };
-    }))
-  );
-
-  const created = await GalleryImage.insertMany(imageDocs);
+  const folderId = req.body.folderId && UUID_RE.test(req.body.folderId) ? req.body.folderId : null;
+  const created = await ingestGalleryImages(req.files, {
+    galleryId,
+    adminId: req.admin.id,
+    selectedImageMap,
+    folderId,
+  });
 
   // Fire-and-forget: enqueue face recognition for ALL gallery images — never block the 201 response.
   // We fetch the full ID list so the worker processes previously uploaded images too,

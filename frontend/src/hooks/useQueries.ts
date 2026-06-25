@@ -1,6 +1,50 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useRef } from 'react';
-import api, { getMyStorage, getAdminStorage, setAdminQuota, pingS3 } from '@/lib/api';
+import api, {
+  getMyStorage,
+  getAdminStorage,
+  setAdminQuota,
+  getPublicPlans,
+  getMyPlan,
+  getAdminPlans,
+  updateAdminPlan,
+  getAdminSubscriptions,
+  getCustomPrice,
+  checkoutPlan,
+  cancelSubscription,
+  reactivateSubscription,
+  getInvoices,
+  pingS3,
+  getSupplierProducts,
+  createSupplierProduct,
+  updateSupplierProduct,
+  deleteSupplierProduct,
+  uploadSupplierProductImage,
+  getAdminSuppliers,
+  createAdminSupplier,
+  updateAdminSupplier,
+  deleteAdminSupplier,
+  toggleSupplierActive,
+  setSupplierExclusive,
+  getOrders,
+  getOrder,
+  createOrder,
+  sendOrderToClient,
+  approveOrder,
+  sendOrderToSupplier,
+  cancelOrder,
+  deleteOrder,
+  getAdminSupplierProducts,
+  setSupplierProductFavorite,
+  createDirectOrder,
+  notifyOrderClient,
+  getSupplierOrders,
+  getSupplierOrder,
+  updateSupplierOrderStatus,
+  getStoreProducts,
+  getStoreOrderStatus,
+} from '@/lib/api';
+import type { Plan, InvoicesResponse, SupplierProduct, Supplier, StoreProductsResponse } from '@/lib/api';
 import * as clientService from '@/services/clientService';
 import * as galleryService from '@/services/galleryService';
 import { fetchProductOrders, updateProductOrderGalleries, deliverProductOrder } from '@/services/productOrderService';
@@ -28,6 +72,19 @@ export const queryKeys = {
   storageMe: ['storage', 'me'] as const,
   adminStorage: (id: string) => ['storage', 'admin', id] as const,
   galleryPreview: (galleryId: string) => ['galleries', galleryId, 'preview'] as const,
+  publicPlans: ['plans', 'public'] as const,
+  myPlan: ['plans', 'me'] as const,
+  adminPlans: ['plans', 'admin'] as const,
+  adminSubscriptions: ['plans', 'admin', 'subscriptions'] as const,
+  customPrice: (gb: number, interval: string) => ['plans', 'custom-price', gb, interval] as const,
+  supplierProducts: ['supplier', 'products'] as const,
+  adminSuppliers: ['admin', 'suppliers'] as const,
+  orders: ['orders'] as const,
+  orderDetail: (id: string) => ['orders', id] as const,
+  supplierOrders: ['supplier', 'orders'] as const,
+  supplierOrderDetail: (id: string) => ['supplier', 'orders', id] as const,
+  storeProducts: (token: string) => ['store', 'products', token] as const,
+  storeOrderStatus: (id: string) => ['store', 'order', id] as const,
 };
 
 // ---------------------------------------------------------------------------
@@ -84,6 +141,7 @@ export function useSubmissions(galleryId: string) {
     queryKey: queryKeys.submissions(galleryId),
     queryFn: () => galleryService.fetchSubmissions(galleryId),
     enabled: !!galleryId,
+    staleTime: 30_000,
   });
 }
 
@@ -133,22 +191,6 @@ export function useProductOrders(clientId: string) {
   });
 }
 
-export interface AdminProduct {
-  id: string;
-  adminId: string;
-  name: string;
-  type: 'album' | 'print';
-  maxPhotos: number;
-  createdAt: string;
-}
-
-export function useAdminProducts() {
-  return useQuery({
-    queryKey: queryKeys.adminProducts,
-    queryFn: () => api.get<AdminProduct[]>('/admin-products').then((r) => r.data),
-    staleTime: 60_000,
-  });
-}
 
 export function useMyStorage() {
   const pinged = useRef(false);
@@ -188,6 +230,186 @@ export function useSetAdminQuota() {
       queryClient.invalidateQueries({ queryKey: queryKeys.adminStorage(adminId) });
       queryClient.invalidateQueries({ queryKey: queryKeys.storageMe });
     },
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Plan hooks
+// ---------------------------------------------------------------------------
+
+export function usePublicPlans() {
+  return useQuery({
+    queryKey: queryKeys.publicPlans,
+    queryFn: getPublicPlans,
+    staleTime: 5 * 60_000,
+  });
+}
+
+export function useMyPlan() {
+  return useQuery({
+    queryKey: queryKeys.myPlan,
+    queryFn: getMyPlan,
+    staleTime: 60_000,
+  });
+}
+
+export function useAdminPlans() {
+  return useQuery({
+    queryKey: queryKeys.adminPlans,
+    queryFn: getAdminPlans,
+    staleTime: 60_000,
+  });
+}
+
+export function useAdminSubscriptions() {
+  return useQuery({
+    queryKey: queryKeys.adminSubscriptions,
+    queryFn: getAdminSubscriptions,
+    staleTime: 60_000,
+  });
+}
+
+export function useCustomPrice(gb: number, interval: 'monthly' | 'annual', enabled = true) {
+  return useQuery({
+    queryKey: queryKeys.customPrice(gb, interval),
+    queryFn: () => getCustomPrice(gb, interval),
+    enabled: enabled && gb > 0,
+    staleTime: 30_000,
+  });
+}
+
+export function useUpdateAdminPlan() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Partial<Plan> }) => updateAdminPlan(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.adminPlans });
+      queryClient.invalidateQueries({ queryKey: queryKeys.publicPlans });
+      queryClient.invalidateQueries({ queryKey: queryKeys.myPlan });
+    },
+  });
+}
+
+export function useInvoices(page = 1) {
+  return useQuery({
+    queryKey: ['plans', 'invoices', page],
+    queryFn: () => getInvoices(page),
+    staleTime: 60_000,
+  });
+}
+
+export function useCheckoutPlan() {
+  return useMutation({
+    mutationFn: ({ planId, billingInterval, customStorageGb }: { planId: string; billingInterval: 'monthly' | 'annual'; customStorageGb?: number }) =>
+      checkoutPlan(planId, billingInterval, customStorageGb),
+    onSuccess: ({ url }) => {
+      window.location.href = url;
+    },
+  });
+}
+
+export function useCancelSubscription() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: cancelSubscription,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.myPlan });
+    },
+  });
+}
+
+export function useReactivateSubscription() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: reactivateSubscription,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.myPlan });
+    },
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Supplier hooks
+// ---------------------------------------------------------------------------
+
+export function useSupplierProducts() {
+  return useQuery({ queryKey: queryKeys.supplierProducts, queryFn: getSupplierProducts, staleTime: 30_000 });
+}
+
+export function useAdminSuppliers() {
+  return useQuery({ queryKey: queryKeys.adminSuppliers, queryFn: getAdminSuppliers, staleTime: 30_000 });
+}
+
+export function useCreateSupplierProduct() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: createSupplierProduct,
+    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.supplierProducts }),
+  });
+}
+
+export function useUpdateSupplierProduct() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Partial<SupplierProduct> }) => updateSupplierProduct(id, data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.supplierProducts }),
+  });
+}
+
+export function useDeleteSupplierProduct() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: deleteSupplierProduct,
+    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.supplierProducts }),
+  });
+}
+
+export function useUploadSupplierProductImage() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, file }: { id: string; file: File }) => uploadSupplierProductImage(id, file),
+    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.supplierProducts }),
+  });
+}
+
+export function useCreateAdminSupplier() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: createAdminSupplier,
+    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.adminSuppliers }),
+  });
+}
+
+export function useUpdateAdminSupplier() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Partial<Omit<Supplier, 'id' | 'orderCount'>> }) =>
+      updateAdminSupplier(id, data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.adminSuppliers }),
+  });
+}
+
+export function useDeleteAdminSupplier() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: deleteAdminSupplier,
+    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.adminSuppliers }),
+  });
+}
+
+export function useToggleSupplierActive() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: toggleSupplierActive,
+    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.adminSuppliers }),
+  });
+}
+
+export function useSetSupplierExclusive() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: setSupplierExclusive,
+    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.adminSuppliers }),
   });
 }
 
@@ -330,6 +552,160 @@ export function useUpdateProductOrderGalleries(clientId: string) {
       updateProductOrderGalleries(orderId, { allowedGalleryIds }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.productOrders(clientId) });
+    },
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Store Order hooks
+// ---------------------------------------------------------------------------
+
+export function useOrders(params?: Parameters<typeof getOrders>[0]) {
+  return useQuery({
+    queryKey: [...queryKeys.orders, params],
+    queryFn: () => getOrders(params),
+    refetchInterval: 15_000,
+    refetchOnWindowFocus: true,
+  });
+}
+
+export function useOrder(id: string) {
+  return useQuery({ queryKey: queryKeys.orderDetail(id), queryFn: () => getOrder(id), enabled: !!id });
+}
+
+export function useCreateOrder() {
+  const qc = useQueryClient();
+  return useMutation({ mutationFn: createOrder, onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.orders }) });
+}
+
+export function useSendOrderToClient() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: sendOrderToClient,
+    onSuccess: (_, id) => qc.invalidateQueries({ queryKey: queryKeys.orderDetail(id) }),
+  });
+}
+
+export function useApproveOrder() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: approveOrder,
+    onSuccess: (_, id) => {
+      qc.invalidateQueries({ queryKey: queryKeys.orderDetail(id) });
+      qc.invalidateQueries({ queryKey: queryKeys.orders });
+    },
+  });
+}
+
+export function useSendOrderToSupplier() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: sendOrderToSupplier,
+    onSuccess: (_, id) => {
+      qc.invalidateQueries({ queryKey: queryKeys.orderDetail(id) });
+      qc.invalidateQueries({ queryKey: queryKeys.orders });
+    },
+  });
+}
+
+export function useCancelOrder() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: cancelOrder,
+    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.orders }),
+  });
+}
+
+export function useDeleteOrder() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: deleteOrder,
+    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.orders }),
+  });
+}
+
+export function useAdminSupplierProducts() {
+  return useQuery({
+    queryKey: ['admin', 'supplier-products'],
+    queryFn: getAdminSupplierProducts,
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
+export function useCreateDirectOrder() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: createDirectOrder,
+    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.orders }),
+  });
+}
+
+export function useToggleSupplierFavorite() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ productId, favorite }: { productId: string; favorite: boolean }) =>
+      setSupplierProductFavorite(productId, favorite),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['admin', 'supplier-products'] }),
+  });
+}
+
+export function useNotifyOrderClient() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => notifyOrderClient(id),
+    onSuccess: (_, id) => {
+      qc.invalidateQueries({ queryKey: queryKeys.orderDetail(id) });
+    },
+  });
+}
+
+export function useSupplierOrders(params?: Parameters<typeof getSupplierOrders>[0]) {
+  return useQuery({
+    queryKey: [...queryKeys.supplierOrders, params],
+    queryFn: () => getSupplierOrders(params),
+    refetchInterval: 5_000,
+    refetchOnWindowFocus: true,
+  });
+}
+
+export function useSupplierOrder(id: string) {
+  return useQuery({ queryKey: queryKeys.supplierOrderDetail(id), queryFn: () => getSupplierOrder(id), enabled: !!id });
+}
+
+export function useUpdateSupplierOrderStatus() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Parameters<typeof updateSupplierOrderStatus>[1] }) =>
+      updateSupplierOrderStatus(id, data),
+    onSuccess: (_, { id }) => {
+      qc.invalidateQueries({ queryKey: queryKeys.supplierOrderDetail(id) });
+      qc.invalidateQueries({ queryKey: queryKeys.supplierOrders });
+    },
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Store public hooks (client self-service Flow B)
+// ---------------------------------------------------------------------------
+
+export function useStoreProducts(galleryToken: string) {
+  return useQuery<StoreProductsResponse>({
+    queryKey: queryKeys.storeProducts(galleryToken),
+    queryFn: () => getStoreProducts(galleryToken),
+    enabled: !!galleryToken,
+    retry: false,
+  });
+}
+
+export function useStoreOrderStatus(orderId: string, enabled = true) {
+  return useQuery({
+    queryKey: queryKeys.storeOrderStatus(orderId),
+    queryFn: () => getStoreOrderStatus(orderId),
+    enabled: !!orderId && enabled,
+    refetchInterval: (query) => {
+      const status = query.state.data?.paymentStatus;
+      if (status === 'paid' || status === 'refunded') return false;
+      return 3000;
     },
   });
 }

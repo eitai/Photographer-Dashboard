@@ -110,6 +110,18 @@ async function findByIdAndUpdate(id, update) {
     googleEmail: 'google_email',
     ssoEnabled: 'sso_enabled',
     firstLogin: 'first_login',
+    addressStreet: 'address_street',
+    addressApartment: 'address_apartment',
+    addressCity: 'address_city',
+    addressZip: 'address_zip',
+    addressCountry: 'address_country',
+    canOrderSupplier: 'can_order_supplier',
+    clientsCanOrder: 'clients_can_order',
+    payplusCardToken: 'payplus_card_token',
+    cardLast4: 'card_last4',
+    cardBrand: 'card_brand',
+    billingBlocked: 'billing_blocked',
+    payplusCustomerUid: 'payplus_customer_uid',
   };
   const src = update.$set || update;
   for (const [k, v] of Object.entries(src)) {

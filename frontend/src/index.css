@@ -6,10 +6,10 @@
 
 @layer base {
   :root {
-    --background: #f5f0ea;
+    --background: #ffffff;
     --foreground: #3c3a38;
 
-    --card: #ffffff;
+    --card: #faf9f7;
     --card-foreground: #3c3a38;
 
     --popover: #ffffff;
@@ -21,7 +21,7 @@
     --secondary: #ede5da;
     --secondary-foreground: #3c3a38;
 
-    --muted: #e7e2db;
+    --muted: #f0ede8;
     --muted-foreground: #726e6a;
 
     --accent: #e7b8b5;
@@ -30,27 +30,32 @@
     --destructive: #f04444;
     --destructive-foreground: #f5f9fc;
 
-    --border: #ded9d1;
-    --input: #ded9d1;
+    /* Stronger section/card borders (was #e8e4de) */
+    --border: #d4cdc1;
+    --input: #d4cdc1;
     --ring: #e7b8b5;
 
     --radius: 0.5rem;
 
-    --sidebar-background: #ffffff;
+    --sidebar-background: #faf9f7;
     --sidebar-foreground: #3c3a38;
     --sidebar-primary: #e7b8b5;
     --sidebar-primary-foreground: #3c3a38;
     --sidebar-accent: #ede5da;
     --sidebar-accent-foreground: #3c3a38;
-    --sidebar-border: #ded9d1;
+    --sidebar-border: #e8e4de;
     --sidebar-ring: #e7b8b5;
 
     /* Custom tokens */
     --blush: #e7b8b5;
-    --beige: #ede5da;
-    --ivory: #f5f0ea;
+    /* Stronger section/card borders (was #ede5da) */
+    --beige: #d8ccba;
+    --ivory: #ffffff;
     --warm-gray: #8c8c8c;
     --charcoal: #3c3a38;
+    /* Selection accent (exhibition-white system) — same in every theme */
+    --flag: #f5a623;
+    --flag-ink: #9a6a0b;
 
     --font-heading: 'Playfair Display', Georgia, serif;
     --font-sans: 'Inter', system-ui, sans-serif;
@@ -74,8 +79,9 @@
     --accent-foreground: #f5f3ef;
     --destructive: #7f1d1d;
     --destructive-foreground: #f5f9fc;
-    --border: #3a3530;
-    --input: #3a3530;
+    /* Stronger section/card borders (was #3a3530) */
+    --border: #4c463f;
+    --input: #4c463f;
     --ring: #e7b8b5;
     --sidebar-background: #161412;
     --sidebar-foreground: #f5f3ef;
@@ -87,7 +93,8 @@
     --sidebar-ring: #e7b8b5;
     /* Custom tokens */
     --blush: #e7b8b5;
-    --beige: #302b29;
+    /* Stronger section/card borders (was #302b29) */
+    --beige: #423b37;
     --ivory: #1c1a18;
     --warm-gray: #a09890;
     --charcoal: #f5f3ef;
@@ -109,6 +116,7 @@
   h2,
   h3,
   h4 {
+    font-family: var(--font-heading);
     line-height: 1.3;
   }
 
@@ -352,30 +360,59 @@
   --warm-gray: #8a9bb8;
 }
 
+/* Exhibition-white (matches the landing page system):
+   paper #FFFFFF · ink #111111 · graphite #5C5C66 · hairline #E8E8EC ·
+   flag amber #F5A623 (selection states ONLY; #9A6A0B for amber text on white) */
 [data-theme='bw'] {
   --background: #ffffff;
-  --foreground: #000000;
+  --foreground: #111111;
   --card: #ffffff;
-  --card-foreground: #000000;
+  --card-foreground: #111111;
   --popover: #ffffff;
-  --popover-foreground: #000000;
-  --primary: #000000;
+  --popover-foreground: #111111;
+  --primary: #111111;
   --primary-foreground: #ffffff;
-  --secondary: #e0e0e0;
-  --secondary-foreground: #000000;
-  --muted: #e0e0e0;
-  --muted-foreground: #555555;
-  --accent: #000000;
+  --secondary: #f6f6f8;
+  --secondary-foreground: #111111;
+  --muted: #f6f6f8;
+  --muted-foreground: #5c5c66;
+  --accent: #111111;
   --accent-foreground: #ffffff;
-  --border: #cccccc;
-  --input: #cccccc;
-  --ring: #000000;
+  /* Stronger section/card borders (was #e8e8ec hairline) */
+  --border: #ccccd6;
+  --input: #ccccd6;
+  --ring: #111111;
   --radius: 0rem;
-  --blush: #000000;
-  --beige: #e0e0e0;
+  --blush: #111111;
+  --beige: #ccccd6;
   --ivory: #ffffff;
-  --charcoal: #000000;
-  --warm-gray: #555555;
+  --charcoal: #111111;
+  --warm-gray: #5c5c66;
+  --flag: #f5a623;
+  --flag-ink: #9a6a0b;
+}
+
+/* White body background when any bw-theme page is active */
+body:has([data-theme='bw']) {
+  background-color: #ffffff;
+}
+
+/* Force sans-serif headings on bw-theme pages (supplier, client, login screens) */
+[data-theme='bw'] h1,
+[data-theme='bw'] h2,
+[data-theme='bw'] h3,
+[data-theme='bw'] h4 {
+  font-family: var(--font-sans);
+  line-height: 1.4;
+}
+
+/* Escape hatch: explicit landing-system fonts win over the bw heading reset
+   (Frank Ruhl Libre / Heebo are Hebrew-native — used on client gallery pages) */
+[data-theme='bw'] .font-display {
+  font-family: 'Frank Ruhl Libre', Georgia, serif;
+}
+[data-theme='bw'] .font-body {
+  font-family: 'Heebo', system-ui, sans-serif;
 }
 
 /* react-masonry-css */

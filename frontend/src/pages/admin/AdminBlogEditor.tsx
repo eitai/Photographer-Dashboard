@@ -234,7 +234,7 @@ export const AdminBlogEditor = () => {
             <input
               {...register('title')}
               placeholder={t('admin.editor.title_placeholder')}
-              className='w-full text-2xl  text-charcoal bg-transparent border-0 border-b border-beige pb-3 focus:outline-none focus:border-blush'
+              className='w-full text-2xl  text-charcoal bg-transparent border-0 border-b border-beige pb-3 focus:outline-none focus:border-charcoal'
             />
             {errors.title && <p className='text-xs text-rose-500 mt-1'>{errors.title.message}</p>}
           </div>
@@ -271,9 +271,9 @@ export const AdminBlogEditor = () => {
                     if (e.key === 'Escape') cancelLink();
                   }}
                   placeholder='https://'
-                  className='flex-1 text-xs border border-beige rounded px-2 py-1 bg-ivory focus:outline-none focus:border-blush'
+                  className='flex-1 text-xs border border-beige rounded px-2 py-1 bg-ivory focus:outline-none focus:border-charcoal'
                 />
-                <button type='button' onClick={commitLink} className='text-blush hover:text-charcoal' title={t('admin.editor.apply')}>
+                <button type='button' onClick={commitLink} className='text-charcoal hover:text-charcoal' title={t('admin.editor.apply')}>
                   <Check size={14} />
                 </button>
                 <button type='button' onClick={cancelLink} className='text-warm-gray hover:text-charcoal' title={t('admin.common.cancel')}>
@@ -298,9 +298,9 @@ export const AdminBlogEditor = () => {
                     if (e.key === 'Escape') cancelImage();
                   }}
                   placeholder='https://'
-                  className='flex-1 text-xs border border-beige rounded px-2 py-1 bg-ivory focus:outline-none focus:border-blush'
+                  className='flex-1 text-xs border border-beige rounded px-2 py-1 bg-ivory focus:outline-none focus:border-charcoal'
                 />
-                <button type='button' onClick={commitImage} className='text-blush hover:text-charcoal' title={t('admin.editor.apply')}>
+                <button type='button' onClick={commitImage} className='text-charcoal hover:text-charcoal' title={t('admin.editor.apply')}>
                   <Check size={14} />
                 </button>
                 <button type='button' onClick={cancelImage} className='text-warm-gray hover:text-charcoal' title={t('admin.common.cancel')}>
@@ -348,7 +348,7 @@ export const AdminBlogEditor = () => {
               type='file'
               accept='image/*'
               onChange={(e) => setFeaturedImage(e.target.files?.[0] || null)}
-              className='w-full text-xs text-warm-gray file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:bg-blush/20 file:text-charcoal file:text-xs hover:file:bg-blush/30 cursor-pointer'
+              className='w-full text-xs text-warm-gray file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:bg-ivory file:text-charcoal file:text-xs hover:file:bg-beige cursor-pointer'
             />
           </div>
 
