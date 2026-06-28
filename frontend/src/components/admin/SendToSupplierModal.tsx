@@ -181,7 +181,7 @@ export const SendToSupplierModal = ({
             type='button'
             onClick={handleConfirm}
             disabled={isSending || !addressValid}
-            className='flex items-center gap-1.5 bg-blush text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-blush/80 transition-colors disabled:opacity-60'
+            className='flex items-center gap-1.5 bg-blush text-charcoal px-4 py-2 rounded-xl text-sm font-medium hover:bg-blush/80 transition-colors disabled:opacity-60'
           >
             <Send size={13} />
             {isSending ? t('admin.common.saving') : t('orders.action.send_to_supplier')}

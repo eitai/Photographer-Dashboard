@@ -110,7 +110,7 @@ function verifyWebhookSignature(payload) {
   if (!secretKey) return false;
 
   const receivedSig = payload[SIGNATURE_FIELD];
-  if (!receivedSig) return false;
+  if (!receivedSig || typeof receivedSig !== 'string') return false;
 
   // Compute HMAC-SHA256 over the more_info string
   const expected = crypto
@@ -118,10 +118,12 @@ function verifyWebhookSignature(payload) {
     .update(payload.more_info || '')
     .digest('hex');
 
-  return crypto.timingSafeEqual(
-    Buffer.from(receivedSig.toLowerCase()),
-    Buffer.from(expected.toLowerCase()),
-  );
+  const a = Buffer.from(receivedSig.toLowerCase());
+  const b = Buffer.from(expected.toLowerCase());
+  // crypto.timingSafeEqual throws if the buffers differ in length — guard first
+  // so a malformed signature yields a clean false instead of a 500.
+  if (a.length !== b.length) return false;
+  return crypto.timingSafeEqual(a, b);
 }
 
 /**

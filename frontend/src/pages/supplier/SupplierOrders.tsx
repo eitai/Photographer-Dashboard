@@ -94,16 +94,16 @@ export const SupplierOrders = () => {
       ]);
       const summaryRow = [he ? 'סה״כ' : 'Total', '', '', '', '', rep.summary.totalToPay, `${rep.summary.count}`];
       downloadCsv('supplier-orders', headers, rows, summaryRow);
-      if (rep.capped) toast.warning(he ? 'הדוח נחתך ל-5000 שורות' : 'Report capped at 5000 rows');
+      if (rep.capped) toast.warning(t('supplier.orders.report_capped'));
     } catch {
-      toast.error(dir === 'rtl' ? 'שגיאה בייצוא' : 'Export failed');
+      toast.error(t('supplier.orders.export_failed'));
     } finally {
       setExporting(false);
     }
   };
 
   const statusOptions = [
-    { value: 'all',              label: dir === 'rtl' ? 'הכל' : 'All statuses' },
+    { value: 'all',              label: t('supplier.orders.all_statuses') },
     { value: 'sent_to_supplier', label: t('orders.status.sent_to_supplier') },
     { value: 'in_production',    label: t('orders.status.in_production') },
     { value: 'ready_to_ship',    label: t('orders.status.ready_to_ship') },
@@ -120,7 +120,7 @@ export const SupplierOrders = () => {
             {t('supplier.orders.title')}
           </h1>
           {!isLoading && total > 0 && (
-            <span className='inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold bg-zinc-900 text-white'>
+            <span className='inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold bg-primary text-primary-foreground'>
               {total}
             </span>
           )}
@@ -157,7 +157,7 @@ export const SupplierOrders = () => {
             className='inline-flex items-center gap-2 h-9 px-3 rounded-xl border border-zinc-200 bg-white text-sm font-medium text-zinc-700 hover:bg-zinc-50 disabled:opacity-50'
           >
             <Download size={15} />
-            {exporting ? (dir === 'rtl' ? 'מייצא…' : 'Exporting…') : (dir === 'rtl' ? 'ייצוא CSV' : 'Export CSV')}
+            {exporting ? t('supplier.orders.exporting') : t('supplier.orders.export_csv')}
           </button>
         </div>
       </div>

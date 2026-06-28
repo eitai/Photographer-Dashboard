@@ -95,7 +95,7 @@ export const ChangePlanModal = ({ admin, isOpen, onClose, allPlans, currentSub }
                   type='button'
                   onClick={() => setInterval(iv)}
                   className={`flex-1 py-2 rounded-lg text-xs font-medium border transition-colors ${
-                    interval === iv ? 'bg-charcoal text-white border-charcoal' : 'border-beige text-warm-gray hover:bg-ivory'
+                    interval === iv ? 'bg-primary text-white border-primary' : 'border-beige text-warm-gray hover:bg-ivory'
                   }`}
                 >
                   {iv.charAt(0).toUpperCase() + iv.slice(1)}

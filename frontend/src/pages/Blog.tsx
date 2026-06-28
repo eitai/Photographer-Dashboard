@@ -5,9 +5,19 @@ import { useI18n } from '@/lib/i18n';
 import api, { getImageUrl } from '@/lib/api';
 import { Helmet } from 'react-helmet-async';
 
+interface BlogPostSummary {
+  _id: string;
+  slug: string;
+  title: string;
+  featuredImagePath?: string;
+  category?: string;
+  publishedAt?: string;
+  createdAt?: string;
+}
+
 export const Blog = () => {
   const { t } = useI18n();
-  const [posts, setPosts] = useState<any[]>([]);
+  const [posts, setPosts] = useState<BlogPostSummary[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {

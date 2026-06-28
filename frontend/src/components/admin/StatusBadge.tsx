@@ -1,11 +1,12 @@
 import { useI18n } from '@/lib/i18n';
 
 const STATUS_COLOR: Record<string, string> = {
-  gallery_sent:        'bg-blue-100 text-blue-700',
-  viewed:              'bg-yellow-100 text-yellow-700',
-  selection_submitted: 'bg-blush/20 text-charcoal',
-  in_editing:          'bg-purple-100 text-purple-700',
-  delivered:           'bg-green-100 text-green-700',
+  gallery_sent:        'bg-[#D6EAF8] text-[#1A5276]',
+  viewed:              'bg-[#FEF9E7] text-[#7D6608]',
+  selection_submitted: 'bg-[#F7E4E3] text-[#8B3A38]',
+  in_editing:          'bg-[#EEE0FF] text-[#5B2D8E]',
+  delivered:           'bg-[#D5F5E3] text-[#1D6A39]',
+  draft:               'bg-[#F2F3F4] text-[#626567]',
 };
 
 export const StatusBadge = ({ status }: { status: string }) => {

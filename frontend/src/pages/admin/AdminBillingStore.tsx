@@ -88,7 +88,7 @@ export const AdminBillingStore = () => {
                 <p className='text-sm text-warm-gray'>{t('admin.billing.no_card')}</p>
               )}
               <div>
-                <Button onClick={handleAddCard} disabled={addingCard} className='bg-charcoal hover:bg-charcoal/90 text-white'>
+                <Button onClick={handleAddCard} disabled={addingCard} className='bg-primary hover:bg-primary/90 text-white'>
                   {data.hasCardOnFile ? t('admin.billing.replace_card') : t('admin.billing.add_card')}
                 </Button>
               </div>

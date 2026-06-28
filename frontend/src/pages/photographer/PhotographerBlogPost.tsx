@@ -1,18 +1,31 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import DOMPurify from 'dompurify';
-import { usePhotographer } from './PhotographerLayout';
+import { usePhotographer } from './usePhotographer';
 import { FadeIn } from '@/components/FadeIn';
 import { useI18n } from '@/lib/i18n';
 import { ArrowLeft } from 'lucide-react';
 import api, { getImageUrl } from '@/lib/api';
 import { Helmet } from 'react-helmet-async';
 
+interface BlogPostData {
+  slug: string;
+  title: string;
+  content?: string;
+  featuredImagePath?: string;
+  category?: string;
+  seoTitle?: string;
+  seoDescription?: string;
+  authorName?: string;
+  publishedAt?: string;
+  createdAt?: string;
+}
+
 export const PhotographerBlogPost = () => {
   const { slug } = useParams<{ username: string; slug: string }>();
   const { t } = useI18n();
   const { username } = usePhotographer();
-  const [post, setPost] = useState<any>(null);
+  const [post, setPost] = useState<BlogPostData | null>(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
 

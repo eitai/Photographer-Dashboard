@@ -19,7 +19,7 @@ const STATUS_COLORS: Record<string, string> = {
   pending_selection: 'bg-yellow-100 text-yellow-700',
   selection_submitted: 'bg-blue-100 text-blue-700',
   approved: 'bg-green-100 text-green-700',
-  sent_to_supplier: 'bg-purple-100 text-purple-700',
+  sent_to_supplier: 'bg-primary/15 text-primary',
   in_production: 'bg-orange-100 text-orange-700',
   ready_to_ship: 'bg-indigo-100 text-indigo-700',
   shipped: 'bg-sky-100 text-sky-700',
@@ -29,9 +29,12 @@ const STATUS_COLORS: Record<string, string> = {
 
 type SupplierStatus = 'in_production' | 'ready_to_ship' | 'shipped' | 'delivered';
 
+// Must mirror the backend state machine in StoreOrder.updateSupplierStatus
+// (VALID_FROM). Offering a transition the backend rejects only earns the
+// supplier a 409 — keep these in sync.
 const NEXT_STATUSES: Record<string, SupplierStatus[]> = {
-  sent_to_supplier: ['in_production', 'shipped', 'delivered'],
-  in_production:    ['ready_to_ship', 'shipped', 'delivered'],
+  sent_to_supplier: ['in_production'],
+  in_production:    ['ready_to_ship', 'shipped'],
   ready_to_ship:    ['shipped'],
   shipped:          ['delivered'],
   delivered:        [],
@@ -78,7 +81,13 @@ export const SupplierOrderDetail = () => {
           setTrackingCarrier('');
           setSupplierNote('');
         },
-        onError: () => toast({ title: t('admin.common.error'), variant: 'destructive' }),
+        onError: (err: unknown) => {
+          // Surface the backend reason (e.g. a 409 illegal-transition message).
+          const message =
+            (err as { response?: { data?: { message?: string } } })?.response?.data?.message ??
+            t('admin.common.error');
+          toast({ title: message, variant: 'destructive' });
+        },
       },
     );
   };
@@ -300,7 +309,7 @@ export const SupplierOrderDetail = () => {
                   <SelectTrigger>
                     <SelectValue placeholder={dir === 'rtl' ? '— בחר סטטוס —' : '— Select status —'} />
                   </SelectTrigger>
-                  <SelectContent data-theme="bw" dir={dir}>
+                  <SelectContent data-theme="violet" dir={dir}>
                     {availableStatuses.map((s) => (
                       <SelectItem key={s} value={s}>{t(`orders.status.${s}`)}</SelectItem>
                     ))}

@@ -71,7 +71,7 @@ export const GalleryCard = ({ gallery, client }: { gallery: RichGallery; client:
           target='_blank'
           rel='noreferrer'
           onClick={(e) => e.stopPropagation()}
-          className='p-1.5 rounded-md text-warm-gray hover:text-[#25D366] hover:bg-beige transition-colors shrink-0'
+          className='p-1.5 min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 rounded-md text-warm-gray hover:text-[#25D366] hover:bg-beige transition-colors shrink-0 flex items-center justify-center'
           aria-label={t('admin.galleries.whatsapp_send')}
         >
           <WhatsAppIcon size={13} />
@@ -85,7 +85,7 @@ export const GalleryCard = ({ gallery, client }: { gallery: RichGallery; client:
         type='button'
         onClick={handleSendEmail}
         disabled={!client.email || resendEmail.isPending}
-        className='p-1.5 rounded-xl text-warm-gray hover:text-blush hover:bg-beige transition-colors shrink-0 disabled:opacity-30 disabled:cursor-not-allowed'
+        className='p-1.5 min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 rounded-xl text-warm-gray hover:text-blush hover:bg-beige transition-colors shrink-0 disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center'
         aria-label={t('admin.galleries.resend_email')}
         title={client.email ? t('admin.galleries.resend_email') : t('admin.common.no_email')}
       >
@@ -95,7 +95,7 @@ export const GalleryCard = ({ gallery, client }: { gallery: RichGallery; client:
         type='button'
         onClick={handleSendSms}
         disabled={!client.phone || sendSms.isPending}
-        className='p-1.5 rounded-xl text-warm-gray hover:text-blue-500 hover:bg-beige transition-colors shrink-0 disabled:opacity-30 disabled:cursor-not-allowed'
+        className='p-1.5 min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 rounded-xl text-warm-gray hover:text-blue-500 hover:bg-beige transition-colors shrink-0 disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center'
         aria-label={t('admin.galleries.send_sms')}
         title={client.phone ? t('admin.galleries.send_sms') : t('admin.common.no_phone')}
       >
@@ -104,7 +104,7 @@ export const GalleryCard = ({ gallery, client }: { gallery: RichGallery; client:
       <button
         type='button'
         onClick={handleCopyLink}
-        className='p-1.5 rounded-xl text-warm-gray hover:text-charcoal hover:bg-beige transition-colors shrink-0'
+        className='p-1.5 min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 rounded-xl text-warm-gray hover:text-charcoal hover:bg-beige transition-colors shrink-0 flex items-center justify-center'
         aria-label={t('admin.client.copy_link')}
       >
         <Link2 size={13} />

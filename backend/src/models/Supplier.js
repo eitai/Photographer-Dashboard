@@ -12,6 +12,18 @@ function scrub(supplier) {
   return supplier;
 }
 
+// Whitelist of fields safe to return to a supplier about themselves. Excludes
+// password, apiWebhookUrl, payplus*, createdBySuperadminId and any future columns.
+const SUPPLIER_PUBLIC_FIELDS = ['id', 'name', 'email', 'phone', 'contactPerson', 'logoPath', 'isActive', 'isExclusive'];
+function formatSupplier(supplier) {
+  if (!supplier) return supplier;
+  const out = {};
+  for (const f of SUPPLIER_PUBLIC_FIELDS) {
+    if (supplier[f] !== undefined) out[f] = supplier[f];
+  }
+  return out;
+}
+
 async function findById(id) {
   if (!id || !UUID_RE.test(id)) return null;
   const { rows } = await pool.query(
@@ -140,6 +152,7 @@ async function countOrders(id) {
 }
 
 module.exports = {
+  formatSupplier,
   findById,
   findByEmail,
   findAll,

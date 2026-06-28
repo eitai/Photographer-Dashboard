@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { X, Infinity, Images, Eye } from 'lucide-react';
+import { X, Infinity as InfinityIcon, Images, Eye } from 'lucide-react';
 import { useI18n } from '@/lib/i18n';
 import { useToast } from '@/hooks/use-toast';
 import { createGallery } from '@/services/galleryService';
@@ -167,11 +167,11 @@ export const AddGalleryModal = ({
                 onClick={() => setForm((f) => ({ ...f, maxSelections: f.maxSelections === 0 ? 10 : 0 }))}
                 className={`shrink-0 p-2 rounded-lg border transition-colors ${
                   form.maxSelections === 0
-                    ? 'bg-blush text-white border-blush'
+                    ? 'bg-blush text-charcoal border-blush'
                     : 'border-beige text-warm-gray hover:border-blush hover:text-blush'
                 }`}
               >
-                <Infinity size={16} />
+                <InfinityIcon size={16} />
               </button>
             </div>
           </div>

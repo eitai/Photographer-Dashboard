@@ -130,7 +130,9 @@ async function reorder(items, supplierId) {
   let i = 1;
 
   for (const item of items) {
-    caseParts.push(`WHEN id = $${i++} THEN $${i++}`);
+    // $n::int — without the cast Postgres types the CASE result as text and
+    // the assignment to the integer sort_order column fails (500).
+    caseParts.push(`WHEN id = $${i++} THEN $${i++}::int`);
     vals.push(item.id, item.sortOrder);
   }
 

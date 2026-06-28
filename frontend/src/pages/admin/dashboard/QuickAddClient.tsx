@@ -41,7 +41,7 @@ export const QuickAddClient = ({ onSuccess }: { onSuccess?: () => void }) => {
   };
 
   return (
-    <div className='bg-card rounded-xl shadow p-5'>
+    <div className='bg-card rounded-xl border border-blush/20 p-5'>
       <h3 className=' text-base text-charcoal mb-4'>{t('admin.dashboard.quick_add_title')}</h3>
       <form onSubmit={handleSubmit} className='flex flex-col gap-3'>
         <InputField
@@ -56,7 +56,7 @@ export const QuickAddClient = ({ onSuccess }: { onSuccess?: () => void }) => {
         <button
           type='submit'
           disabled={createClient.isPending}
-          className='mt-1 w-full py-2 rounded-xl bg-blush text-white text-sm font-sans font-medium hover:bg-blush/90 disabled:opacity-60 transition-colors'
+          className='mt-1 w-full py-2 rounded-xl bg-blush text-charcoal text-sm font-sans font-medium hover:bg-blush/90 disabled:opacity-60 transition-colors'
         >
           {createClient.isPending ? t('admin.dashboard.creating_client') : t('admin.dashboard.create_client_btn')}
         </button>

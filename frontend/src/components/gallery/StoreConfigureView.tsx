@@ -196,14 +196,14 @@ export function StoreConfigureView({ product, galleryImages, getImageUrl, onAdd,
                           onClick={() => toggleNoteExpand(img._id)}
                           className='text-xs font-sans text-charcoal/50 hover:text-charcoal transition-colors'
                         >
-                          {noteExpanded ? '−' : '+'} הוסף הערה
+                          {noteExpanded ? '−' : '+'} {t('store.configure.add_note')}
                         </button>
                         {noteExpanded && (
                           <input
                             type='text'
                             value={imageNotes[img._id] ?? ''}
                             onChange={(e) => setImageNotes((prev) => ({ ...prev, [img._id]: e.target.value }))}
-                            placeholder='הערה...'
+                            placeholder={t('store.configure.note_placeholder')}
                             className='mt-1 w-full text-xs font-sans border border-beige rounded px-2 py-1 bg-white focus:outline-none focus:border-charcoal'
                           />
                         )}

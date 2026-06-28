@@ -1,9 +1,12 @@
-import { createContext, useContext, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams, Outlet, Navigate } from 'react-router-dom';
 import { Navbar } from '@/components/Navbar';
 import { Footer } from '@/components/Footer';
 import { WhatsAppButton } from '@/components/WhatsAppButton';
 import api, { getImageUrl } from '@/lib/api';
+import { PhotographerContext, type PhotographerSocial } from './usePhotographer';
+
+const EMPTY_SOCIAL: PhotographerSocial = { phone: '', instagramHandle: '', facebookUrl: '', contactEmail: '' };
 
 interface Photographer {
   id: string;
@@ -11,30 +14,6 @@ interface Photographer {
   studioName: string | null;
   username: string;
 }
-
-export interface PhotographerSocial {
-  phone: string;
-  instagramHandle: string;
-  facebookUrl: string;
-  contactEmail: string;
-}
-
-interface PhotographerContextValue {
-  photographer: Photographer;
-  username: string;
-  social: PhotographerSocial;
-  theme: string;
-}
-
-const PhotographerContext = createContext<PhotographerContextValue | null>(null);
-
-export const usePhotographer = () => {
-  const ctx = useContext(PhotographerContext);
-  if (!ctx) throw new Error('usePhotographer must be used inside PhotographerLayout');
-  return ctx;
-};
-
-const EMPTY_SOCIAL: PhotographerSocial = { phone: '', instagramHandle: '', facebookUrl: '', contactEmail: '' };
 
 export const PhotographerLayout = () => {
   const { id } = useParams<{ id: string }>();

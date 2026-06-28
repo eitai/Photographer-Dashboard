@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { useI18n } from '@/lib/i18n';
-import { useAuthStore } from '@/store/authStore';
 import { useOrders } from '@/hooks/useQueries';
 import { AdminLayout } from '@/components/admin/AdminLayout';
 import { Button } from '@/components/ui/button';
@@ -21,7 +20,7 @@ type OrderFlow = 'all' | 'photographer' | 'client';
 const STATUS_COLORS: Record<StoreOrder['status'], string> = {
   draft: 'bg-ivory text-warm-gray border border-beige',
   pending_selection: 'bg-amber-50 text-amber-700',
-  selection_submitted: 'bg-blush/15 text-charcoal',
+  selection_submitted: 'bg-primary/15 text-primary',
   approved: 'bg-green-50 text-green-700',
   sent_to_supplier: 'bg-ivory text-charcoal border border-beige',
   in_production: 'bg-amber-50 text-amber-700',
@@ -33,7 +32,6 @@ const STATUS_COLORS: Record<StoreOrder['status'], string> = {
 
 export const AdminOrders = () => {
   const { t, lang, dir } = useI18n();
-  const theme = useAuthStore((s) => s.theme);
   const navigate = useNavigate();
   const [statusFilter, setStatusFilter] = useState<OrderStatus>('open');
   const [flowFilter, setFlowFilter] = useState<OrderFlow>('all');
@@ -67,12 +65,14 @@ export const AdminOrders = () => {
     setExporting(true);
     try {
       const rep = await getOrdersReport(filters);
-      const headers = lang === 'he'
-        ? ['מספר', 'לקוח', 'גלריה', 'פריטים', 'סטטוס', 'זרימה', 'סכום', 'תאריך']
-        : ['#', 'Client', 'Gallery', 'Items', 'Status', 'Flow', 'Total', 'Date'];
+      const headers = [
+        t('orders.csv.num'), t('orders.csv.client'), t('orders.csv.gallery'),
+        t('orders.csv.items'), t('orders.csv.status'), t('orders.csv.flow'),
+        t('orders.csv.total'), t('orders.csv.date'),
+      ];
       const rows = rep.rows.map((o, i) => [
         i + 1,
-        o.clientName ?? (lang === 'he' ? 'הזמנה ישירה' : 'Direct order'),
+        o.clientName ?? t('orders.direct_badge'),
         o.galleryName ?? '—',
         o.itemsCount ?? 0,
         o.status,
@@ -81,11 +81,11 @@ export const AdminOrders = () => {
         new Date(o.createdAt).toLocaleDateString(lang === 'he' ? 'he-IL' : 'en-GB'),
       ]);
       const summaryRow = [
-        lang === 'he' ? 'סה״כ' : 'Total', '', '', '', '', '',
+        t('reports.total'), '', '', '', '', '',
         rep.summary.totalAmount, `${rep.summary.count}`,
       ];
       downloadCsv('orders', headers, rows, summaryRow);
-      if (rep.capped) toast.warning(lang === 'he' ? 'הדוח נחתך ל-5000 שורות' : 'Report capped at 5000 rows');
+      if (rep.capped) toast.warning(t('orders.report_capped'));
     } catch {
       toast.error(t('admin.common.error'));
     } finally {
@@ -94,8 +94,8 @@ export const AdminOrders = () => {
   };
 
   const statusOptions: { value: OrderStatus; label: string }[] = [
-    { value: 'open', label: dir === 'rtl' ? 'פתוחות' : 'Open Orders' },
-    { value: 'all', label: dir === 'rtl' ? 'הכל' : 'All' },
+    { value: 'open', label: t('orders.filter.open') },
+    { value: 'all', label: t('orders.filter.all') },
     { value: 'draft', label: t('orders.status.draft') },
     { value: 'pending_selection', label: t('orders.status.pending_selection') },
     { value: 'selection_submitted', label: t('orders.status.selection_submitted') },
@@ -109,7 +109,7 @@ export const AdminOrders = () => {
   ];
 
   const flowOptions: { value: OrderFlow; label: string }[] = [
-    { value: 'all', label: dir === 'rtl' ? 'הכל' : 'All' },
+    { value: 'all', label: t('orders.filter.all') },
     { value: 'photographer', label: t('orders.flow.photographer') },
     { value: 'client', label: t('orders.flow.client') },
   ];
@@ -152,7 +152,7 @@ export const AdminOrders = () => {
             <SelectTrigger className='w-48'>
               <SelectValue />
             </SelectTrigger>
-            <SelectContent data-theme={theme} dir={dir}>
+            <SelectContent data-theme='violet' dir={dir}>
               {statusOptions.map((o) => (
                 <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
               ))}
@@ -167,7 +167,7 @@ export const AdminOrders = () => {
             <SelectTrigger className='w-40'>
               <SelectValue />
             </SelectTrigger>
-            <SelectContent data-theme={theme} dir={dir}>
+            <SelectContent data-theme='violet' dir={dir}>
               {flowOptions.map((o) => (
                 <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
               ))}
@@ -262,7 +262,7 @@ export const AdminOrders = () => {
                         onClick={() => navigate(`/admin/orders/${order.id}`)}
                       >
                         <Eye size={14} />
-                        {dir === 'rtl' ? 'צפה' : 'View'}
+                        {t('admin.clients.view')}
                       </Button>
                     </TableCell>
                   </TableRow>
@@ -281,7 +281,7 @@ export const AdminOrders = () => {
               disabled={page <= 1}
               onClick={() => setPage((p) => p - 1)}
             >
-              {dir === 'rtl' ? 'הקודם' : 'Previous'}
+              {t('orders.pagination.prev')}
             </Button>
             <span className='text-sm text-warm-gray'>{page} / {totalPages}</span>
             <Button
@@ -290,7 +290,7 @@ export const AdminOrders = () => {
               disabled={page >= totalPages}
               onClick={() => setPage((p) => p + 1)}
             >
-              {dir === 'rtl' ? 'הבא' : 'Next'}
+              {t('orders.pagination.next')}
             </Button>
           </div>
         )}

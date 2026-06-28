@@ -20,7 +20,7 @@ router.get(
 router.post(
   '/',
   asyncHandler(async (req, res) => {
-    const { name, email, password } = req.body;
+    const { name, email, password, phone, contactPerson, logoPath, isActive, isExclusive, apiWebhookUrl } = req.body;
     if (!name || !email || !password) {
       return res.status(400).json({ message: 'name, email and password are required' });
     }
@@ -28,8 +28,10 @@ router.post(
     if (existing) {
       return res.status(400).json({ message: 'Email already in use' });
     }
+    // Explicit field list — no `...req.body` spread, so the request can never set
+    // unintended columns (e.g. override createdBySuperadminId or future fields).
     const supplier = await Supplier.create({
-      ...req.body,
+      name, email, password, phone, contactPerson, logoPath, isActive, isExclusive, apiWebhookUrl,
       createdBySuperadminId: req.admin.id,
     });
     res.status(201).json(supplier);

@@ -40,7 +40,7 @@ export const AdminShowcase = () => {
       .get('/galleries')
       .then((r) => setGalleries(r.data))
       .catch(() => toast.error(t('admin.showcase.load_error')));
-  }, []);
+  }, [t]);
 
   // Reset + load page 1 whenever gallery changes
   useEffect(() => {
@@ -61,7 +61,7 @@ export const AdminShowcase = () => {
         setBrowseTotal(r.data.total);
       })
       .catch(() => toast.error(t('admin.showcase.load_error')));
-  }, [browseGalleryId]);
+  }, [browseGalleryId, t]);
 
   // Load next page
   const loadMore = useCallback(async () => {
@@ -143,7 +143,7 @@ export const AdminShowcase = () => {
                   setBrowseGalleryId('');
                 }}
                 placeholder={t('admin.showcase.search_placeholder')}
-                className='pr-9 pl-3'
+                className='pe-9 ps-3'
               />
             </div>
           </div>
@@ -151,7 +151,7 @@ export const AdminShowcase = () => {
           {filteredGalleries.length === 0 ? (
             <p className='text-sm text-warm-gray'>{t('admin.showcase.no_galleries')}</p>
           ) : (
-            <div className='grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 max-h-64 overflow-y-auto pr-1'>
+            <div className='grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 max-h-64 overflow-y-auto pe-1'>
               {filteredGalleries.map((g) => (
                 <button
                   key={g._id}

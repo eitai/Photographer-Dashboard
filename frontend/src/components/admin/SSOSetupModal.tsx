@@ -67,7 +67,7 @@ export const SSOSetupModal = ({ open, onClose }: SSOSetupModalProps) => {
           </ShadButton>
           <ShadButton
             onClick={handleSetupNow}
-            className='bg-zinc-900 text-white hover:bg-black'
+            className='bg-primary text-white hover:bg-primary/90'
           >
             {t('admin.sso_modal.setup_now')}
           </ShadButton>

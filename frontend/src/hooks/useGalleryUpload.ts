@@ -177,13 +177,15 @@ export function useGalleryUpload(galleryId: string | undefined, onUploadComplete
           );
           queryClient.invalidateQueries({ queryKey: queryKeys.storageMe });
           onUploadComplete();
-        } catch (err: any) {
-          if (err?.code === 'ERR_CANCELED' || controller.signal.aborted) {
+        } catch (err: unknown) {
+          const e = err as { code?: string; response?: { status?: number; data?: { code?: string; used?: number; quota?: number } } };
+          if (e?.code === 'ERR_CANCELED' || controller.signal.aborted) {
             // Cancelled — queue state already handled by cancelUpload()
             return;
           }
-          if (err?.response?.status === 413 && err?.response?.data?.code === 'QUOTA_EXCEEDED') {
-            const { used, quota } = err.response.data;
+          if (e?.response?.status === 413 && e?.response?.data?.code === 'QUOTA_EXCEEDED') {
+            const used  = e.response.data?.used;
+            const quota = e.response.data?.quota;
             const usedGB  = used  ? (used  / 1024 ** 3).toFixed(1) : '?';
             const quotaGB = quota ? (quota / 1024 ** 3).toFixed(1) : '?';
             toast.error(`${t('storage.quotaExceeded')} (${usedGB} / ${quotaGB} GB)`);

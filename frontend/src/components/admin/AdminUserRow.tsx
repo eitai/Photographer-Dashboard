@@ -78,7 +78,7 @@ export const AdminUserRow = ({
         <button
           onClick={onEdit}
           className={`w-7 h-7 rounded-full flex items-center justify-center transition-colors ${
-            isEditing ? 'bg-charcoal text-white' : 'text-warm-gray hover:text-charcoal hover:bg-beige'
+            isEditing ? 'bg-primary text-white' : 'text-warm-gray hover:text-charcoal hover:bg-beige'
           }`}
           title={t('admin.users.edit')}
         >

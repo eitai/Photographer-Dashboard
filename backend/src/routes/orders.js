@@ -95,9 +95,28 @@ router.get(
       [order.galleryId]
     );
 
+    // PUBLIC endpoint — project to client-facing fields only. Never expose the
+    // internal supplier cost (unitCostPrice), the photographer's adminId/supplierId,
+    // internal notes, or client PII (email/phone/address) to the selection page.
+    const safeOrder = {
+      id:         order.id,
+      status:     order.status,
+      currency:   order.currency,
+      clientNote: order.clientNote ?? null,
+      gallery:    order.gallery ? { name: order.gallery.name } : null,
+      client:     order.client ? { name: order.client.name } : null,
+      items: (order.items || []).map((it) => ({
+        id:               it.id,
+        quantity:         it.quantity,
+        selectedImageIds: it.selectedImageIds || [],
+        imageNotes:       it.imageNotes || {},
+        product:          it.product, // catalog info (name/specs/min-max photos) — no cost
+      })),
+    };
+
     // Shape must match the frontend OrderSelectionData contract:
     // { order, galleryImages } with camelCase image fields
-    return res.json({ order, galleryImages: galleryImages.map(rowToCamel) });
+    return res.json({ order: safeOrder, galleryImages: galleryImages.map(rowToCamel) });
   })
 );
 
@@ -565,7 +584,7 @@ router.post('/:id/notify-client', protect, async (req, res) => {
 
     res.json({ ok: true });
   } catch (err) {
-    console.error('[notify-client]', err);
+    logger.error('[notify-client]', err);
     res.status(500).json({ message: 'Server error' });
   }
 });

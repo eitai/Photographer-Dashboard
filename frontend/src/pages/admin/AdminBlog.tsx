@@ -47,7 +47,7 @@ export const AdminBlog = () => {
     <AdminLayout title={t('admin.blog.title')}>
       <div className="flex justify-end mb-6">
         <Link to="/admin/blog/new"
-          className="flex items-center gap-2 bg-charcoal text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-charcoal/90 transition-colors">
+          className="flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors">
           <Plus size={15} /> {t('admin.blog.new_post')}
         </Link>
       </div>

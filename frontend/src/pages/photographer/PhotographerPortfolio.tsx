@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { usePhotographer } from './PhotographerLayout';
+import { usePhotographer } from './usePhotographer';
 import { FadeIn } from '@/components/FadeIn';
 import { useI18n } from '@/lib/i18n';
 import Masonry from 'react-masonry-css';

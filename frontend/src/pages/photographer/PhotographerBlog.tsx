@@ -1,14 +1,24 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { usePhotographer } from './PhotographerLayout';
+import { usePhotographer } from './usePhotographer';
 import { FadeIn } from '@/components/FadeIn';
 import { useI18n } from '@/lib/i18n';
 import api, { getImageUrl } from '@/lib/api';
 
+interface BlogPostSummary {
+  _id: string;
+  slug: string;
+  title: string;
+  featuredImagePath?: string;
+  category?: string;
+  publishedAt?: string;
+  createdAt?: string;
+}
+
 export const PhotographerBlog = () => {
   const { t } = useI18n();
   const { username } = usePhotographer();
-  const [posts, setPosts] = useState<any[]>([]);
+  const [posts, setPosts] = useState<BlogPostSummary[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {

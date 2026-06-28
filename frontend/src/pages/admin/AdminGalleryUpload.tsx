@@ -290,7 +290,7 @@ export const AdminGalleryUpload = () => {
                       type='button'
                       onClick={() => { setActiveFolderId(null); setSelectedIds(new Set()); }}
                       className={`shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
-                        activeFolderId === null ? 'bg-charcoal text-white' : 'bg-beige text-charcoal hover:bg-blush/30'
+                        activeFolderId === null ? 'bg-primary text-white' : 'bg-beige text-charcoal hover:bg-blush/30'
                       }`}
                     >
                       {t('gallery.folder_all')}
@@ -302,7 +302,7 @@ export const AdminGalleryUpload = () => {
                         type='button'
                         onClick={() => { setActiveFolderId(f._id); setSelectedIds(new Set()); }}
                         className={`shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
-                          activeFolderId === f._id ? 'bg-charcoal text-white' : 'bg-beige text-charcoal hover:bg-blush/30'
+                          activeFolderId === f._id ? 'bg-primary text-white' : 'bg-beige text-charcoal hover:bg-blush/30'
                         }`}
                       >
                         {f.name}

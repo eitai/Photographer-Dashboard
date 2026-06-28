@@ -14,7 +14,7 @@ export const StatCard = ({ label, value, icon: Icon, iconClass, to, sub, compact
   compact ? (
     <Link
       to={to}
-      className='relative bg-card rounded-xl shadow hover:shadow-md transition-shadow px-4 py-3 flex items-center gap-3'
+      className='relative bg-card rounded-xl border border-blush/20 hover:border-blush/40 transition-colors px-4 py-3 flex items-center gap-3'
     >
       <span className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 ${iconClass}`}>
         <Icon size={15} />

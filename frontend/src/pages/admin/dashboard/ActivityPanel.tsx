@@ -1,6 +1,7 @@
 import { useI18n } from '@/lib/i18n';
 import type { Client } from '@/types/admin';
 import { formatRelativeTime } from './types';
+import { AvatarInitials } from '@/components/admin/AvatarInitials';
 
 export const ActivityPanel = ({ clients }: { clients: Client[] }) => {
   const { t } = useI18n();
@@ -13,23 +14,18 @@ export const ActivityPanel = ({ clients }: { clients: Client[] }) => {
     });
 
   return (
-    <div className='bg-card rounded-xl shadow p-5 flex flex-col h-full'>
+    <div className='bg-card rounded-xl border border-blush/20 p-5 flex flex-col h-full'>
       <h3 className=' text-base text-charcoal mb-4 shrink-0'>{t('admin.dashboard.activity_title')}</h3>
       {recent.length === 0 ? (
         <p className='text-xs text-warm-gray'>{t('admin.dashboard.no_activity')}</p>
       ) : (
         <ul className='flex flex-col gap-3 overflow-y-auto'>
           {recent.map((c) => {
-            const initials = c.name
-              .split(' ')
-              .slice(0, 2)
-              .map((w) => w[0]?.toUpperCase() ?? '')
-              .join('');
             return (
               <li key={c._id} className='flex items-start gap-3'>
-                <span className='w-8 h-8 rounded-full bg-blush/20 text-blush text-xs font-sans font-semibold flex items-center justify-center shrink-0 mt-0.5'>
-                  {initials}
-                </span>
+                <div className='mt-0.5'>
+                  <AvatarInitials name={c.name} size='sm' />
+                </div>
                 <div className='flex-1 min-w-0'>
                   <p className='text-sm font-sans text-charcoal leading-snug'>
                     {t('admin.dashboard.activity_new_client')}: <span className='font-medium'>{c.name}</span>

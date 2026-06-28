@@ -6,11 +6,10 @@ import { useI18n } from '@/lib/i18n';
 import type { Client } from '@/types/admin';
 import type { GalleryData } from '@/types/gallery';
 import { WhatsAppIcon } from '@/pages/admin/dashboard/WhatsAppIcon';
-import { useGalleryPreviewImages, useSubmissions } from '@/hooks/useQueries';
 import { getImageUrl } from '@/lib/api';
 import { downloadZip } from '@/lib/downloadZip';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { SESSION_TYPE_KEYS } from '@/components/admin/SessionTypeCombobox';
+import { SESSION_TYPE_KEYS } from '@/components/admin/SessionTypeComboboxConstants';
 
 const getGalleryDisplayName = (name: string, t: (key: string) => string) => {
   if (!SESSION_TYPE_KEYS.includes(name)) return name;
@@ -94,8 +93,8 @@ export const GalleryCard = memo(({
 }: GalleryCardProps) => {
   const { t } = useI18n();
   const hasDelivery = !!delivery || galleries.some((g2) => g2.deliveryOf === g._id);
-  const { data: previewImages = [] } = useGalleryPreviewImages(g._id);
-  const { data: submissions = [] } = useSubmissions(g._id);
+  const previewImages = g.previewImages ?? [];
+  const submissions = g.submissions ?? [];
   const expiryBadge = useExpiryBadge(g.expiresAt, t);
   const submission = submissions[0] ?? null;
 
@@ -320,7 +319,7 @@ export const GalleryCard = memo(({
               <button
                 onClick={handleCreateDelivery}
                 disabled={creatingDeliveryFor === g._id}
-                className='flex-1 bg-charcoal text-white px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-charcoal/80 transition-colors disabled:opacity-60'
+                className='flex-1 bg-primary text-white px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-primary/90 transition-colors disabled:opacity-60'
               >
                 {creatingDeliveryFor === g._id ? t('admin.client.creating_delivery') : t('admin.client.create_delivery')}
               </button>

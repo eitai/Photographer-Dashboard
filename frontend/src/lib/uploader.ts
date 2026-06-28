@@ -932,7 +932,6 @@ const encodeFileToJxl = async (
   }
   // Defensive lossless-contract check (matches comment in jxl-worker.ts).
   if (options.distance !== 0) {
-    // eslint-disable-next-line no-console
     console.warn(
       `[jxl] Non-lossless distance requested (${options.distance}); the slice contract is distance=0. Forcing lossless.`,
     );
@@ -989,7 +988,6 @@ export async function uploadFileWithJxlSidecar(
     return uploadFile(file, opts);
   }
   if (file.size > JXL_MAX_SOURCE_BYTES) {
-    // eslint-disable-next-line no-console
     console.info(
       `[jxl] Skipping sidecar: file too large (${file.size} > ${JXL_MAX_SOURCE_BYTES})`,
     );
@@ -998,7 +996,6 @@ export async function uploadFileWithJxlSidecar(
   // PNG-only path: must also be 8-bit per IHDR. 16-bit PNGs would silently
   // quantise during decode and break verify (C2).
   if (!(await isEightBitPng(file))) {
-    // eslint-disable-next-line no-console
     console.info('[jxl] Skipping sidecar: not 8-bit PNG');
     return uploadFile(file, opts);
   }
@@ -1046,7 +1043,6 @@ export async function uploadFileWithJxlSidecar(
   try {
     await runJxlSidecar(file, result.assetId, totalBytes, opts);
   } catch (err) {
-    // eslint-disable-next-line no-console
     console.warn(
       `[jxl] Sidecar failed for asset ${result.assetId}: ${
         err instanceof Error ? err.message : String(err)

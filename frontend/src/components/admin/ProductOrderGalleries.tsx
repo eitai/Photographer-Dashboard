@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Pencil } from 'lucide-react';
 import { useI18n } from '@/lib/i18n';
-import { SESSION_TYPE_KEYS } from '@/components/admin/SessionTypeCombobox';
+import { SESSION_TYPE_KEYS } from '@/components/admin/SessionTypeComboboxConstants';
 import { useUpdateProductOrderGalleries } from '@/hooks/useQueries';
 import type { ProductOrder } from '@/services/productOrderService';
 import type { Gallery } from '@/types/gallery';
@@ -137,7 +137,7 @@ export const ProductOrderGalleries = ({ order, clientId, galleries }: Props) => 
             <button
               onClick={save}
               disabled={saving}
-              className='text-xs px-3 py-1 bg-blush text-white rounded-lg hover:opacity-90 disabled:opacity-60 transition-opacity cursor-pointer'
+              className='text-xs px-3 py-1 bg-blush text-charcoal rounded-lg hover:opacity-90 disabled:opacity-60 transition-opacity cursor-pointer'
             >
               {saving ? t('admin.common.saving') : t('admin.common.done')}
             </button>

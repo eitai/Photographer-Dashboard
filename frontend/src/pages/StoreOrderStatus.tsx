@@ -13,7 +13,7 @@ export const StoreOrderStatus = () => {
 
   const header = (
     <header className='h-20 shrink-0 flex items-center px-6 bg-white border-b border-beige'>
-      <img src='/logos/logo.png' style={{mixBlendMode: 'multiply'}} alt='LIGHT STUDIO' className='h-14 w-auto' />
+      <img src='/logos/logo.png' className='h-14 w-auto mix-blend-multiply' alt='LIGHT STUDIO' />
     </header>
   );
 
@@ -21,8 +21,7 @@ export const StoreOrderStatus = () => {
     <div
       data-theme='bw'
       dir={dir}
-      style={{ backgroundColor: 'var(--background)', minHeight: '100vh' }}
-      className='flex flex-col'
+      className='flex flex-col bg-background min-h-screen'
     >
       {children}
     </div>
@@ -157,7 +156,7 @@ export const StoreOrderStatus = () => {
             {(data.status === 'shipped' || data.status === 'delivered') && data.trackingNumber && (
               <div className='mt-3 pt-3 border-t border-beige space-y-1'>
                 <p className='font-medium text-charcoal text-xs uppercase tracking-wide'>
-                  {dir === 'rtl' ? 'פרטי משלוח' : 'Shipping Info'}
+                  {t('store.order.shipping_info')}
                 </p>
                 <p>
                   <span className='font-medium text-charcoal'>{t('orders.tracking')}:</span>{' '}
@@ -171,7 +170,7 @@ export const StoreOrderStatus = () => {
                 )}
                 {data.shippedAt && (
                   <p className='text-xs text-charcoal/40'>
-                    {dir === 'rtl' ? 'נשלח ב-' : 'Shipped '}
+                    {t('store.order.shipped_on') + ' '}
                     {new Date(data.shippedAt).toLocaleDateString(dir === 'rtl' ? 'he-IL' : 'en-GB')}
                   </p>
                 )}

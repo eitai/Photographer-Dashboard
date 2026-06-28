@@ -1,11 +1,7 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { useI18n } from '@/lib/i18n';
 import { ChevronDown } from 'lucide-react';
-
-export const SESSION_TYPE_KEYS = [
-  'family', 'maternity', 'newborn', 'wedding', 'bar_mitzvah', 'bat_mitzvah',
-  'brit_milah', 'engagement', 'birthday', 'branding', 'landscape', 'corporate',
-];
+import { SESSION_TYPE_KEYS } from './SessionTypeComboboxConstants';
 
 interface Props {
   value: string;
@@ -18,17 +14,17 @@ export const SessionTypeCombobox = ({ value, onChange, className = '' }: Props) 
   const containerRef = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState(false);
 
-  const getLabel = (val: string) => {
+  const getLabel = useCallback((val: string) => {
     if (!val) return '';
     const translated = t(`admin.session.${val}`);
     return translated.startsWith('admin.session.') ? val : translated;
-  };
+  }, [t]);
 
   const [inputValue, setInputValue] = useState(() => getLabel(value));
 
   useEffect(() => {
     if (!open) setInputValue(getLabel(value));
-  }, [value, open]);
+  }, [value, open, getLabel]);
 
   const options = SESSION_TYPE_KEYS.map((st) => ({ key: st, label: t(`admin.session.${st}`) }));
 

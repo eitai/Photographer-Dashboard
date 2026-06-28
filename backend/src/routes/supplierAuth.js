@@ -5,6 +5,7 @@ const pool = require('../db');
 const Supplier = require('../models/Supplier');
 const { supplierProtect } = require('../middleware/supplierAuth');
 const asyncHandler = require('../middleware/asyncHandler');
+const validatePassword = require('../utils/validatePassword');
 
 const router = express.Router();
 
@@ -55,10 +56,9 @@ router.post(
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
-    // Remove password before responding (findByEmail returns it for bcrypt comparison)
-    delete supplier.password;
-
-    res.json({ supplier });
+    // Whitelist the response — findByEmail returns the full row (incl. password,
+    // apiWebhookUrl, payplus*, createdBySuperadminId) which must not leak.
+    res.json({ supplier: Supplier.formatSupplier(supplier) });
   })
 );
 
@@ -77,7 +77,7 @@ router.get(
   '/me',
   supplierProtect,
   asyncHandler(async (req, res) => {
-    res.json({ supplier: req.supplier });
+    res.json({ supplier: Supplier.formatSupplier(req.supplier) });
   })
 );
 
@@ -125,7 +125,7 @@ router.patch(
       return res.status(404).json({ message: 'Supplier not found' });
     }
 
-    res.json({ supplier: updated });
+    res.json({ supplier: Supplier.formatSupplier(updated) });
   })
 );
 
@@ -140,8 +140,10 @@ router.post(
       return res.status(400).json({ message: 'currentPassword and newPassword are required' });
     }
 
-    if (newPassword.length < 8) {
-      return res.status(400).json({ message: 'New password must be at least 8 characters' });
+    // Same complexity policy as admin password changes (≥8 chars, letter + digit)
+    const pwErr = validatePassword(newPassword);
+    if (pwErr) {
+      return res.status(400).json({ message: pwErr });
     }
 
     // Re-fetch with password hash for comparison (findById scrubs it)

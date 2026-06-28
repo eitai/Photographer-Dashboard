@@ -10,6 +10,12 @@ import { Button } from '@/components/admin/Button';
 import { StorageBar } from '@/components/admin/StorageBar';
 import { QuotaSlider } from '@/components/admin/QuotaSlider';
 import { useAdminStorage, useSetAdminQuota, queryKeys } from '@/hooks/useQueries';
+import type { AxiosError } from 'axios';
+
+function getApiMessage(err: unknown, fallback: string): string {
+  const axiosErr = err as AxiosError<{ message?: string }>;
+  return axiosErr?.response?.data?.message || fallback;
+}
 import type { AdminRecord, AdminSettings } from '@/types/admin';
 
 interface ProfileForm {
@@ -87,8 +93,8 @@ export const AdminUserEditPanel = ({ admin, onClose }: Props) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.admins });
       setProfileForm((f) => ({ ...f, newPassword: '' }));
       flash(t('admin.users.profile_saved'));
-    } catch (err: any) {
-      flash(err.response?.data?.message || t('admin.users.save_error'), true);
+    } catch (err) {
+      flash(getApiMessage(err, t('admin.users.save_error')), true);
     } finally {
       setSavingProfile(false);
     }
@@ -100,8 +106,8 @@ export const AdminUserEditPanel = ({ admin, onClose }: Props) => {
     try {
       await api.put(`/admins/${admin.id}/landing`, landingForm);
       flash(t('admin.users.landing_saved'));
-    } catch (err: any) {
-      flash(err.response?.data?.message || t('admin.users.save_error'), true);
+    } catch (err) {
+      flash(getApiMessage(err, t('admin.users.save_error')), true);
     } finally {
       setSavingLanding(false);
     }
@@ -122,8 +128,8 @@ export const AdminUserEditPanel = ({ admin, onClose }: Props) => {
         ...(type === 'hero-image' ? { heroImagePath: r.data.heroImagePath } : { profileImagePath: r.data.profileImagePath }),
       } : prev);
       flash(t('admin.users.image_uploaded'));
-    } catch (err: any) {
-      flash(err.response?.data?.message || t('admin.users.upload_error'), true);
+    } catch (err) {
+      flash(getApiMessage(err, t('admin.users.upload_error')), true);
     } finally {
       setter(false);
     }
@@ -312,7 +318,7 @@ export const AdminUserEditPanel = ({ admin, onClose }: Props) => {
             { adminId: admin.id, quotaGB: quotaInputGB ?? 0 },
             {
               onSuccess: () => flash(t('admin.users.quota_saved')),
-              onError: (err: any) => flash(err.response?.data?.message || t('admin.users.save_error'), true),
+              onError: (err: unknown) => flash(getApiMessage(err, t('admin.users.save_error')), true),
             },
           )}>
           <Check size={13} />

@@ -70,7 +70,7 @@ export const AdminDashboard = () => {
           className='ps-8'
         />
       </div>
-      <Button variant='dark' className='shrink-0' onClick={() => setShowNewClient(true)}>
+      <Button variant='primary' className='shrink-0' onClick={() => setShowNewClient(true)}>
         <Plus size={15} />
         {t('admin.dashboard.new_client_btn')}
       </Button>
@@ -80,7 +80,7 @@ export const AdminDashboard = () => {
   return (
     <AdminLayout title={t('admin.nav.dashboard')} actions={topBarActions}>
       {/* Full-height shell — no outer scroll */}
-      <div className='flex flex-col h-full -mx-4 md:-mx-8 -my-6 overflow-hidden bg-muted/30'>
+      <div className='flex flex-col h-full -mx-4 md:-mx-8 -my-6 overflow-hidden bg-background'>
         {/* ── Fixed top section: landing link + stat cards ── */}
         <div className='shrink-0 px-4 md:px-8 pt-4 pb-3 space-y-3'>
           {admin?.id && (
@@ -90,7 +90,7 @@ export const AdminDashboard = () => {
                   href={`/${admin.id}`}
                   target='_blank'
                   rel='noreferrer'
-                  className='inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-zinc-900 border border-zinc-900 text-white text-sm font-medium hover:bg-black transition-colors'
+                  className='inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-blush border border-blush text-charcoal text-sm font-medium shadow-sm shadow-blush/30 hover:bg-blush/90 transition-colors'
                 >
                   <ExternalLink size={15} />
                   {t('admin.dashboard.view_landing')}
@@ -121,7 +121,7 @@ export const AdminDashboard = () => {
                 label={t('admin.dashboard.clients')}
                 value={clients.length}
                 icon={Users}
-                iconClass='bg-blue-100 text-blue-500'
+                iconClass='bg-blush/15 text-blush'
                 to='/admin/clients'
                 sub={t('admin.dashboard.stat_clients_sub')}
               />
@@ -130,7 +130,7 @@ export const AdminDashboard = () => {
                 label={t('admin.dashboard.galleries')}
                 value={galleries.length}
                 icon={Images}
-                iconClass='bg-purple-100 text-purple-500'
+                iconClass='bg-blush/15 text-blush'
                 to='/admin/clients'
                 sub={t('admin.dashboard.stat_galleries_sub')}
               />
@@ -139,7 +139,7 @@ export const AdminDashboard = () => {
                 label={t('admin.dashboard.pending')}
                 value={pendingCount}
                 icon={CheckSquare}
-                iconClass='bg-rose-100 text-rose-500'
+                iconClass='bg-blush/15 text-blush'
                 to='/admin/selections'
                 sub={t('admin.dashboard.stat_pending_sub')}
               />
@@ -150,7 +150,7 @@ export const AdminDashboard = () => {
         {/* ── Scrollable main area ── */}
         <div className='flex-1 overflow-hidden flex flex-col lg:flex-row'>
           {/* Left — client list */}
-          <div className='flex-1 min-w-0 flex flex-col bg-card rounded-2xl shadow m-4'>
+          <div className='flex-1 min-w-0 flex flex-col bg-card rounded-2xl border border-blush/20 m-4'>
             {/* Filter bar — fixed */}
             <div className='shrink-0 px-4 md:px-6 pt-4 pb-3'>
               <div className='flex items-center justify-between mb-3'>
@@ -162,10 +162,10 @@ export const AdminDashboard = () => {
                     key={key}
                     type='button'
                     onClick={() => setFilter(key)}
-                    className={`px-3 py-1 rounded-full text-xs font-sans font-medium transition-colors border ${
+                    className={`px-3 py-1 min-h-[44px] rounded-full text-xs font-sans font-medium transition-colors border ${
                       filter === key
-                        ? 'bg-charcoal text-white border-charcoal'
-                        : 'bg-ivory text-warm-gray border-beige hover:border-charcoal hover:text-charcoal'
+                        ? 'bg-blush text-charcoal border-blush'
+                        : 'bg-white text-warm-gray border-blush/30 hover:border-blush/60 hover:text-blush'
                     }`}
                   >
                     {t(labelKey)}

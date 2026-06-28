@@ -88,13 +88,14 @@ describe('P0 — CORS', () => {
 
 // ─────────────────────────────────────────────────────────────────────────────
 describe('P0 — Body Size Limit', () => {
-  test('Rejects JSON body larger than 10kb', async () => {
-    const bigPayload = JSON.stringify({ data: 'x'.repeat(11 * 1024) });
+  // express.json is configured with a 2mb limit (src/app.js).
+  test('Rejects JSON body larger than the 2mb limit', async () => {
+    const bigPayload = JSON.stringify({ data: 'x'.repeat(3 * 1024 * 1024) });
     const res = await request(app).post('/api/auth/login').set('Content-Type', 'application/json').send(bigPayload);
     expect(res.status).toBe(413);
   });
 
-  test('Accepts JSON body smaller than 10kb', async () => {
+  test('Accepts a normal-sized JSON body', async () => {
     const res = await request(app).post('/api/auth/login').send({ email: 'test@example.com', password: 'wrong-password' });
     // 401 = route ran fine (wrong credentials), not a size rejection
     expect(res.status).not.toBe(413);
@@ -117,7 +118,11 @@ describe('P0 — Rate Limiting', () => {
 // ─────────────────────────────────────────────────────────────────────────────
 describe('P0 — asyncHandler (Error Propagation)', () => {
   test('Invalid UUID returns 400 with "Invalid ID format"', async () => {
-    const res = await request(app).get('/api/galleries/not-a-valid-uuid');
+    // /api/galleries/:id is protect-guarded — authenticate so the request
+    // reaches the route's UUID validation instead of stopping at 401.
+    const res = await request(app)
+      .get('/api/galleries/not-a-valid-uuid')
+      .set('Authorization', `Bearer ${VALID_TOKEN}`);
     expect(res.status).toBe(400);
     expect(res.body.message).toBe('Invalid ID format');
   });

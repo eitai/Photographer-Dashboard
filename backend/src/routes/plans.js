@@ -8,10 +8,30 @@ const { protect, superprotect } = require('../middleware/auth');
 const { getStorageUsedBytes } = require('../utils/storageUsage');
 const { UUID_RE } = require('../utils/uuid');
 const payplus = require('../utils/payplus');
+const logger = require('../utils/logger');
 const { FREE_TIER_BYTES } = Subscription;
 const ANNUAL_DISCOUNT = 0.8; // 20% discount when billed annually
 
 const router = express.Router();
+
+// Single source of truth for the price (ILS) of a plan + billing interval.
+// Used by BOTH the checkout link generator and the webhook amount-verification
+// so the two can never drift. Returns null when the plan is not chargeable / mispriced.
+function computePlanAmount(plan, billingInterval, customStorageGb) {
+  if (!plan || plan.slug === 'free') return null;
+  if (plan.slug === 'custom') {
+    const pricePerGb = Number(plan.pricePerGbIls);
+    if (!customStorageGb || customStorageGb < 1 || !pricePerGb) return null;
+    const monthly = parseFloat((customStorageGb * pricePerGb).toFixed(2));
+    return billingInterval === 'annual'
+      ? parseFloat((monthly * 12 * ANNUAL_DISCOUNT).toFixed(2))
+      : monthly;
+  }
+  const amount = billingInterval === 'annual'
+    ? Number(plan.priceAnnualIls)
+    : Number(plan.priceMonthlyIls);
+  return amount || null;
+}
 
 // GET /api/plans — public: active plans for pricing page
 router.get('/', asyncHandler(async (req, res) => {
@@ -192,24 +212,12 @@ router.post('/checkout', protect, asyncHandler(async (req, res) => {
   if (plan.slug === 'free')
     return res.status(400).json({ message: 'Free plan does not require payment' });
 
-  let amount;
-  if (plan.slug === 'custom') {
-    if (!customStorageGb || customStorageGb < 1)
-      return res.status(400).json({ message: 'customStorageGb is required for the custom plan' });
-    const pricePerGb = Number(plan.pricePerGbIls);
-    if (!pricePerGb)
-      return res.status(503).json({ message: 'Custom plan pricing not configured' });
-    const monthly = parseFloat((customStorageGb * pricePerGb).toFixed(2));
-    amount = billingInterval === 'annual'
-      ? parseFloat((monthly * 12 * ANNUAL_DISCOUNT).toFixed(2))
-      : monthly;
-  } else {
-    amount = billingInterval === 'annual'
-      ? Number(plan.priceAnnualIls)
-      : Number(plan.priceMonthlyIls);
-    if (!amount)
-      return res.status(503).json({ message: 'Plan pricing not configured' });
-  }
+  if (plan.slug === 'custom' && (!customStorageGb || customStorageGb < 1))
+    return res.status(400).json({ message: 'customStorageGb is required for the custom plan' });
+
+  const amount = computePlanAmount(plan, billingInterval, customStorageGb);
+  if (!amount)
+    return res.status(503).json({ message: 'Plan pricing not configured' });
 
   const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:8080';
   const result = await payplus.generatePaymentLink({
@@ -238,9 +246,17 @@ router.post('/checkout', protect, asyncHandler(async (req, res) => {
 router.post('/webhook', asyncHandler(async (req, res) => {
   const payload = req.body;
 
-  // Verify signature — skip in dev if PAYPLUS_SECRET_KEY not set
-  if (process.env.PAYPLUS_SECRET_KEY && !payplus.verifyWebhookSignature(payload)) {
-    return res.status(401).json({ message: 'Invalid signature' });
+  // Verify signature — hard reject if the secret is missing OR the signature is
+  // invalid (fail-closed). This handler grants subscriptions and stores card-on-file
+  // tokens, so an unauthenticated caller must never reach the body. Mirrors the
+  // store webhook (routes/store.js).
+  if (!process.env.PAYPLUS_SECRET_KEY) {
+    logger.warn('PayPlus plans webhook: PAYPLUS_SECRET_KEY not configured');
+    return res.status(400).json({ message: 'Webhook secret not configured' });
+  }
+  if (!payplus.verifyWebhookSignature(payload)) {
+    logger.warn('PayPlus plans webhook: invalid signature');
+    return res.status(400).json({ message: 'Invalid signature' });
   }
 
   // Only process approved transactions
@@ -287,6 +303,21 @@ router.post('/webhook', asyncHandler(async (req, res) => {
   const amount              = payload?.data?.amount || null;
   const transactionUid      = payload?.data?.transaction_uid || null;
 
+  // Verify the charged amount matches the plan price before provisioning.
+  // planId/billingInterval/customStorageGb come from the signature-protected
+  // more_info, but `amount` does not — so cross-check it against the catalog
+  // to prevent activating a paid plan for a smaller (or zero) charge.
+  const plan = await Plan.findById(planId);
+  if (!plan) {
+    logger.warn(`PayPlus plans webhook: plan ${planId} not found (admin ${adminId})`);
+    return res.status(400).json({ message: 'Plan not found' });
+  }
+  const expectedAmount = computePlanAmount(plan, billingInterval, customStorageGb);
+  if (expectedAmount == null || amount == null || Number(amount) < expectedAmount - 0.01) {
+    logger.warn(`PayPlus plans webhook: amount mismatch for admin ${adminId} plan ${planId} — got ${amount}, expected ${expectedAmount}`);
+    return res.status(400).json({ message: 'Amount mismatch' });
+  }
+
   // Determine period boundaries (monthly or annual from now)
   const now   = new Date();
   const end   = new Date(now);
@@ -320,7 +351,6 @@ router.post('/webhook', asyncHandler(async (req, res) => {
     try {
       const adminRec = await Admin.findById(adminId);
       if (!adminRec?.email) return;
-      const plan = await Plan.findById(planId).catch(() => null);
       const invoiceService = require('../services/invoiceService');
       await invoiceService.issueReceipt({
         sourceKind: 'subscription',

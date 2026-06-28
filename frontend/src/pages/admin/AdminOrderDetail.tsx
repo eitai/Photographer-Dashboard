@@ -145,7 +145,7 @@ export const AdminOrderDetail = () => {
                 <div key={step} className={`flex items-center gap-1 ${dir === 'rtl' ? 'flex-row-reverse' : ''}`}>
                   <div className={`flex flex-col items-center gap-1`}>
                     <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-colors ${
-                      isCurrent ? 'bg-charcoal text-white' :
+                      isCurrent ? 'bg-primary text-white' :
                       isPast ? 'bg-emerald-500 text-white' :
                       'bg-ivory text-warm-gray'
                     }`}>
@@ -237,7 +237,7 @@ export const AdminOrderDetail = () => {
               {order.status === 'draft' && (
                 <>
                   <Button
-                    className='w-full bg-charcoal hover:bg-charcoal/90 text-white'
+                    className='w-full bg-primary hover:bg-primary/90 text-white'
                     onClick={() =>
                       handleAction(
                         sendToClient as Parameters<typeof handleAction>[0],
@@ -285,7 +285,7 @@ export const AdminOrderDetail = () => {
 
               {order.status === 'approved' && (
                 <Button
-                  className='w-full bg-charcoal hover:bg-charcoal/90 text-white'
+                  className='w-full bg-primary hover:bg-primary/90 text-white'
                   onClick={() =>
                     handleAction(
                       sendToSupplier as Parameters<typeof handleAction>[0],
@@ -322,7 +322,7 @@ export const AdminOrderDetail = () => {
                       <div className={`flex gap-2 ${dir === 'rtl' ? 'flex-row-reverse' : ''}`}>
                         <Button
                           size='sm'
-                          className='bg-charcoal hover:bg-charcoal/90 text-white'
+                          className='bg-primary hover:bg-primary/90 text-white'
                           disabled={notifyMutation.isPending}
                           onClick={() => {
                             if (!id) return;

@@ -41,7 +41,7 @@ export const AdminUsers = () => {
     const next = new URLSearchParams(searchParams);
     next.delete('sso'); next.delete('reason');
     setSearchParams(next, { replace: true });
-  }, []);
+  }, [searchParams, setSearchParams, t]);
 
   const handleDelete = (id: string) => {
     setDeleteConfirmId(null);

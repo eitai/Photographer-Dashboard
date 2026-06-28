@@ -89,8 +89,8 @@ export const Lightbox = ({
       onTouchEnd={(e) => {
         if (touchStartX.current === null) return;
         const diff = touchStartX.current - e.changedTouches[0].clientX;
-        if (diff > 50)  isRtl ? handleLeft()  : handleRight();
-        else if (diff < -50) isRtl ? handleRight() : handleLeft();
+        if (diff > 50) { if (isRtl) { handleLeft(); } else { handleRight(); } }
+        else if (diff < -50) { if (isRtl) { handleRight(); } else { handleLeft(); } }
         touchStartX.current = null;
       }}
     >

@@ -98,7 +98,7 @@ export const ClientFaceReferenceCard = ({ clientId, faceRecognitionEnabled: init
       }
       uploadMutation.mutate(file);
     },
-    [uploadMutation],
+    [uploadMutation, t],
   );
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {

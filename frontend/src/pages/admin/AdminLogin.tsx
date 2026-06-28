@@ -57,7 +57,7 @@ export const AdminLogin = () => {
   return (
     <div className='min-h-screen bg-white flex flex-col items-center justify-center px-4'>
       {/* Logo */}
-      <img src='/logos/logo.png' style={{mixBlendMode: 'multiply'}} alt='LIGHT STUDIO' className='h-48 w-auto' />
+      <img src='/logos/logo.png' className='h-48 w-auto mix-blend-multiply' alt='LIGHT STUDIO' />
       <div className='w-full max-w-sm'>
         <form onSubmit={handleSubmit} className='border border-zinc-200 rounded-2xl p-8 space-y-5'>
           <div>
