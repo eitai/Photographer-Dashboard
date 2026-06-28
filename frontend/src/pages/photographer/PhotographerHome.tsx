@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Helmet } from 'react-helmet-async';
-import { usePhotographer } from './PhotographerLayout';
+import { usePhotographer } from './usePhotographer';
 import { useI18n } from '@/lib/i18n';
 import api, { getImageUrl } from '@/lib/api';
 import heroFallback from '@/assets/hero-family.jpg';
@@ -30,7 +30,7 @@ export const PhotographerHome = () => {
     staleTime: 5 * 60 * 1000,
   });
 
-  const { data: latestPosts } = useQuery<any[]>({
+  const { data: latestPosts } = useQuery<{ _id: string; slug: string; title: string; featuredImagePath?: string; category?: string; publishedAt?: string }[]>({
     queryKey: ['photographerBlog', username],
     queryFn: () => api.get(`/p/${username}/blog`).then((r) => r.data.slice(0, 3)),
     staleTime: 5 * 60 * 1000,

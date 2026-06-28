@@ -1,6 +1,6 @@
 import { useI18n } from '@/lib/i18n';
 import { Phone, Mail } from 'lucide-react';
-import type { PhotographerSocial } from '@/pages/photographer/PhotographerLayout';
+import type { PhotographerSocial } from '@/pages/photographer/usePhotographer';
 
 interface FooterProps {
   social?: PhotographerSocial;

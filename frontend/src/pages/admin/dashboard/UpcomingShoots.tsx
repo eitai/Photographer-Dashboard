@@ -32,7 +32,7 @@ export const UpcomingShoots = ({ clients, galleries }: UpcomingShootsProps) => {
   };
 
   return (
-    <div className='bg-card rounded-2xl shadow p-4 md:p-5 flex flex-col min-h-0'>
+    <div className='bg-card rounded-2xl border border-blush/20 p-4 md:p-5 flex flex-col min-h-0'>
       <div className='flex items-center gap-2 mb-3 shrink-0'>
         <Camera size={15} className='text-warm-gray' />
         <h3 className='text-sm font-sans font-semibold text-charcoal'>{t('admin.dashboard.upcoming_title')}</h3>
@@ -48,7 +48,7 @@ export const UpcomingShoots = ({ clients, galleries }: UpcomingShootsProps) => {
             const title = sessionLabel ? `${sessionLabel} · ${c.name}` : c.name;
             return (
               <li key={c._id} className='flex items-center gap-3'>
-                <DashboardThumb galleryId={gallery?._id} alt={c.name} />
+                <DashboardThumb previewImages={gallery?.previewImages} alt={c.name} />
                 <div className='flex-1 min-w-0'>
                   <p className='text-sm font-sans font-medium text-charcoal truncate'>{title}</p>
                   <p className='text-xs text-warm-gray mt-0.5'>{formatWhen(c.eventDate as string)}</p>

@@ -63,7 +63,7 @@ export const OnboardingPage = () => {
     if (admin && admin.firstLogin === false) {
       navigate('/admin/dashboard', { replace: true });
     }
-  }, [admin]);
+  }, [admin, navigate]);
 
   function persistStep(s: 1 | 2 | 3 | 4) {
     setStep(s);

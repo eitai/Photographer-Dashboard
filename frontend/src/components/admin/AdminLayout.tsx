@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Menu } from 'lucide-react';
 import { AdminSidebar } from './AdminSidebar';
 import { NotificationBell } from './NotificationBell';
@@ -18,14 +18,27 @@ interface AdminLayoutProps {
 
 export const AdminLayout = ({ children, title, actions }: AdminLayoutProps) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const theme = useAuthStore((s) => s.theme);
   const darkMode = useAuthStore((s) => s.darkMode);
   const { dir } = useI18n();
   const { admin } = useAuth();
   const { data: storage, isLoading: storageLoading } = useMyStorage();
 
+  // The admin interface is always the violet theme — decoupled from the
+  // photographer's landing theme. Mirror it onto <body> so Radix portals
+  // (dialogs, dropdowns, selects) inherit the same tokens. Cleared on unmount
+  // so client/landing routes are never affected.
+  useEffect(() => {
+    const body = document.body;
+    body.setAttribute('data-theme', 'violet');
+    body.classList.toggle('dark', darkMode);
+    return () => {
+      body.removeAttribute('data-theme');
+      body.classList.remove('dark');
+    };
+  }, [darkMode]);
+
   return (
-    <div dir={dir} data-theme={theme} className={`admin-layout flex h-screen overflow-hidden bg-background${darkMode ? ' dark' : ''}`}>
+    <div dir={dir} data-theme='violet' className={`admin-layout flex h-screen overflow-hidden bg-background${darkMode ? ' dark' : ''}`}>
       {/* Mobile overlay */}
       {sidebarOpen && <div className='fixed inset-0 z-20 bg-black/40 md:hidden' onClick={() => setSidebarOpen(false)} />}
 

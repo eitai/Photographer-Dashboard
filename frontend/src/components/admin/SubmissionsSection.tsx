@@ -81,13 +81,13 @@ export const SubmissionsSection = ({
                           loading='lazy'
                         />
                         {isHero && (
-                          <div className='absolute top-1 left-1 w-5 h-5 rounded-full bg-amber-400 flex items-center justify-center shadow pointer-events-none'>
+                          <div className='absolute top-1 start-1 w-5 h-5 rounded-full bg-amber-400 flex items-center justify-center shadow pointer-events-none'>
                             <Star size={10} fill='white' className='text-white' />
                           </div>
                         )}
                         {comment && (
                           <div
-                            className='absolute top-1 right-1 w-5 h-5 rounded-full bg-blush flex items-center justify-center shadow pointer-events-none'
+                            className='absolute top-1 end-1 w-5 h-5 rounded-full bg-blush flex items-center justify-center shadow pointer-events-none'
                             title={comment}
                           >
                             <MessageCircle size={10} className='text-charcoal' />

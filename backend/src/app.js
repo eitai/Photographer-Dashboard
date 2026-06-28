@@ -13,6 +13,26 @@ const path = require('path');
 
 const logger = require('./utils/logger');
 
+// ── Shared rate-limit store ───────────────────────────────────────────────────
+// Default MemoryStore is per-process: with >1 instance the effective limit is N×
+// per instance and a load-balanced attacker bypasses the throttles. When REDIS_URL
+// is configured, back every limiter with a shared Redis store so limits hold across
+// instances. Degrades gracefully to in-memory if the packages/connection are absent.
+let sharedRateLimitStore;
+if (process.env.REDIS_URL) {
+  try {
+    const { RedisStore } = require('rate-limit-redis');
+    const Redis = require('ioredis');
+    const redisClient = new Redis(process.env.REDIS_URL);
+    redisClient.on('error', (err) => logger.warn(`Rate-limit Redis error: ${err.message}`));
+    sharedRateLimitStore = new RedisStore({ sendCommand: (...args) => redisClient.call(...args) });
+    logger.info('Rate limiting backed by Redis (shared store)');
+  } catch (err) {
+    logger.warn(`REDIS_URL set but Redis store unavailable — falling back to in-memory rate limiting: ${err.message}`);
+  }
+}
+const withStore = (opts) => (sharedRateLimitStore ? { ...opts, store: sharedRateLimitStore } : opts);
+
 const app = express();
 
 // ── HTTPS redirect (production only, before all other middleware) ─────────────
@@ -62,9 +82,25 @@ app.use(
 );
 
 // ── Request logging (skip in test) ───────────────────────────────────────────
+// Gallery/store access tokens travel in the URL path of public routes. Redact
+// them so the bearer secret never lands in plaintext request logs.
+const REDACT_TOKEN_PATHS = [
+  /(\/galleries\/token\/)[^/?]+/g,
+  /(\/store\/)[^/?]+/g,
+  /(\/orders\/selection\/)[^/?]+/g,
+  /(\/product-orders\/gallery\/)[^/?]+/g,
+];
+function sanitizeLogUrl(url) {
+  let out = url || '';
+  for (const re of REDACT_TOKEN_PATHS) out = out.replace(re, '$1[REDACTED]');
+  return out;
+}
+morgan.token('clean-url', (req) => sanitizeLogUrl(req.originalUrl || req.url));
+const PROD_LOG_FORMAT =
+  ':remote-addr - :remote-user [:date[clf]] ":method :clean-url HTTP/:http-version" :status :res[content-length] ":referrer" ":user-agent"';
 if (process.env.NODE_ENV !== 'test') {
   app.use(
-    morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev', {
+    morgan(process.env.NODE_ENV === 'production' ? PROD_LOG_FORMAT : 'dev', {
       stream: { write: (msg) => logger.info(msg.trim()) },
     }),
   );
@@ -86,7 +122,7 @@ app.use(
 );
 
 // ── Rate limiting ─────────────────────────────────────────────────────────────
-const globalLimiter = rateLimit({
+const globalLimiter = rateLimit(withStore({
   windowMs: 15 * 60 * 1000,
   max: process.env.NODE_ENV === 'test' ? 10000 : 2000,
   standardHeaders: true,
@@ -97,42 +133,44 @@ const globalLimiter = rateLimit({
   // cap can be hit by an admin viewing several large galleries in a session.
   // Media routes have no sensitive data; rate-limit only the API surface.
   skip: (req) => req.path.startsWith('/media/') || req.path === '/media',
-});
+}));
 app.use('/api', globalLimiter);
 
-const authLimiter = rateLimit({
+const authLimiter = rateLimit(withStore({
   windowMs: 15 * 60 * 1000,
   max: process.env.NODE_ENV === 'test' ? 1000 : 20,
   standardHeaders: true,
   legacyHeaders: false,
   message: { message: 'Too many attempts, please try again later.' },
-});
+}));
 
-const contactLimiter = rateLimit({
+const contactLimiter = rateLimit(withStore({
   windowMs: 60 * 60 * 1000,
   max: process.env.NODE_ENV === 'test' ? 1000 : 10,
   standardHeaders: true,
   legacyHeaders: false,
   message: { message: 'Too many contact submissions, please try again later.' },
-});
+}));
 
-const submissionLimiter = rateLimit({
+const submissionLimiter = rateLimit(withStore({
   windowMs: 15 * 60 * 1000,
   max: process.env.NODE_ENV === 'test' ? 10000 : 30,
   standardHeaders: true,
   legacyHeaders: false,
   message: { message: 'Too many submissions, please try again later.' },
-});
+}));
 
-const galleryTokenLimiter = rateLimit({
+const galleryTokenLimiter = rateLimit(withStore({
   windowMs: 15 * 60 * 1000,
   max: process.env.NODE_ENV === 'test' ? 10000 : 60,
   standardHeaders: true,
   legacyHeaders: false,
   message: { message: 'Too many requests, please try again later.' },
-});
+}));
 
 app.use('/api/auth/login', authLimiter);
+app.use('/api/auth/superadmin-login', authLimiter);
+app.use('/api/supplier/auth/login', authLimiter);
 app.use('/api/auth/seed', authLimiter);
 app.use('/api/contact', contactLimiter);
 app.use('/api/p/:id/contact', contactLimiter);
@@ -140,13 +178,13 @@ app.use('/api/galleries/:galleryId/submit', submissionLimiter);
 app.use('/api/product-orders/:id/selection', submissionLimiter);
 app.use('/api/galleries/token', galleryTokenLimiter);
 
-const storeLimiter = rateLimit({
+const storeLimiter = rateLimit(withStore({
   windowMs: 15 * 60 * 1000,
   max: process.env.NODE_ENV === 'test' ? 10000 : 20,
   standardHeaders: true,
   legacyHeaders: false,
   message: { message: 'Too many requests, please try again later.' },
-});
+}));
 app.use('/api/store/:galleryToken/checkout', storeLimiter);
 
 // ── Static files ──────────────────────────────────────────────────────────────
@@ -156,7 +194,14 @@ app.use(
   '/uploads',
   (req, res, next) => {
     res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
-    res.setHeader('Access-Control-Allow-Origin', '*');
+    // Echo the request origin only when it's an allowed frontend origin instead of a
+    // blanket '*', so private gallery assets aren't fetchable cross-origin from any site.
+    // (<img> display needs no ACAO; this only governs fetch/canvas access, e.g. ZIP download.)
+    const origin = req.headers.origin;
+    if (origin && allowedOrigins.includes(origin.replace(/\/$/, ''))) {
+      res.setHeader('Access-Control-Allow-Origin', origin);
+      res.setHeader('Vary', 'Origin');
+    }
     next();
   },
   express.static(path.join(__dirname, '../uploads'), {

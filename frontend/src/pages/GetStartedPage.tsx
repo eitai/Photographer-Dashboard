@@ -38,7 +38,7 @@ export const GetStartedPage = () => {
   // Redirect if already logged in
   useEffect(() => {
     if (admin) navigate('/admin/dashboard', { replace: true });
-  }, [admin]);
+  }, [admin, navigate]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();

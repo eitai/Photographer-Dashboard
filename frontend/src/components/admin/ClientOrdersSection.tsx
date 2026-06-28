@@ -31,7 +31,6 @@ export const ClientOrdersSection = ({ clientId, clientName, galleries, clientEma
 
   const { data: productOrders = [], isLoading: poLoading, refetch } = useProductOrders(clientId);
   const { data: storeData, isLoading: soLoading } = useOrders({ clientId, limit: 20 });
-  const storeOrders = storeData?.orders ?? [];
 
   const [showCreateOrder, setShowCreateOrder] = useState(false);
 
@@ -39,12 +38,13 @@ export const ClientOrdersSection = ({ clientId, clientName, galleries, clientEma
   const [emailSent, setEmailSent] = useState(false);
 
   const entries: MergedEntry[] = useMemo(() => {
+    const storeOrders = storeData?.orders ?? [];
     const merged: MergedEntry[] = [
       ...productOrders.map((o): MergedEntry => ({ kind: 'catalog', createdAt: o.createdAt, order: o })),
       ...storeOrders.map((o): MergedEntry => ({ kind: 'supplier', createdAt: o.createdAt, order: o })),
     ];
     return merged.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-  }, [productOrders, storeOrders]);
+  }, [productOrders, storeData]);
 
   const isLoading = poLoading || soLoading;
   const hasEnabledLinks = productOrders.some((o) => o.linkEnabled);

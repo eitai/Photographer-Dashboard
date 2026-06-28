@@ -1,0 +1,45 @@
+# ── Dependencies ────────────────────────────────────────────────
+node_modules/
+**/node_modules/
+.pnp
+.pnp.js
+
+# ── Environment / secrets ───────────────────────────────────────
+.env
+.env.local
+.env.development
+.env.production
+.env.*.local
+
+# ── Build output ────────────────────────────────────────────────
+dist/
+build/
+.vite/
+*.tsbuildinfo
+
+# ── Logs ────────────────────────────────────────────────────────
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# ── Test / coverage ─────────────────────────────────────────────
+coverage/
+.nyc_output/
+
+# ── Python (face-recognition-service) ───────────────────────────
+__pycache__/
+*.pyc
+venv/
+.venv/
+
+# ── OS / editor cruft ───────────────────────────────────────────
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# ── Dead / archived code (kept on disk, untracked) ──────────────
+disabled-koral-mobile/

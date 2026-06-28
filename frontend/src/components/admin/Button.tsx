@@ -5,7 +5,7 @@ const BASE =
   'inline-flex items-center justify-center gap-1.5 rounded-xl font-medium transition-colors disabled:opacity-60 disabled:cursor-not-allowed';
 
 const VARIANTS = {
-  primary: 'bg-blush text-white hover:bg-blush/80',
+  primary: 'bg-blush text-charcoal hover:bg-blush/80',
   dark:    'bg-charcoal text-white hover:bg-charcoal/90',
   ghost:   'border border-beige text-warm-gray hover:bg-ivory',
   danger:  'border border-red-200 text-red-500 hover:bg-red-50',

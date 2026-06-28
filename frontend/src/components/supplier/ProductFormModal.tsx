@@ -154,8 +154,12 @@ export const ProductFormModal = ({ open, onClose, product }: ProductFormModalPro
         toast.success(t('supplier.products.created'));
       }
       onClose();
-    } catch {
-      toast.error(t('admin.common.error'));
+    } catch (err) {
+      // Surface backend validation errors (422) instead of a generic toast.
+      const message =
+        (err as { response?: { data?: { message?: string } } })?.response?.data?.message ??
+        t('admin.common.error');
+      toast.error(message);
     }
   };
 
@@ -188,7 +192,7 @@ export const ProductFormModal = ({ open, onClose, product }: ProductFormModalPro
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
-      <DialogContent data-theme="bw" dir={dir} className='max-w-md max-h-[90vh] overflow-y-auto'>
+      <DialogContent data-theme="violet" dir={dir} className='max-w-md max-h-[90vh] overflow-y-auto'>
         <DialogHeader>
           <DialogTitle>
             {isEditing ? t('supplier.products.edit') : t('supplier.products.add')}
@@ -219,7 +223,7 @@ export const ProductFormModal = ({ open, onClose, product }: ProductFormModalPro
               <SelectTrigger>
                 <SelectValue placeholder='—' />
               </SelectTrigger>
-              <SelectContent data-theme="bw" dir={dir}>
+              <SelectContent data-theme="violet" dir={dir}>
                 {typeOptions.map((o) => (
                   <SelectItem key={o.value} value={o.value}>
                     {o.label}
@@ -438,7 +442,7 @@ export const ProductFormModal = ({ open, onClose, product }: ProductFormModalPro
             <Button
               type='submit'
               disabled={isSubmitting}
-              className='bg-foreground text-background hover:bg-foreground/90'
+              className='bg-primary text-primary-foreground hover:bg-primary/90'
             >
               {isSubmitting ? (
                 <Loader2 className='h-4 w-4 animate-spin me-2' />

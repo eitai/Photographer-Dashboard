@@ -46,7 +46,7 @@ export const ClientGallery = () => {
 
   const header = (
     <header className='h-20 shrink-0 flex items-center justify-between px-6 bg-background border-b border-border'>
-      <img src='/logos/logo.png' style={{ mixBlendMode: 'multiply' }} alt='LIGHT STUDIO' className='h-14 w-auto' />
+      <img src='/logos/logo.png' className='h-14 w-auto mix-blend-multiply' alt='LIGHT STUDIO' />
       {gallery && (
         <p className='font-body text-sm text-muted-foreground truncate ms-4'>{gallery.name}</p>
       )}
@@ -54,7 +54,7 @@ export const ClientGallery = () => {
   );
 
   const themeWrapper = (children: React.ReactNode) => (
-    <div data-theme='bw' style={{ backgroundColor: 'var(--background)', minHeight: '100vh' }} className='flex flex-col'>
+    <div data-theme='bw' className='flex flex-col bg-background min-h-screen'>
       {children}
     </div>
   );

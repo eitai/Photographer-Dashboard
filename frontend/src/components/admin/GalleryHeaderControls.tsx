@@ -49,7 +49,7 @@ export const GalleryHeaderControls = ({ gallery, galleryId, setGallery, expiresA
           }}
           className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs transition-colors ${
             gallery.selectionEnabled !== false
-              ? 'border-charcoal bg-ivory text-charcoal'
+              ? 'border-primary bg-primary/10 text-primary'
               : 'border-beige bg-muted/20 text-warm-gray'
           }`}
         >
@@ -99,7 +99,7 @@ export const GalleryHeaderControls = ({ gallery, galleryId, setGallery, expiresA
           }}
           className={`shrink-0 p-1.5 rounded-lg border transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
             (gallery.maxSelections ?? 10) === 0
-              ? 'bg-charcoal text-white border-charcoal'
+              ? 'bg-primary text-white border-primary'
               : 'border-beige text-warm-gray hover:border-charcoal/30 hover:text-charcoal'
           }`}
         >
@@ -129,7 +129,7 @@ export const GalleryHeaderControls = ({ gallery, galleryId, setGallery, expiresA
           type='button'
           onClick={handleSaveExpiry}
           disabled={updateGallery.isPending}
-          className='text-xs bg-charcoal text-white px-3 py-1.5 rounded-lg hover:bg-charcoal/90 transition-colors disabled:opacity-60'
+          className='text-xs bg-primary text-white px-3 py-1.5 rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-60'
         >
           {updateGallery.isPending ? t('admin.gallery.expires_at_saving') : t('admin.gallery.expires_at_save')}
         </button>

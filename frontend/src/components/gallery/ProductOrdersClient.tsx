@@ -121,7 +121,7 @@ const OrderPanel = ({ order, getImageUrl, onSubmitted }: OrderPanelProps) => {
           <button
             onClick={handleSubmit}
             disabled={submitting || selectedPhotos.size === 0}
-            className='flex items-center gap-2 px-4 py-2 bg-blush text-white text-sm rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50'
+            className='flex items-center gap-2 px-4 py-2 bg-blush text-charcoal text-sm rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50'
           >
             <Send size={13} />
             {submitting ? t('products.submitting') : t('products.submit')}
@@ -138,7 +138,7 @@ const OrderPanel = ({ order, getImageUrl, onSubmitted }: OrderPanelProps) => {
               onClick={() => setActiveGalleryId(g._id)}
               className={`px-3 py-1 text-xs rounded-full border transition-colors ${
                 activeGalleryId === g._id
-                  ? 'bg-blush text-white border-blush'
+                  ? 'bg-blush text-charcoal border-blush'
                   : 'bg-white text-warm-gray border-beige hover:border-blush hover:text-charcoal'
               }`}
             >

@@ -142,37 +142,37 @@ export const NotificationBell = () => {
       >
         <Bell size={19} />
         {count > 0 && (
-          <span className="absolute top-1 right-1 w-4 h-4 bg-blush text-white text-[10px] font-bold rounded-full flex items-center justify-center leading-none">
+          <span className="absolute top-1 end-1 w-4 h-4 bg-blush text-charcoal text-[10px] font-bold rounded-full flex items-center justify-center leading-none">
             {count > 9 ? '9+' : count}
           </span>
         )}
       </button>
 
       {open && (
-        <div className="absolute left-0 mt-2 w-72 bg-card border border-beige rounded-xl shadow-lg z-50 overflow-hidden">
+        <div className="absolute start-0 mt-2 w-72 bg-card border border-beige rounded-xl shadow-lg z-50 overflow-hidden">
           <div className="px-4 py-3 border-b border-beige flex items-center justify-between">
             <p className="text-sm font-medium font-sans text-charcoal">
-              {count === 0 ? 'אין התראות חדשות' : `${count} התראות חדשות`}
+              {count === 0 ? t('notif.no_new') : t('notif.new_count').replace('{n}', String(count))}
             </p>
             {pending.length > 0 && (
               <button
                 onClick={dismissAll}
                 className="text-xs font-sans text-warm-gray hover:text-charcoal transition-colors"
               >
-                נקה הכל
+                {t('notif.clear_all')}
               </button>
             )}
           </div>
 
           {count === 0 ? (
-            <p className="px-4 py-4 text-sm text-warm-gray text-center">הכל עדכני ✓</p>
+            <p className="px-4 py-4 text-sm text-warm-gray text-center">{t('notif.all_up_to_date')}</p>
           ) : (
             <div className="max-h-80 overflow-y-auto">
               {/* Gallery selection notifications */}
               {pending.length > 0 && (
                 <>
                   <p className="px-4 pt-3 pb-1 text-[10px] font-semibold uppercase tracking-wide text-warm-gray">
-                    בחירות גלריה
+                    {t('notif.gallery_selections')}
                   </p>
                   <ul className="divide-y divide-beige">
                     {pending.map((g) => (
@@ -197,7 +197,7 @@ export const NotificationBell = () => {
               {unseenOrders.length > 0 && (
                 <>
                   <p className="px-4 pt-3 pb-1 text-[10px] font-semibold uppercase tracking-wide text-warm-gray border-t border-beige">
-                    עדכוני הזמנות
+                    {t('notif.order_updates')}
                   </p>
                   <ul className="divide-y divide-beige">
                     {unseenOrders.map((order) => (
@@ -212,7 +212,7 @@ export const NotificationBell = () => {
                           />
                           <span className="flex flex-col min-w-0">
                             <span className="text-sm text-charcoal font-medium truncate">
-                              {order.client ? `הזמנה עבור ${order.client.name}` : t('orders.direct_badge')}
+                              {order.client ? t('notif.order_for').replace('{name}', order.client.name) : t('orders.direct_badge')}
                             </span>
                             <span className="text-xs text-warm-gray mt-0.5">
                               {t(`orders.notify.${order.status}` as Parameters<typeof t>[0])} · {new Date(order.updatedAt).toLocaleDateString('he-IL')}

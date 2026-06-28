@@ -8,6 +8,7 @@ const { protect } = require('../middleware/auth');
 const asyncHandler = require('../middleware/asyncHandler');
 const validatePassword = require('../utils/validatePassword');
 const formatAdmin = require('../utils/formatAdmin');
+const logger = require('../utils/logger');
 
 const router = express.Router();
 
@@ -298,12 +299,12 @@ router.get(
     const errorBase = isSuperadminFlow ? '/admin' : '/login';
 
     if (error || !code) {
-      console.error('[SSO] Google returned error or no code:', { error, hasCode: !!code });
+      logger.error('[SSO] Google returned error or no code:', { error, hasCode: !!code });
       return res.redirect(`${FRONTEND_URL()}${errorBase}?sso=error&reason=no_code&detail=${encodeURIComponent(error || 'missing_code')}`);
     }
 
     if (!stateData || !['login', 'link', 'superadmin-login'].includes(stateData.flow)) {
-      console.error('[SSO] State decode failed:', { hasState: !!state, stateData });
+      logger.error('[SSO] State decode failed:', { hasState: !!state, stateData });
       return res.redirect(`${FRONTEND_URL()}${errorBase}?sso=error&reason=state_failed`);
     }
 
@@ -311,7 +312,7 @@ router.get(
     try {
       googleProfile = await exchangeCodeForProfile(code, callbackUrl);
     } catch (err) {
-      console.error('[SSO] exchangeCodeForProfile failed:', err.message);
+      logger.error('[SSO] exchangeCodeForProfile failed:', err.message);
       return res.redirect(`${FRONTEND_URL()}${errorBase}?sso=error&reason=exchange_failed&detail=${encodeURIComponent(err.message)}`);
     }
 
@@ -338,10 +339,14 @@ router.get(
       if (!admin) {
         admin = await Admin.findOne({ email: googleEmail });
         if (!admin) return res.redirect(`${FRONTEND_URL()}/admin?sso=error&reason=no_account`);
-        await Admin.findByIdAndUpdate(admin.id, { googleId, googleEmail, ssoEnabled: true });
+        // Only link a Google identity by email match if this admin has explicitly
+        // enabled SSO. Otherwise any Google account sharing the email could take over.
+        if (!admin.ssoEnabled) {
+          return res.redirect(`${FRONTEND_URL()}/admin?sso=error&reason=sso_not_enabled`);
+        }
+        await Admin.findByIdAndUpdate(admin.id, { googleId, googleEmail });
         admin.googleId = googleId;
         admin.googleEmail = googleEmail;
-        admin.ssoEnabled = true;
       }
       if (admin.role !== 'superadmin') {
         return res.redirect(`${FRONTEND_URL()}/admin?sso=error&reason=not_superadmin`);
@@ -379,11 +384,15 @@ router.get(
         await Subscription.assignFreePlan(admin.id);
         isNewSignup = true;
       } else {
-        // Auto-link on first Google login when email matches an existing admin
-        await Admin.findByIdAndUpdate(admin.id, { googleId, googleEmail, ssoEnabled: true });
+        // Existing account matched by email — only link if this admin has explicitly
+        // enabled SSO. Without this guard, anyone controlling a Google account with the
+        // same email could hijack the account.
+        if (!admin.ssoEnabled) {
+          return res.redirect(`${FRONTEND_URL()}/login?sso=error&reason=sso_not_enabled`);
+        }
+        await Admin.findByIdAndUpdate(admin.id, { googleId, googleEmail });
         admin.googleId = googleId;
         admin.googleEmail = googleEmail;
-        admin.ssoEnabled = true;
       }
     }
 
@@ -473,7 +482,7 @@ async function exchangeCodeForProfile(code, redirectUri) {
 
   if (!tokenRes.ok) {
     const body = await tokenRes.text();
-    console.error('[SSO] Token exchange failed:', tokenRes.status, body);
+    logger.error('[SSO] Token exchange failed:', tokenRes.status, body);
     throw new Error(`Token exchange failed: ${tokenRes.status}`);
   }
 

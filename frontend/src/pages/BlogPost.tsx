@@ -7,10 +7,22 @@ import { useI18n } from '@/lib/i18n';
 import { ArrowLeft } from 'lucide-react';
 import { Helmet } from 'react-helmet-async';
 
+interface BlogPostData {
+  slug: string;
+  title: string;
+  content?: string;
+  featuredImagePath?: string;
+  category?: string;
+  seoTitle?: string;
+  seoDescription?: string;
+  publishedAt?: string;
+  createdAt?: string;
+}
+
 export const BlogPost = () => {
   const { slug } = useParams<{ slug: string }>();
   const { t } = useI18n();
-  const [post, setPost] = useState<any>(null);
+  const [post, setPost] = useState<BlogPostData | null>(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
 

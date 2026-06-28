@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Images, Plus, Infinity } from 'lucide-react';
+import { Images, Plus, Infinity as InfinityIcon } from 'lucide-react';
 import { createGallery as apiCreateGallery } from '@/services/galleryService';
 import { GalleryGrid } from '@/components/admin/GalleryGrid';
 import { SessionTypeCombobox } from '@/components/admin/SessionTypeCombobox';
@@ -146,11 +146,11 @@ export const GalleriesSection = ({
                 onClick={() => setGalleryForm((f) => ({ ...f, maxSelections: f.maxSelections === 0 ? 10 : 0 }))}
                 className={`shrink-0 p-2 rounded-lg border transition-colors ${
                   galleryForm.maxSelections === 0
-                    ? 'bg-blush text-white border-blush'
+                    ? 'bg-blush text-charcoal border-blush'
                     : 'border-beige text-warm-gray hover:border-blush hover:text-blush'
                 }`}
               >
-                <Infinity size={16} />
+                <InfinityIcon size={16} />
               </button>
             </div>
           </div>
@@ -176,7 +176,7 @@ export const GalleriesSection = ({
       {galleries.length === 0 ? (
         <p className='text-sm text-warm-gray'>{t('admin.client.no_galleries')}</p>
       ) : (
-        <div className='overflow-y-auto max-h-[70vh] pr-1'>
+        <div className='overflow-y-auto max-h-[70vh] pe-1'>
         <GalleryGrid
           galleries={galleries}
           client={client}

@@ -258,7 +258,7 @@ export const AdminStoreOrderComposer = () => {
             {(['upload', 'gallery'] as PhotoSource[]).map((src) => (
               <button key={src} type='button' onClick={() => setPhotoSource(src)}
                 className={`px-4 py-2 text-sm font-medium -mb-px border-b-2 transition-colors ${
-                  photoSource === src ? 'border-charcoal text-charcoal' : 'border-transparent text-warm-gray hover:text-charcoal'
+                  photoSource === src ? 'border-primary text-primary' : 'border-transparent text-warm-gray hover:text-charcoal'
                 }`}>
                 {src === 'upload' ? t('store.direct.upload_tab') : t('store.direct.galleries_tab')}
               </button>
@@ -294,12 +294,12 @@ export const AdminStoreOrderComposer = () => {
                     return (
                       <button key={id} type='button' onClick={() => toggleImage(img)} disabled={!isSel && atMax}
                         className={`relative aspect-square rounded-lg overflow-hidden border-2 transition-all ${
-                          isSel ? 'border-charcoal' : 'border-transparent'
+                          isSel ? 'border-primary' : 'border-transparent'
                         } ${!isSel && atMax ? 'opacity-40 cursor-not-allowed' : ''}`}>
                         <img src={getImageUrl(img.thumbnailPath || img.path)} alt={img.filename} loading='lazy' className='w-full h-full object-cover' />
                         {isSel && (
                           <div className='absolute inset-0 bg-charcoal/20 flex items-center justify-center'>
-                            <span className='w-5 h-5 rounded-full bg-charcoal flex items-center justify-center'><Check size={12} className='text-white' /></span>
+                            <span className='w-5 h-5 rounded-full bg-primary flex items-center justify-center'><Check size={12} className='text-white' /></span>
                           </div>
                         )}
                       </button>
@@ -333,7 +333,7 @@ export const AdminStoreOrderComposer = () => {
             {(['mine', 'client', 'custom'] as ShipMode[]).map((mode) => (
               <button key={mode} type='button' onClick={() => setShipMode(mode)}
                 className={`px-3 py-1.5 rounded-full border text-sm transition-colors ${
-                  shipMode === mode ? 'border-charcoal bg-charcoal text-white' : 'border-beige text-charcoal hover:border-charcoal'
+                  shipMode === mode ? 'border-primary bg-primary text-white' : 'border-beige text-charcoal hover:border-charcoal'
                 }`}>
                 {mode === 'mine' ? t('store.direct.shipping_mine') : mode === 'client' ? t('store.direct.shipping_client') : t('store.direct.shipping_custom')}
               </button>
@@ -404,7 +404,7 @@ export const AdminStoreOrderComposer = () => {
             <Textarea value={note} onChange={(e) => setNote(e.target.value)} rows={2} className='mt-1' />
           </div>
           <Button onClick={handleSubmit} disabled={!countOk || !optionsOk || createOrder.isPending}
-            className='w-full bg-charcoal hover:bg-charcoal/90 text-white gap-2'>
+            className='w-full bg-primary hover:bg-primary/90 text-white gap-2'>
             {createOrder.isPending ? <Loader2 size={16} className='animate-spin' /> : null}
             {createOrder.isPending ? t('store.direct.submitting') : t('store.direct.submit')}
           </Button>

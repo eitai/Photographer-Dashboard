@@ -6,12 +6,20 @@ import { getImageUrl } from '@/lib/api';
 import { SectionHeading } from './photographerHomeComponents';
 import type { PublicSettings } from './photographerHomeTypes';
 
+interface LatestPost {
+  _id: string;
+  slug: string;
+  title: string;
+  featuredImagePath?: string;
+  category?: string;
+}
+
 interface HomeSectionMediaProps {
   settings: PublicSettings | undefined;
   username: string;
   photographerName: string;
   showInstagramFeed: boolean;
-  latestPosts: any[] | undefined;
+  latestPosts: LatestPost[] | undefined;
 }
 
 export const HomeSectionMedia = ({
@@ -31,7 +39,7 @@ export const HomeSectionMedia = ({
           <div className='max-w-5xl mx-auto'>
             <SectionHeading title={t('showcase.title')} />
             <div className='columns-2 md:columns-3 lg:columns-4 gap-3 space-y-3 mt-14'>
-              {settings.featuredImages.map((img: any, i: number) => (
+              {settings.featuredImages.map((img, i) => (
                 <FadeIn key={img._id} delay={i * 0.04}>
                   <div className='break-inside-avoid overflow-hidden group relative'>
                     <img

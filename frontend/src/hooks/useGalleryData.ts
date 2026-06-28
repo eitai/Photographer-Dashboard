@@ -25,11 +25,11 @@ export const useGalleryData = (id: string | undefined) => {
   // Surface fetch errors via toast (v5 no longer accepts onError in useQuery)
   React.useEffect(() => {
     if (galleryQuery.isError) toast.error(t('admin.upload.load_failed'));
-  }, [galleryQuery.isError]);
+  }, [galleryQuery.isError, t]);
 
   React.useEffect(() => {
     if (imagesQuery.isError) toast.error(t('admin.upload.images_load_failed'));
-  }, [imagesQuery.isError]);
+  }, [imagesQuery.isError, t]);
 
   // Optimistic status update
   const updateStatusMutation = useMutation({

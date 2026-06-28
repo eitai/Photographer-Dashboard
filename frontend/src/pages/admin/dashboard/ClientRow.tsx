@@ -4,6 +4,7 @@ import { ChevronDown, Plus } from 'lucide-react';
 import type { Client } from '@/types/admin';
 import { GalleryCard } from './DashboardGalleryCard';
 import { matchesClient, type RichGallery } from './types';
+import { AvatarInitials } from '@/components/admin/AvatarInitials';
 
 interface ClientRowProps {
   client: Client;
@@ -15,12 +16,6 @@ export const ClientRow = ({ client, galleries, onAddGallery }: ClientRowProps) =
   const [open, setOpen] = useState(false);
   const { t } = useI18n();
 
-  const initials = client.name
-    .split(' ')
-    .slice(0, 2)
-    .map((w) => w[0]?.toUpperCase() ?? '')
-    .join('');
-
   const clientGalleries = galleries.filter((g) => matchesClient(g, client));
 
   const galleryCountLabel =
@@ -30,18 +25,13 @@ export const ClientRow = ({ client, galleries, onAddGallery }: ClientRowProps) =
 
   return (
     <div className='border-b border-border last:border-b-0'>
-      <div
-        role='button'
-        tabIndex={0}
+      <button
+        type='button'
+        aria-expanded={open}
         onClick={() => setOpen((v) => !v)}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter' || e.key === ' ') setOpen((v) => !v);
-        }}
-        className='w-full flex items-center gap-3 px-4 py-3 hover:bg-muted/30 transition-colors cursor-pointer select-none'
+        className='w-full flex items-center gap-3 px-4 py-3 hover:bg-muted/30 transition-colors cursor-pointer select-none text-start'
       >
-        <span className='w-9 h-9 rounded-full bg-blush/20 text-blush text-xs font-sans font-semibold flex items-center justify-center shrink-0'>
-          {initials}
-        </span>
+        <AvatarInitials name={client.name} />
 
         <div className='flex-1 min-w-0 text-start'>
           <p className='text-sm font-sans font-medium text-charcoal truncate'>{client.name}</p>
@@ -52,7 +42,7 @@ export const ClientRow = ({ client, galleries, onAddGallery }: ClientRowProps) =
         </div>
         <span className='text-xs text-warm-gray font-sans shrink-0'>{galleryCountLabel}</span>
         <ChevronDown size={15} className={`text-warm-gray shrink-0 transition-transform duration-200 ${open ? 'rotate-180' : ''}`} />
-      </div>
+      </button>
       <div
         className={`grid transition-all duration-300 ease-in-out ${open ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'}`}
       >

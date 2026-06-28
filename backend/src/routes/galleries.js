@@ -106,14 +106,18 @@ router.get('/token/:token', asyncHandler(async (req, res) => {
     }
   }
 
-  res.json(gallery);
+  // PUBLIC endpoint — strip internal-only fields. `adminId` in particular is the FK
+  // used in every order/billing/settings query and must not leak to gallery visitors.
+  const { adminId, clientId, deliveryOf, ...safeGallery } = gallery;
+  res.json(safeGallery);
 }));
 
 // GET /api/galleries
+// Returns galleries enriched with previewImages (≤5) and submissions in 4 queries total.
 router.get('/', protect, asyncHandler(async (req, res) => {
   const filter = { adminId: req.admin.id };
   if (req.query.clientId) filter.clientId = req.query.clientId;
-  const galleries = await Gallery.find(filter, { populate: true });
+  const galleries = await Gallery.findEnriched(filter);
   res.json(galleries);
 }));
 

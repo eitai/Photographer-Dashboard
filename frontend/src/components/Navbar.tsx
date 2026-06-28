@@ -2,7 +2,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { useI18n } from '@/lib/i18n';
 import { Menu, X, Phone, Mail } from 'lucide-react';
 import { useState } from 'react';
-import type { PhotographerSocial } from '@/pages/photographer/PhotographerLayout';
+import type { PhotographerSocial } from '@/pages/photographer/usePhotographer';
 
 interface NavbarProps {
   photographerName?: string;

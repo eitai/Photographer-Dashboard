@@ -348,7 +348,7 @@ export const AdminBlogEditor = () => {
               type='file'
               accept='image/*'
               onChange={(e) => setFeaturedImage(e.target.files?.[0] || null)}
-              className='w-full text-xs text-warm-gray file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:bg-ivory file:text-charcoal file:text-xs hover:file:bg-beige cursor-pointer'
+              className='w-full text-xs text-warm-gray file:me-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:bg-ivory file:text-charcoal file:text-xs hover:file:bg-beige cursor-pointer'
             />
           </div>
 

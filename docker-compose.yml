@@ -3,15 +3,15 @@ services:
     image: postgres:16-alpine
     restart: unless-stopped
     environment:
-      POSTGRES_USER: koral
-      POSTGRES_PASSWORD: koral
-      POSTGRES_DB: koral
+      POSTGRES_USER: ${POSTGRES_USER:-koral}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: ${POSTGRES_DB:-koral}
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U koral -d koral"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-koral} -d ${POSTGRES_DB:-koral}"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -23,10 +23,11 @@ services:
     expose:
       - "5000"
     environment:
-      DATABASE_URL: postgresql://koral:koral@postgres:5432/koral
+      DATABASE_URL: postgresql://${POSTGRES_USER:-koral}:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@postgres:5432/${POSTGRES_DB:-koral}
       JWT_SECRET: ${JWT_SECRET}
       JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-7d}
       FRONTEND_URL: ${FRONTEND_URL}
+      BACKEND_URL: ${BACKEND_URL:-}
       NODE_ENV: ${NODE_ENV:-production}
       SMTP_HOST: ${SMTP_HOST:-}
       SMTP_PORT: ${SMTP_PORT:-587}
@@ -42,7 +43,15 @@ services:
       S3_PUBLIC_URL: ${S3_PUBLIC_URL:-}
       AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
       AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
-      FACE_SERVICE_URL: ${FACE_SERVICE_URL:-http://127.0.0.1:8001}
+      REDIS_URL: ${REDIS_URL:-}
+      # PayPlus
+      PAYPLUS_ENV: ${PAYPLUS_ENV:-}
+      PAYPLUS_API_KEY: ${PAYPLUS_API_KEY:-}
+      PAYPLUS_SECRET_KEY: ${PAYPLUS_SECRET_KEY:-}
+      PAYPLUS_PAYMENT_PAGE_UID: ${PAYPLUS_PAYMENT_PAGE_UID:-}
+      PAYPLUS_STORE_PAYMENT_PAGE_UID: ${PAYPLUS_STORE_PAYMENT_PAGE_UID:-}
+      PAYPLUS_TERMINAL_UID: ${PAYPLUS_TERMINAL_UID:-}
+      FACE_SERVICE_URL: http://face:8001
     depends_on:
       postgres:
         condition: service_healthy
@@ -50,6 +59,37 @@ services:
       # Bind mount — files persist on the host at ./backend/uploads/
       # (existing uploaded files stay intact across rebuilds)
       - ./backend/uploads:/app/uploads
+
+  # Background job worker — image compression, face recognition, monthly billing.
+  # Without this, queued jobs (cjxl transcode, face indexing) never run.
+  worker:
+    build:
+      context: ./backend
+    restart: unless-stopped
+    command: ["npm", "run", "workers"]
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-koral}:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@postgres:5432/${POSTGRES_DB:-koral}
+      NODE_ENV: ${NODE_ENV:-production}
+      S3_ENDPOINT: ${S3_ENDPOINT:-}
+      S3_REGION: ${S3_REGION:-auto}
+      S3_BUCKET: ${S3_BUCKET:-}
+      S3_PUBLIC_URL: ${S3_PUBLIC_URL:-}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
+      FACE_SERVICE_URL: http://face:8001
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./backend/uploads:/app/uploads
+
+  # Face-recognition microservice (FastAPI + InsightFace) on port 8001.
+  face:
+    build:
+      context: ./face-recognition-service
+    restart: unless-stopped
+    expose:
+      - "8001"
 
   frontend:
     build:

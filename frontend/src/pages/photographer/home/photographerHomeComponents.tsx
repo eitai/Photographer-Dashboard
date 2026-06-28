@@ -1,21 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
-import { Phone } from 'lucide-react';
-import {
-  Camera,
-  Heart,
-  Users,
-  Star,
-  Baby,
-  Diamond,
-  Building2,
-  Mountain,
-  Clock,
-  Award,
-  Smile,
-  Aperture,
-} from 'lucide-react';
+import { Phone, Camera } from 'lucide-react';
 import { motion, useInView } from 'framer-motion';
 import type { PublicSettings } from './photographerHomeTypes';
+import { ICON_MAP } from './photographerHomeConstants';
 
 export const InstagramIcon = () => (
   <svg viewBox='0 0 24 24' width='22' height='22' fill='currentColor'>
@@ -40,21 +27,6 @@ export const TikTokIcon = () => (
     <path d='M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-2.88 2.5 2.89 2.89 0 01-2.89-2.89 2.89 2.89 0 012.89-2.89c.28 0 .54.04.79.1V9.01a6.33 6.33 0 00-.79-.05 6.34 6.34 0 00-6.34 6.34 6.34 6.34 0 006.34 6.34 6.34 6.34 0 006.33-6.34V8.69a8.17 8.17 0 004.77 1.52V6.73a4.85 4.85 0 01-1-.04z' />
   </svg>
 );
-
-export const ICON_MAP: Record<string, React.ElementType> = {
-  camera: Camera,
-  heart: Heart,
-  users: Users,
-  star: Star,
-  baby: Baby,
-  diamond: Diamond,
-  'building-2': Building2,
-  mountain: Mountain,
-  aperture: Aperture,
-  clock: Clock,
-  smile: Smile,
-  award: Award,
-};
 
 export const ServiceIcon = ({ name }: { name: string }) => {
   const Icon = ICON_MAP[name] || Camera;
@@ -126,7 +98,7 @@ export const SectionHeading = ({
   </motion.div>
 );
 
-export const fadeUpVariant = {
+const fadeUpVariant = {
   hidden: { opacity: 0, y: 30 },
   visible: { opacity: 1, y: 0 },
 };

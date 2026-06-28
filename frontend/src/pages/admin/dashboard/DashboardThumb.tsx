@@ -1,21 +1,22 @@
 import { Image as ImageIcon } from 'lucide-react';
-import { useGalleryPreviewImages } from '@/hooks/useQueries';
 import { getImageUrl } from '@/lib/api';
+import type { GalleryPreviewImage } from '@/types/gallery';
 
 interface DashboardThumbProps {
-  galleryId?: string;
+  /** Pre-loaded preview images from the gallery list response. When provided the
+   *  component renders purely from props with no network call. */
+  previewImages?: GalleryPreviewImage[];
   alt: string;
 }
 
 /**
- * Square-ish thumbnail for dashboard list rows. Pulls the first image of the
- * given gallery (cached via React Query) and falls back to a neutral
- * placeholder when the gallery has no images or no gallery is linked.
+ * Square-ish thumbnail for dashboard list rows. Renders the first available
+ * preview image from the embedded gallery list data and falls back to a neutral
+ * placeholder when no images are present.
  */
-export const DashboardThumb = ({ galleryId, alt }: DashboardThumbProps) => {
-  const { data: images } = useGalleryPreviewImages(galleryId ?? '');
-  const first = images?.[0];
-  const src = first ? getImageUrl(first.thumbnailPath || first.path) : '';
+export const DashboardThumb = ({ previewImages = [], alt }: DashboardThumbProps) => {
+  const first = previewImages.find((img) => img.thumbnailPath ?? img.previewPath);
+  const src = first ? getImageUrl((first.thumbnailPath ?? first.previewPath)!) : '';
 
   if (!src) {
     return (

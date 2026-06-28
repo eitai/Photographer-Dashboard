@@ -79,6 +79,14 @@ async function chargeInvoice(invoice) {
  * @returns {Promise<{invoiced:number, paid:number, failed:number, period:object}>}
  */
 async function closeCycle(opts = {}) {
+  // Validate caller-supplied dates (YYYY-MM-DD) so a malformed value can't reach SQL
+  // as an unhandled error or skew the billing window.
+  const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+  if (opts.periodStart && !DATE_RE.test(opts.periodStart))
+    throw Object.assign(new Error('periodStart must be YYYY-MM-DD'), { status: 400 });
+  if (opts.periodEnd && !DATE_RE.test(opts.periodEnd))
+    throw Object.assign(new Error('periodEnd must be YYYY-MM-DD'), { status: 400 });
+
   const period = (opts.periodStart && opts.periodEnd)
     ? { periodStart: opts.periodStart, periodEnd: opts.periodEnd }
     : previousMonthPeriod();
@@ -155,6 +163,30 @@ async function chargeOutstanding({ adminIds } = {}) {
   }
 
   logger.info(`[billing] chargeOutstanding: ${invoiced} invoice(s), ${paid} paid, ${failed} failed`);
+  return { invoiced, paid, failed };
+}
+
+/**
+ * Retry every unpaid invoice (failed / pending_payment) without billing any new
+ * orders. This is the recovery path for transient PayPlus failures and for
+ * invoices left pending by a crash mid-cycle. Safe to run on a daily cron:
+ * unlike chargeOutstanding it never creates new invoices, so it cannot
+ * pre-empt the monthly billing model. Idempotent (markPaid/markFailed).
+ *
+ * @param {{adminIds?:string[]}} [opts]
+ * @returns {Promise<{invoiced:number, paid:number, failed:number}>}
+ */
+async function retryUnpaidInvoices({ adminIds } = {}) {
+  let invoiced = 0, paid = 0, failed = 0;
+  const unpaid = await PhotographerInvoice.findUnpaid(
+    Array.isArray(adminIds) && adminIds.length ? adminIds : undefined
+  );
+  for (const invoice of unpaid) {
+    const charged = await chargeInvoice(invoice);
+    invoiced++;
+    if (charged?.status === 'paid') paid++; else failed++;
+  }
+  logger.info(`[billing] retryUnpaidInvoices: ${invoiced} invoice(s), ${paid} paid, ${failed} failed`);
   return { invoiced, paid, failed };
 }
 
@@ -252,4 +284,4 @@ async function financialReport({ from, to } = {}) {
   return { period: { from: f, to: t }, photographers, suppliers: supplierRows, totals };
 }
 
-module.exports = { closeCycle, chargeOutstanding, chargeInvoice, previousMonthPeriod, financialReport };
+module.exports = { closeCycle, chargeOutstanding, retryUnpaidInvoices, chargeInvoice, previousMonthPeriod, financialReport };

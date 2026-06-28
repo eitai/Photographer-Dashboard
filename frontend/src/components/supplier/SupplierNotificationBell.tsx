@@ -19,8 +19,8 @@ export const SupplierNotificationBell = () => {
       <Bell size={18} className={hasNew ? 'text-foreground' : ''} />
       {hasNew && (
         <>
-          <span className='absolute top-0.5 end-0.5 w-2 h-2 rounded-full bg-foreground animate-ping' />
-          <span className='absolute top-0.5 end-0.5 w-2 h-2 rounded-full bg-foreground' />
+          <span className='absolute top-0.5 end-0.5 w-2 h-2 rounded-full bg-primary animate-ping' />
+          <span className='absolute top-0.5 end-0.5 w-2 h-2 rounded-full bg-primary' />
         </>
       )}
     </button>

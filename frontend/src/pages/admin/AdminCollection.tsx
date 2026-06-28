@@ -138,7 +138,7 @@ export const AdminCollection = () => {
             >
               {t('admin.collection.charge_selected')} ({selected.size})
             </Button>
-            <Button onClick={() => charge()} disabled={charging} className='bg-charcoal hover:bg-charcoal/90 text-white'>
+            <Button onClick={() => charge()} disabled={charging} className='bg-primary hover:bg-primary/90 text-white'>
               {charging ? t('admin.common.saving') : t('admin.collection.charge_all')}
             </Button>
             <Button onClick={handleClose} disabled={closing} variant='outline'>

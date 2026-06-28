@@ -132,7 +132,7 @@ export const SupplierSettings = () => {
             <Button
               type='submit'
               disabled={profileSaving}
-              className='bg-foreground text-background hover:bg-foreground/90 rounded-xl px-5 h-9 text-sm font-medium'
+              className='bg-primary text-primary-foreground hover:bg-primary/90 rounded-xl px-5 h-9 text-sm font-medium'
             >
               {profileSaving
                 ? (dir === 'rtl' ? 'שומר...' : 'Saving...')
@@ -207,7 +207,7 @@ export const SupplierSettings = () => {
             <Button
               type='submit'
               disabled={pwSaving}
-              className='bg-foreground text-background hover:bg-foreground/90 rounded-xl px-5 h-9 text-sm font-medium'
+              className='bg-primary text-primary-foreground hover:bg-primary/90 rounded-xl px-5 h-9 text-sm font-medium'
             >
               {pwSaving
                 ? (dir === 'rtl' ? 'מעדכן...' : 'Updating...')

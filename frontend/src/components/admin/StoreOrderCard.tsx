@@ -67,10 +67,11 @@ const BORDER_BY_STATUS: Record<OrderStatus, string> = {
 // ---------------------------------------------------------------------------
 
 const StatusTimeline = ({ status }: { status: OrderStatus }) => {
+  const { t } = useI18n();
   const currentIdx = STATUS_ORDER[status] ?? -1;
 
   if (status === 'cancelled') {
-    return <p className='text-xs text-destructive italic mt-1'>Cancelled</p>;
+    return <p className='text-xs text-destructive italic mt-1'>{t('orders.status.cancelled')}</p>;
   }
 
   return (
@@ -125,8 +126,12 @@ export const OrderCard = ({ order }: OrderCardProps) => {
     setPendingAction(actionKey);
     try {
       await fn();
-    } catch {
-      toast({ title: t('admin.common.error'), variant: 'destructive' });
+    } catch (err) {
+      // Surface the backend reason (e.g. a 409 state-machine rejection).
+      const message =
+        (err as { response?: { data?: { message?: string } } })?.response?.data?.message ??
+        t('admin.common.error');
+      toast({ title: message, variant: 'destructive' });
     } finally {
       setPendingAction(null);
     }
@@ -183,7 +188,7 @@ export const OrderCard = ({ order }: OrderCardProps) => {
             <button
               onClick={() => run('send_to_client', () => sendToClient.mutateAsync(order.id))}
               disabled={pendingAction === 'send_to_client'}
-              className='flex items-center gap-1 text-xs px-3 py-1.5 rounded-lg bg-blush text-white hover:bg-blush/90 transition-colors disabled:opacity-60 cursor-pointer'
+              className='flex items-center gap-1 text-xs px-3 py-1.5 rounded-lg bg-blush text-charcoal hover:bg-blush/90 transition-colors disabled:opacity-60 cursor-pointer'
             >
               <Send size={11} />
               {pendingAction === 'send_to_client' ? t('admin.common.saving') : t('orders.action.send_to_client')}
@@ -220,7 +225,7 @@ export const OrderCard = ({ order }: OrderCardProps) => {
           <button
             onClick={() => run('send_to_supplier', () => sendToSupplier.mutateAsync(order.id))}
             disabled={pendingAction === 'send_to_supplier'}
-            className='flex items-center gap-1 text-xs px-3 py-1.5 rounded-lg bg-charcoal text-white hover:bg-charcoal/90 transition-colors disabled:opacity-60 cursor-pointer'
+            className='flex items-center gap-1 text-xs px-3 py-1.5 rounded-lg bg-primary text-white hover:bg-primary/90 transition-colors disabled:opacity-60 cursor-pointer'
           >
             <Truck size={11} />
             {pendingAction === 'send_to_supplier' ? t('admin.common.saving') : t('orders.action.send_to_supplier')}

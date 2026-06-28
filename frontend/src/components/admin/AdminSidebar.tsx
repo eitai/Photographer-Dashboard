@@ -90,7 +90,7 @@ export const AdminSidebar = ({ isOpen, onClose }: AdminSidebarProps) => {
             onClick={onClose}
             className={({ isActive }) =>
               `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-sans transition-colors duration-150 ${
-                isActive ? 'bg-ivory text-charcoal font-medium' : 'text-warm-gray hover:bg-ivory hover:text-charcoal'
+                isActive ? 'bg-blush/15 text-blush font-medium' : 'text-warm-gray hover:bg-blush/10 hover:text-blush'
               }`
             }
           >
@@ -115,7 +115,7 @@ export const AdminSidebar = ({ isOpen, onClose }: AdminSidebarProps) => {
         {/* Language toggle */}
         <button
           onClick={toggleLang}
-          className='flex items-center gap-3 w-full px-3 py-2 rounded-xl text-sm font-sans text-warm-gray hover:bg-ivory hover:text-charcoal transition-colors duration-150 mb-1'
+          className='flex items-center gap-3 w-full px-3 py-2 rounded-xl text-sm font-sans text-warm-gray hover:bg-blush/10 hover:text-blush transition-colors duration-150 mb-1'
         >
           <Languages size={17} />
           {lang === 'he' ? 'English' : 'עברית'}
@@ -123,14 +123,14 @@ export const AdminSidebar = ({ isOpen, onClose }: AdminSidebarProps) => {
         {/* Dark mode toggle */}
         <button
           onClick={() => setDarkMode(!darkMode)}
-          className='flex items-center gap-3 w-full px-3 py-2 rounded-xl text-sm font-sans text-warm-gray hover:bg-ivory hover:text-charcoal transition-colors duration-150 mb-1'
+          className='flex items-center gap-3 w-full px-3 py-2 rounded-xl text-sm font-sans text-warm-gray hover:bg-blush/10 hover:text-blush transition-colors duration-150 mb-1'
         >
           {darkMode ? <Sun size={17} /> : <Moon size={17} />}
           {darkMode ? (lang === 'he' ? 'מצב בהיר' : 'Light mode') : lang === 'he' ? 'מצב כהה' : 'Dark mode'}
         </button>
         <button
           onClick={handleLogout}
-          className='flex items-center gap-3 w-full px-3 py-2.5 rounded-xl text-sm font-sans text-warm-gray hover:bg-ivory hover:text-charcoal transition-colors duration-150'
+          className='flex items-center gap-3 w-full px-3 py-2.5 rounded-xl text-sm font-sans text-warm-gray hover:bg-blush/10 hover:text-blush transition-colors duration-150'
         >
           <LogOut size={17} />
           {t('admin.nav.logout')}

@@ -173,6 +173,27 @@ router.post(
       }
     }
 
+    // 5c. Every selected image must belong to the gallery being ordered from
+    const allImageIds = [...new Set(items.flatMap((i) =>
+      Array.isArray(i.selectedImageIds) ? i.selectedImageIds : [],
+    ))];
+    if (allImageIds.length > 0) {
+      if (!allImageIds.every((id) => UUID_RE.test(id))) {
+        return res
+          .status(400)
+          .json({ message: 'One or more selected image IDs are not valid UUIDs' });
+      }
+      const { rows: owned } = await pool.query(
+        `SELECT id FROM gallery_images WHERE id = ANY($1::uuid[]) AND gallery_id = $2`,
+        [allImageIds, galleryId],
+      );
+      if (owned.length !== allImageIds.length) {
+        return res
+          .status(422)
+          .json({ message: 'One or more selected images do not belong to this gallery' });
+      }
+    }
+
     // 6. Compute total using client_price
     let total = 0;
     for (const item of items) {
@@ -233,7 +254,7 @@ router.post(
             item.quantity,
             prod.cost_price,
             prod.client_price,
-            selectedIds.length > 0 ? JSON.stringify(selectedIds) : '{}',
+            selectedIds, // native JS array; pg serializes to the Postgres {…} literal
             JSON.stringify(imageNotes),
             JSON.stringify(productOpts),
           ],
@@ -374,6 +395,25 @@ router.post(
     const transactionUid = payload.transaction_uid || payload.paymentRequestUid || '';
 
     if (statusCode === '000') {
+      // C4 — cross-check the amount PayPlus reports against the order total
+      // before trusting the payment. The amount is server-fixed when the link
+      // is generated, so a mismatch signals tampering or a misrouted callback:
+      // refuse to mark paid and leave the order pending for manual review.
+      // (Field name varies across PayPlus payloads; if absent, skip the check.)
+      const paidAmountRaw =
+        payload.amount ?? payload.total ?? payload.transaction?.amount ?? null;
+      if (paidAmountRaw != null) {
+        const paidAmount = Number(paidAmountRaw);
+        const expected   = Number(order.totalAmount);
+        if (Number.isFinite(paidAmount) && Math.abs(paidAmount - expected) > 0.01) {
+          logger.error(
+            `PayPlus store webhook: AMOUNT MISMATCH for order ${orderId} — ` +
+            `reported ${paidAmount}, expected ${expected}; not marking paid`,
+          );
+          return res.json({ received: true }); // 200 stops retries; order stays unpaid
+        }
+      }
+
       // Payment succeeded — mark order paid
       await pool.query(
         `UPDATE store_orders

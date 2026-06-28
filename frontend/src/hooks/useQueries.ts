@@ -121,6 +121,7 @@ export function useGalleriesByClient(clientId: string) {
     queryKey: queryKeys.galleriesByClient(clientId),
     queryFn: () => galleryService.fetchGalleries(clientId),
     enabled: !!clientId,
+    staleTime: 30_000,
   });
 }
 
@@ -168,8 +169,7 @@ export function useBlogPosts(adminId?: string) {
 export function useSettings() {
   return useQuery({
     queryKey: queryKeys.settings,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    queryFn: () => api.get('/settings').then((r) => r.data as Record<string, any>),
+    queryFn: () => api.get('/settings').then((r) => r.data as Record<string, unknown>),
     staleTime: 120_000,
   });
 }
@@ -499,6 +499,8 @@ export function useDeleteSubmission(clientId: string) {
       queryClient.setQueryData(queryKeys.submissions(galleryId), []);
       queryClient.invalidateQueries({ queryKey: queryKeys.submissions(galleryId) });
       queryClient.invalidateQueries({ queryKey: queryKeys.galleriesByClient(clientId) });
+      // Submissions now ride on the enriched galleries list — refresh the flat key too
+      queryClient.invalidateQueries({ queryKey: queryKeys.galleries });
     },
   });
 }
@@ -515,8 +517,10 @@ export function useDeleteSubmissionImage(clientId: string) {
       submissionId: string;
       imageId: string;
     }) => galleryService.removeSubmissionImage(galleryId, submissionId, imageId),
-    onSuccess: () =>
-      queryClient.invalidateQueries({ queryKey: queryKeys.galleriesByClient(clientId) }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.galleriesByClient(clientId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.galleries });
+    },
   });
 }
 
@@ -570,7 +574,7 @@ export function useOrders(params?: Parameters<typeof getOrders>[0]) {
 }
 
 export function useOrder(id: string) {
-  return useQuery({ queryKey: queryKeys.orderDetail(id), queryFn: () => getOrder(id), enabled: !!id });
+  return useQuery({ queryKey: queryKeys.orderDetail(id), queryFn: () => getOrder(id), enabled: !!id, staleTime: 30_000 });
 }
 
 export function useCreateOrder() {
@@ -669,7 +673,7 @@ export function useSupplierOrders(params?: Parameters<typeof getSupplierOrders>[
 }
 
 export function useSupplierOrder(id: string) {
-  return useQuery({ queryKey: queryKeys.supplierOrderDetail(id), queryFn: () => getSupplierOrder(id), enabled: !!id });
+  return useQuery({ queryKey: queryKeys.supplierOrderDetail(id), queryFn: () => getSupplierOrder(id), enabled: !!id, staleTime: 30_000 });
 }
 
 export function useUpdateSupplierOrderStatus() {
@@ -694,6 +698,7 @@ export function useStoreProducts(galleryToken: string) {
     queryFn: () => getStoreProducts(galleryToken),
     enabled: !!galleryToken,
     retry: false,
+    staleTime: 5 * 60_000,
   });
 }
 

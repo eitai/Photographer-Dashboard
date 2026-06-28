@@ -1,7 +1,8 @@
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useI18n } from '@/lib/i18n';
-import { SectionHeading, ServiceIcon, AnimatedNumber, ICON_MAP } from './photographerHomeComponents';
+import { SectionHeading, ServiceIcon, AnimatedNumber } from './photographerHomeComponents';
+import { ICON_MAP } from './photographerHomeConstants';
 import { Camera } from 'lucide-react';
 import type { PublicSettings, PromiseItem, StatItem } from './photographerHomeTypes';
 

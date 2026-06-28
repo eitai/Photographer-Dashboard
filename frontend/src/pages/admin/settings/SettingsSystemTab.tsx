@@ -1,33 +1,60 @@
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/admin/Button';
 import { useI18n } from '@/lib/i18n';
+import { useQueryClient } from '@tanstack/react-query';
+import { useSettings, queryKeys } from '@/hooks/useQueries';
+import { useAuthStore } from '@/store/authStore';
+import api from '@/lib/api';
+import { toast } from 'sonner';
 import { ThemePicker } from './settingsComponents';
 
-interface SettingsSystemTabProps {
-  systemTheme: string;
-  setSystemTheme: React.Dispatch<React.SetStateAction<string>>;
-  savingTheme: boolean;
-  onSaveTheme: () => void;
-  autoSendEmail: boolean;
-  setAutoSendEmail: React.Dispatch<React.SetStateAction<boolean>>;
-  autoSendSms: boolean;
-  setAutoSendSms: React.Dispatch<React.SetStateAction<boolean>>;
-  savingNotifications: boolean;
-  onSaveNotifications: () => void;
-}
-
-export const SettingsSystemTab = ({
-  systemTheme,
-  setSystemTheme,
-  savingTheme,
-  onSaveTheme,
-  autoSendEmail,
-  setAutoSendEmail,
-  autoSendSms,
-  setAutoSendSms,
-  savingNotifications,
-  onSaveNotifications,
-}: SettingsSystemTabProps) => {
+export const SettingsSystemTab = () => {
   const { t } = useI18n();
+  const queryClient = useQueryClient();
+  const setTheme = useAuthStore((s) => s.setTheme);
+  const { data: settingsData } = useSettings();
+
+  const [systemTheme, setSystemTheme] = useState('soft');
+  const [savingTheme, setSavingTheme] = useState(false);
+  const [autoSendEmail, setAutoSendEmail] = useState(true);
+  const [autoSendSms, setAutoSendSms] = useState(false);
+  const [savingNotifications, setSavingNotifications] = useState(false);
+
+  // Seed from query cache
+  useEffect(() => {
+    if (!settingsData) return;
+    const s = settingsData;
+    setSystemTheme((s.theme as string) || 'soft');
+    setAutoSendEmail((s.autoSendGalleryEmail as boolean) ?? true);
+    setAutoSendSms((s.autoSendGallerySms as boolean) ?? false);
+  }, [settingsData]);
+
+  const handleSaveTheme = async () => {
+    setSavingTheme(true);
+    try {
+      await api.put('/settings/landing', { theme: systemTheme });
+      setTheme(systemTheme);
+      toast.success(t('admin.settings.landing_saved'));
+      queryClient.invalidateQueries({ queryKey: queryKeys.settings });
+    } catch {
+      toast.error(t('admin.settings.landing_failed'));
+    } finally {
+      setSavingTheme(false);
+    }
+  };
+
+  const handleSaveNotifications = async () => {
+    setSavingNotifications(true);
+    try {
+      await api.put('/settings/notifications', { autoSendGalleryEmail: autoSendEmail, autoSendGallerySms: autoSendSms });
+      toast.success(t('admin.settings.landing_saved'));
+      queryClient.invalidateQueries({ queryKey: queryKeys.settings });
+    } catch {
+      toast.error(t('admin.settings.landing_failed'));
+    } finally {
+      setSavingNotifications(false);
+    }
+  };
 
   return (
     <div className='max-w-md space-y-4'>
@@ -40,7 +67,7 @@ export const SettingsSystemTab = ({
           getLabel={(key) => t(`theme.${key}`)}
         />
         <div className='pt-2 border-t border-beige'>
-          <Button type='button' variant='primary' size='sm' onClick={onSaveTheme} disabled={savingTheme}>
+          <Button type='button' variant='primary' size='sm' onClick={handleSaveTheme} disabled={savingTheme}>
             {savingTheme ? t('admin.common.saving') : t('admin.common.save')}
           </Button>
         </div>
@@ -73,7 +100,7 @@ export const SettingsSystemTab = ({
           </div>
         </label>
         <div className='pt-2 border-t border-beige'>
-          <Button type='button' variant='primary' size='sm' onClick={onSaveNotifications} disabled={savingNotifications}>
+          <Button type='button' variant='primary' size='sm' onClick={handleSaveNotifications} disabled={savingNotifications}>
             {savingNotifications ? t('admin.common.saving') : t('admin.common.save')}
           </Button>
         </div>

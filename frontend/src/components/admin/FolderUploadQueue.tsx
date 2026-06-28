@@ -142,7 +142,7 @@ export const FolderUploadQueue = ({ queue, summary, isUploading }: Props): JSX.E
           </div>
         )}
 
-        <div className='max-h-72 overflow-y-auto space-y-1.5 pr-1'>
+        <div className='max-h-72 overflow-y-auto space-y-1.5 pe-1'>
           {queue.map((item) => {
             const tone = statusToneClass(item.status);
             const bar = barColorClass(item.status);

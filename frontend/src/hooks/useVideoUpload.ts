@@ -98,17 +98,18 @@ export const useVideoUpload = (
         updateItem(item.id, { progress: 100, done: true });
         queryClient.invalidateQueries({ queryKey: queryKeys.storageMe });
         setGallery((g) => g ? { ...g, videos: r.data.videos as GalleryVideo[] } : g);
-      } catch (err: any) {
+      } catch (err: unknown) {
+        const e = err as { code?: string; name?: string; response?: { status?: number; data?: { code?: string } } };
         stopSimulatedProgress(item.id);
         controllersRef.current.delete(item.id);
 
-        if (err?.code === 'ERR_CANCELED' || err?.name === 'AbortError' || err?.name === 'CanceledError') {
+        if (e?.code === 'ERR_CANCELED' || e?.name === 'AbortError' || e?.name === 'CanceledError') {
           updateItem(item.id, { cancelled: true });
           setTimeout(() => setVideoQueue((q) => q.filter((it) => it.id !== item.id)), 1500);
           continue;
         }
 
-        if (err?.response?.status === 413 && err?.response?.data?.code === 'QUOTA_EXCEEDED') {
+        if (e?.response?.status === 413 && e?.response?.data?.code === 'QUOTA_EXCEEDED') {
           toast.error(t('storage.quotaExceeded'));
           queryClient.invalidateQueries({ queryKey: queryKeys.storageMe });
           const pendingIds = items.slice(i).map((it) => it.id);

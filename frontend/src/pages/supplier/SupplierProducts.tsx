@@ -103,7 +103,7 @@ export const SupplierProducts = () => {
           )}
         </div>
         <Button
-          className='bg-foreground text-background hover:bg-foreground/90'
+          className='bg-primary text-primary-foreground hover:bg-primary/90'
           onClick={() => { setEditingProduct(undefined); setModalOpen(true); }}
         >
           + {t('supplier.products.add')}
@@ -137,7 +137,7 @@ export const SupplierProducts = () => {
             {t('supplier.products.empty')}
           </h3>
           <p className='text-sm text-zinc-400 max-w-xs'>
-            Products assigned to you will appear here.
+            {t('supplier.products.empty_hint')}
           </p>
         </div>
       )}

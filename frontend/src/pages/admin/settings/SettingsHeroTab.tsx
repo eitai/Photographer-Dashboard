@@ -1,7 +1,12 @@
+import { useRef, useState, useEffect } from 'react';
 import { Camera } from 'lucide-react';
 import { InputField } from '@/components/admin/InputField';
 import { Button } from '@/components/admin/Button';
 import { useI18n } from '@/lib/i18n';
+import { useQueryClient } from '@tanstack/react-query';
+import { useSettings, queryKeys } from '@/hooks/useQueries';
+import api, { getImageUrl } from '@/lib/api';
+import { toast } from 'sonner';
 import type { HeroOverlayOpacity } from './settingsComponents';
 
 interface HeroState {
@@ -17,40 +22,98 @@ interface FinalCtaState {
   buttonLabel: string;
 }
 
-interface SettingsHeroTabProps {
-  hero: HeroState;
-  setHero: React.Dispatch<React.SetStateAction<HeroState>>;
-  heroTagline: string;
-  setHeroTagline: React.Dispatch<React.SetStateAction<string>>;
-  heroPreview: string;
-  uploadingHero: boolean;
-  heroInputRef: React.RefObject<HTMLInputElement>;
-  onHeroUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  savingHero: boolean;
-  onSaveHero: () => void;
-  finalCta: FinalCtaState;
-  setFinalCta: React.Dispatch<React.SetStateAction<FinalCtaState>>;
-  savingFinalCta: boolean;
-  onSaveFinalCta: () => void;
-}
-
-export const SettingsHeroTab = ({
-  hero,
-  setHero,
-  heroTagline,
-  setHeroTagline,
-  heroPreview,
-  uploadingHero,
-  heroInputRef,
-  onHeroUpload,
-  savingHero,
-  onSaveHero,
-  finalCta,
-  setFinalCta,
-  savingFinalCta,
-  onSaveFinalCta,
-}: SettingsHeroTabProps) => {
+export const SettingsHeroTab = () => {
   const { t } = useI18n();
+  const queryClient = useQueryClient();
+  const { data: settingsData } = useSettings();
+
+  const [hero, setHero] = useState<HeroState>({
+    heroSubtitle: '',
+    heroOverlayOpacity: 'medium',
+    heroCtaPrimaryLabel: '',
+    heroCtaSecondaryLabel: '',
+  });
+  const [heroTagline, setHeroTagline] = useState('');
+  const [heroPreview, setHeroPreview] = useState('');
+  const [savingHero, setSavingHero] = useState(false);
+  const [uploadingHero, setUploadingHero] = useState(false);
+  const heroInputRef = useRef<HTMLInputElement>(null);
+
+  const [finalCta, setFinalCta] = useState<FinalCtaState>({ heading: '', subtext: '', buttonLabel: '' });
+  const [savingFinalCta, setSavingFinalCta] = useState(false);
+
+  // Seed from query cache
+  useEffect(() => {
+    if (!settingsData) return;
+    const s = settingsData;
+    setHero({
+      heroSubtitle: (s.heroSubtitle as string) || '',
+      heroOverlayOpacity: (s.heroOverlayOpacity as HeroOverlayOpacity) || 'medium',
+      heroCtaPrimaryLabel: (s.heroCtaPrimaryLabel as string) || '',
+      heroCtaSecondaryLabel: (s.heroCtaSecondaryLabel as string) || '',
+    });
+    setHeroTagline((s.heroTagline as string) || '');
+    if (s.heroImagePath) setHeroPreview(getImageUrl(s.heroImagePath as string));
+    setFinalCta({
+      heading: (s.finalCtaHeading as string) || '',
+      subtext: (s.finalCtaSubtext as string) || '',
+      buttonLabel: (s.finalCtaButtonLabel as string) || '',
+    });
+  }, [settingsData]);
+
+  const handleHeroUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingHero(true);
+    try {
+      const form = new FormData();
+      form.append('image', file);
+      const res = await api.post('/settings/hero-image', form, { headers: { 'Content-Type': undefined } });
+      setHeroPreview(getImageUrl(res.data.heroImagePath));
+      queryClient.invalidateQueries({ queryKey: queryKeys.settings });
+    } catch {
+      toast.error(t('admin.settings.hero_upload_failed'));
+    } finally {
+      setUploadingHero(false);
+      if (heroInputRef.current) heroInputRef.current.value = '';
+    }
+  };
+
+  const handleSaveHero = async () => {
+    setSavingHero(true);
+    try {
+      await api.put('/settings/landing', {
+        heroTagline,
+        heroSubtitle: hero.heroSubtitle,
+        heroOverlayOpacity: hero.heroOverlayOpacity,
+        heroCtaPrimaryLabel: hero.heroCtaPrimaryLabel,
+        heroCtaSecondaryLabel: hero.heroCtaSecondaryLabel,
+      });
+      toast.success(t('admin.settings.landing_saved'));
+      queryClient.invalidateQueries({ queryKey: queryKeys.settings });
+    } catch {
+      toast.error(t('admin.settings.landing_failed'));
+    } finally {
+      setSavingHero(false);
+    }
+  };
+
+  const handleSaveFinalCta = async () => {
+    setSavingFinalCta(true);
+    try {
+      await api.put('/settings/landing', {
+        finalCtaHeading: finalCta.heading,
+        finalCtaSubtext: finalCta.subtext,
+        finalCtaButtonLabel: finalCta.buttonLabel,
+      });
+      toast.success(t('admin.settings.landing_saved'));
+      queryClient.invalidateQueries({ queryKey: queryKeys.settings });
+    } catch {
+      toast.error(t('admin.settings.landing_failed'));
+    } finally {
+      setSavingFinalCta(false);
+    }
+  };
 
   return (
     <div className='max-w-2xl space-y-6'>
@@ -59,7 +122,7 @@ export const SettingsHeroTab = ({
 
         <div>
           <label className='block text-xs text-warm-gray mb-2'>{t('admin.settings.hero_image')}</label>
-          <input ref={heroInputRef} type='file' accept='image/*' className='hidden' onChange={onHeroUpload} />
+          <input ref={heroInputRef} type='file' accept='image/*' className='hidden' onChange={handleHeroUpload} />
           <div
             onClick={() => !uploadingHero && heroInputRef.current?.click()}
             className='relative w-full rounded-xl overflow-hidden bg-beige border-2 border-dashed border-beige hover:border-blush/50 transition-colors group cursor-pointer'
@@ -153,7 +216,7 @@ export const SettingsHeroTab = ({
           </div>
         </div>
 
-        <Button type='button' variant='primary' onClick={onSaveHero} disabled={savingHero}>
+        <Button type='button' variant='primary' onClick={handleSaveHero} disabled={savingHero}>
           {savingHero ? t('admin.common.saving') : t('admin.settings.save_hero')}
         </Button>
       </div>
@@ -172,7 +235,7 @@ export const SettingsHeroTab = ({
           <label className='block text-xs text-warm-gray mb-1'>{t('admin.settings.final_cta_button_label')}</label>
           <InputField type='text' value={finalCta.buttonLabel} onChange={(e) => setFinalCta({ ...finalCta, buttonLabel: e.target.value })} placeholder='שלח הודעה / Send a Message' />
         </div>
-        <Button type='button' variant='primary' onClick={onSaveFinalCta} disabled={savingFinalCta}>
+        <Button type='button' variant='primary' onClick={handleSaveFinalCta} disabled={savingFinalCta}>
           {savingFinalCta ? t('admin.common.saving') : t('admin.settings.save_hero')}
         </Button>
       </div>

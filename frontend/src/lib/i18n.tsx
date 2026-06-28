@@ -1638,6 +1638,7 @@ const translations: Record<string, Record<Lang, string>> = {
   'supplier.products.title': { he: 'קטלוג מוצרים', en: 'Product Catalog' },
   'supplier.products.add': { he: 'הוסף מוצר', en: 'Add product' },
   'supplier.products.empty': { he: 'אין מוצרים עדיין', en: 'No products yet' },
+  'supplier.products.empty_hint': { he: 'מוצרים שיוקצו לך יופיעו כאן.', en: 'Products assigned to you will appear here.' },
   'supplier.products.image': { he: 'תמונה', en: 'Image' },
   'supplier.products.name': { he: 'שם', en: 'Name' },
   'supplier.products.type': { he: 'סוג', en: 'Type' },
@@ -1796,6 +1797,11 @@ const translations: Record<string, Record<Lang, string>> = {
   'supplier.orders.download_images': { he: 'הורד תמונות', en: 'Download Images' },
   'supplier.orders.in_production': { he: 'בייצור', en: 'In Production' },
   'supplier.orders.shipped': { he: 'נשלח', en: 'Shipped' },
+  'supplier.orders.all_statuses': { he: 'הכל', en: 'All statuses' },
+  'supplier.orders.export_csv': { he: 'ייצוא CSV', en: 'Export CSV' },
+  'supplier.orders.exporting': { he: 'מייצא…', en: 'Exporting…' },
+  'supplier.orders.export_failed': { he: 'שגיאה בייצוא', en: 'Export failed' },
+  'supplier.orders.report_capped': { he: 'הדוח נחתך ל-5000 שורות', en: 'Report capped at 5000 rows' },
   'supplier.orders.delivered': { he: 'סופק', en: 'Delivered' },
 
   // ── Supplier: Dashboard ──────────────────────────────────────────────────────
@@ -2252,6 +2258,42 @@ const translations: Record<string, Record<Lang, string>> = {
   'getstarted.google': { he: 'המשך עם Google', en: 'Continue with Google' },
   'getstarted.email_placeholder': { he: 'you@example.com', en: 'you@example.com' },
   'getstarted.password_placeholder': { he: 'לפחות 8 תווים', en: 'Min. 8 characters' },
+
+  // ── NotificationBell ─────────────────────────────────────────────────────────
+  'notif.no_new': { he: 'אין התראות חדשות', en: 'No new notifications' },
+  'notif.new_count': { he: '{n} התראות חדשות', en: '{n} new notifications' },
+  'notif.clear_all': { he: 'נקה הכל', en: 'Clear all' },
+  'notif.all_up_to_date': { he: 'הכל עדכני ✓', en: 'All up to date ✓' },
+  'notif.gallery_selections': { he: 'בחירות גלריה', en: 'Gallery Selections' },
+  'notif.order_updates': { he: 'עדכוני הזמנות', en: 'Order Updates' },
+  'notif.order_for': { he: 'הזמנה עבור {name}', en: 'Order for {name}' },
+
+  // ── Orders / AdminOrders ──────────────────────────────────────────────────────
+  'orders.csv.num': { he: 'מספר', en: '#' },
+  'orders.csv.client': { he: 'לקוח', en: 'Client' },
+  'orders.csv.gallery': { he: 'גלריה', en: 'Gallery' },
+  'orders.csv.items': { he: 'פריטים', en: 'Items' },
+  'orders.csv.status': { he: 'סטטוס', en: 'Status' },
+  'orders.csv.flow': { he: 'זרימה', en: 'Flow' },
+  'orders.csv.total': { he: 'סכום', en: 'Total' },
+  'orders.csv.date': { he: 'תאריך', en: 'Date' },
+  'orders.report_capped': { he: 'הדוח נחתך ל-5000 שורות', en: 'Report capped at 5000 rows' },
+  'orders.filter.open': { he: 'פתוחות', en: 'Open Orders' },
+  'orders.filter.all': { he: 'הכל', en: 'All' },
+  'orders.pagination.prev': { he: 'הקודם', en: 'Previous' },
+  'orders.pagination.next': { he: 'הבא', en: 'Next' },
+
+  // ── StoreCheckoutView ─────────────────────────────────────────────────────────
+  'store.checkout.error': { he: 'שגיאה בביצוע התשלום. אנא נסה שוב.', en: 'Payment error. Please try again.' },
+  'store.checkout.required': { he: 'שדה חובה', en: 'is required' },
+
+  // ── StoreOrderStatus ──────────────────────────────────────────────────────────
+  'store.order.shipping_info': { he: 'פרטי משלוח', en: 'Shipping Info' },
+  'store.order.shipped_on': { he: 'נשלח ב-', en: 'Shipped' },
+
+  // ── StoreConfigureView ────────────────────────────────────────────────────────
+  'store.configure.add_note': { he: 'הוסף הערה', en: 'Add note' },
+  'store.configure.note_placeholder': { he: 'הערה...', en: 'Note...' },
 };
 
 const I18nContext = createContext<I18nContextType | null>(null);

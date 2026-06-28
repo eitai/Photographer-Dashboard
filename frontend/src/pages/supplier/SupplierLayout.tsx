@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { LayoutDashboard, Package, Settings, ShoppingCart, LogOut, Wallet } from 'lucide-react';
 import { useSupplierAuth } from '@/hooks/useSupplierAuth';
@@ -8,6 +9,13 @@ export const SupplierLayout = () => {
   const { supplier, logout } = useSupplierAuth();
   const { t, dir } = useI18n();
   const navigate = useNavigate();
+
+  // Mirror the violet theme onto <body> so Radix portals (dialogs, selects)
+  // inherit it. Cleared on unmount so other routes are unaffected.
+  useEffect(() => {
+    document.body.setAttribute('data-theme', 'violet');
+    return () => document.body.removeAttribute('data-theme');
+  }, []);
 
   const handleLogout = async () => {
     await logout();
@@ -23,7 +31,7 @@ export const SupplierLayout = () => {
   ];
 
   return (
-    <div data-theme='bw' className='min-h-screen flex bg-background'>
+    <div data-theme='violet' className='min-h-screen flex bg-background'>
       {/* Sidebar */}
       <aside
         className={`
@@ -54,7 +62,7 @@ export const SupplierLayout = () => {
               className={({ isActive }) =>
                 isActive
                   ? `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150
-                     bg-muted text-foreground border-s-2 border-foreground ps-[9px]`
+                     bg-primary/10 text-primary border-s-2 border-primary ps-[9px]`
                   : `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150
                      text-muted-foreground hover:bg-muted hover:text-foreground`
               }

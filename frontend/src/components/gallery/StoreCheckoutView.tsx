@@ -30,18 +30,20 @@ export function StoreCheckoutView({ cart, galleryToken, onBack }: Props) {
     mutationFn: (data: StoreCheckoutRequest) => storeCheckout(galleryToken, data),
     onSuccess: (res) => { window.location.href = res.url; },
     onError: (err: unknown) => {
+      // Backend store routes return errors as { message } (422/503/400 etc.) —
+      // surface that so the client sees the real reason instead of a generic toast.
       const message =
-        (err as { response?: { data?: { error?: string } } })?.response?.data?.error ??
-        'שגיאה בביצוע התשלום. אנא נסה שוב.';
+        (err as { response?: { data?: { message?: string } } })?.response?.data?.message ??
+        t('store.checkout.error');
       toast({ title: message, variant: 'destructive' });
     },
   });
 
   function validate(): ShippingErrors {
     const errs: ShippingErrors = {};
-    if (!shipping.name.trim()) errs.name = t('store.checkout.name') + ' שדה חובה';
-    if (!shipping.street.trim()) errs.street = t('store.checkout.street') + ' שדה חובה';
-    if (!shipping.city.trim()) errs.city = t('store.checkout.city') + ' שדה חובה';
+    if (!shipping.name.trim()) errs.name = t('store.checkout.name') + ' ' + t('store.checkout.required');
+    if (!shipping.street.trim()) errs.street = t('store.checkout.street') + ' ' + t('store.checkout.required');
+    if (!shipping.city.trim()) errs.city = t('store.checkout.city') + ' ' + t('store.checkout.required');
     return errs;
   }
 

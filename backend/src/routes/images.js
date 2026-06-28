@@ -29,6 +29,17 @@ if (!fs.existsSync(PREVIEW_DIR)) fs.mkdirSync(PREVIEW_DIR, { recursive: true });
 // Optional: ?page=1&limit=50 for paginated response { images, total, page, totalPages }
 // Without limit param: returns plain array (backwards compatible)
 router.get('/', asyncHandler(async (req, res) => {
+  // PUBLIC endpoint keyed only on galleryId (no token). Gate on the gallery being
+  // active and not expired so images of inactive/expired galleries can't be listed
+  // by anyone who happens to know a galleryId.
+  if (!UUID_RE.test(req.params.galleryId))
+    return res.status(400).json({ message: 'Invalid gallery ID format' });
+  const gallery = await Gallery.findById(req.params.galleryId);
+  if (!gallery || !gallery.isActive)
+    return res.status(404).json({ message: 'Gallery not found' });
+  if (gallery.expiresAt && new Date(gallery.expiresAt) < new Date())
+    return res.status(410).json({ message: 'Gallery has expired' });
+
   const rawLimit = parseInt(req.query.limit);
   const rawPage = parseInt(req.query.page);
   // Cap limit at 200 to prevent excessive result sets; require positive values

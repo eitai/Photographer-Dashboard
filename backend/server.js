@@ -612,10 +612,18 @@ async function start() {
     }
   }
 
-  // Run once immediately on startup, then every 5 minutes
-  deleteExpiredGalleries();
-  setInterval(deleteExpiredGalleries, CLEANUP_INTERVAL_MS);
-  logger.info('[scheduler] Gallery auto-deletion scheduler started (interval: 5 min)');
+  // Run once immediately on startup, then every 5 minutes.
+  // Gate behind an env flag so that when running MORE THAN ONE API instance, only a
+  // single leader runs the cleanup (set RUN_CLEANUP_SCHEDULER=false on the others) —
+  // otherwise every instance races the same expired-gallery deletes. Defaults on so
+  // single-instance deployments are unchanged.
+  if (process.env.RUN_CLEANUP_SCHEDULER !== 'false') {
+    deleteExpiredGalleries();
+    setInterval(deleteExpiredGalleries, CLEANUP_INTERVAL_MS);
+    logger.info('[scheduler] Gallery auto-deletion scheduler started (interval: 5 min)');
+  } else {
+    logger.info('[scheduler] Gallery auto-deletion scheduler disabled (RUN_CLEANUP_SCHEDULER=false)');
+  }
 
   const PORT = process.env.PORT || 5000;
   const server = app.listen(PORT, () => {

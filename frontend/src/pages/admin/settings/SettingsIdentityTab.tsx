@@ -1,49 +1,23 @@
-import { useState } from 'react';
+import { useRef, useState, useEffect } from 'react';
 import { Star } from 'lucide-react';
 import { InputField } from '@/components/admin/InputField';
 import { Button } from '@/components/admin/Button';
 import { useI18n } from '@/lib/i18n';
-import { useAdminSupplierProducts, useToggleSupplierFavorite } from '@/hooks/useQueries';
-import api from '@/lib/api';
+import { useAdminSupplierProducts, useToggleSupplierFavorite, queryKeys } from '@/hooks/useQueries';
+import { useAuth } from '@/hooks/useAuth';
+import { useAuthStore } from '@/store/authStore';
+import { useSettings } from '@/hooks/useQueries';
+import api, { getImageUrl } from '@/lib/api';
 import type { AdminSupplierProduct } from '@/lib/api';
+import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 
-interface Admin {
-  id?: string;
-  name?: string;
-  email?: string;
-  studioName?: string;
-  ssoEnabled?: boolean;
-  googleEmail?: string | null;
-  addressStreet?: string | null;
-  addressApartment?: string | null;
-  addressCity?: string | null;
-  addressZip?: string | null;
-  addressCountry?: string | null;
-}
-
-interface SettingsIdentityTabProps {
-  admin: Admin | null;
-  logoPreview: string;
-  uploadingLogo: boolean;
-  removingLogo: boolean;
-  logoInputRef: React.RefObject<HTMLInputElement>;
-  onLogoUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  onLogoRemove: () => void;
-  onProfileSaved: (updated: Admin) => void;
-}
-
-export const SettingsIdentityTab = ({
-  admin,
-  logoPreview,
-  uploadingLogo,
-  removingLogo,
-  logoInputRef,
-  onLogoUpload,
-  onLogoRemove,
-  onProfileSaved,
-}: SettingsIdentityTabProps) => {
+export const SettingsIdentityTab = () => {
   const { t } = useI18n();
+  const { admin } = useAuth();
+  const setAdmin = useAuthStore((s) => s.setAdmin);
+  const queryClient = useQueryClient();
+  const { data: settingsData } = useSettings();
   const { data: supplierProducts = [], isLoading: productsLoading } = useAdminSupplierProducts();
   const toggleFavorite = useToggleSupplierFavorite();
 
@@ -60,6 +34,50 @@ export const SettingsIdentityTab = ({
   });
   const [savingAddress, setSavingAddress] = useState(false);
 
+  // Logo state — seeded from settings query
+  const [logoPreview, setLogoPreview] = useState('');
+  const [uploadingLogo, setUploadingLogo] = useState(false);
+  const [removingLogo, setRemovingLogo] = useState(false);
+  const logoInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (!settingsData) return;
+    const s = settingsData;
+    if (s.logoImagePath) setLogoPreview(getImageUrl(s.logoImagePath as string));
+    else setLogoPreview('');
+  }, [settingsData]);
+
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingLogo(true);
+    try {
+      const form = new FormData();
+      form.append('image', file);
+      const res = await api.post('/settings/logo-image', form, { headers: { 'Content-Type': undefined } });
+      setLogoPreview(getImageUrl(res.data.logoImagePath));
+      queryClient.invalidateQueries({ queryKey: queryKeys.settings });
+    } catch {
+      toast.error(t('admin.settings.logo_upload_failed'));
+    } finally {
+      setUploadingLogo(false);
+      if (logoInputRef.current) logoInputRef.current.value = '';
+    }
+  };
+
+  const handleLogoRemove = async () => {
+    setRemovingLogo(true);
+    try {
+      await api.delete('/settings/logo-image');
+      setLogoPreview('');
+      queryClient.invalidateQueries({ queryKey: queryKeys.settings });
+    } catch {
+      toast.error(t('admin.common.error'));
+    } finally {
+      setRemovingLogo(false);
+    }
+  };
+
   const handleAddress = async (e: React.FormEvent) => {
     e.preventDefault();
     setSavingAddress(true);
@@ -71,7 +89,7 @@ export const SettingsIdentityTab = ({
         addressZip: address.addressZip,
         addressCountry: address.addressCountry,
       });
-      onProfileSaved(res.data.admin ?? res.data);
+      setAdmin(res.data.admin ?? res.data);
       toast.success(t('admin.settings.address_saved'));
     } catch {
       toast.error(t('admin.settings.profile_failed'));
@@ -88,7 +106,7 @@ export const SettingsIdentityTab = ({
         name: profile.name || undefined,
         studioName: profile.studioName || undefined,
       });
-      onProfileSaved(res.data);
+      setAdmin(res.data);
       toast.success(t('admin.settings.profile_saved'));
       setProfileMsg('');
     } catch {
@@ -186,12 +204,12 @@ export const SettingsIdentityTab = ({
             </div>
           )}
           <div className='flex items-center gap-2'>
-            <input ref={logoInputRef} type='file' accept='image/*' className='hidden' onChange={onLogoUpload} />
+            <input ref={logoInputRef} type='file' accept='image/*' className='hidden' onChange={handleLogoUpload} />
             <Button type='button' variant='ghost' size='sm' onClick={() => logoInputRef.current?.click()} disabled={uploadingLogo || removingLogo}>
               {uploadingLogo ? t('admin.common.uploading') : logoPreview ? t('admin.settings.logo_replace') : t('admin.settings.logo_upload')}
             </Button>
             {logoPreview && (
-              <Button type='button' variant='ghost' size='sm' onClick={onLogoRemove} disabled={removingLogo || uploadingLogo}>
+              <Button type='button' variant='ghost' size='sm' onClick={handleLogoRemove} disabled={removingLogo || uploadingLogo}>
                 {removingLogo ? '...' : t('admin.settings.logo_remove')}
               </Button>
             )}

@@ -24,7 +24,7 @@ export const SupplierSettlement = () => {
       ) : (
         <>
           {/* Open balance */}
-          <div className='rounded-2xl bg-foreground text-background p-6 mb-8'>
+          <div className='rounded-2xl bg-primary text-primary-foreground p-6 mb-8'>
             <p className='text-xs uppercase tracking-widest opacity-60'>{t('supplier.settlement.owed')}</p>
             <p className='text-3xl font-semibold mt-2'>{fmt(data.open.total)}</p>
             <p className='text-sm opacity-70 mt-1'>{data.open.orderCount} {t('orders.items')}</p>

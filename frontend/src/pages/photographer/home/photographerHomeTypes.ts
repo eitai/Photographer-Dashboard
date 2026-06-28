@@ -44,8 +44,15 @@ export interface FaqItem {
   a: string;
 }
 
+export interface FeaturedImage {
+  _id: string;
+  path: string;
+  thumbnailPath?: string;
+  originalName?: string;
+}
+
 export interface PublicSettings {
-  featuredImages: any[];
+  featuredImages: FeaturedImage[];
   bio: string;
   heroImagePath: string;
   profileImagePath: string;

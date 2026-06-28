@@ -16,6 +16,11 @@ const _dbUrl = (process.env.DATABASE_URL || '')
   .replace('sslmode=verify-full', 'sslmode=no-verify')
   .replace('sslmode=verify-ca', 'sslmode=no-verify');
 
+// NOTE: `rejectUnauthorized: false` disables TLS certificate verification. This is
+// intentional for the self-signed certs that CloudNativePG (CNPG) issues, but it means
+// the DB connection is NOT protected against an active MITM. It is only acceptable when
+// the database traffic stays on a trusted private network. If the DB is ever reachable
+// over an untrusted path, supply the CA and switch to `sslmode=verify-full`.
 const pool = new Pool({
   connectionString: _dbUrl,
   max: 10,

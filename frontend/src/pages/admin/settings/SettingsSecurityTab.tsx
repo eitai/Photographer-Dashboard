@@ -1,28 +1,34 @@
+import { useState } from 'react';
 import { useI18n } from '@/lib/i18n';
+import { useAuth } from '@/hooks/useAuth';
+import { useAuthStore } from '@/store/authStore';
+import api, { API_BASE } from '@/lib/api';
+import { toast } from 'sonner';
 
-interface Admin {
-  id?: string;
-  name?: string;
-  email?: string;
-  studioName?: string;
-  ssoEnabled?: boolean;
-  googleEmail?: string | null;
-}
-
-interface SettingsSecurityTabProps {
-  admin: Admin | null;
-  disconnectingSSO: boolean;
-  onDisconnectSSO: () => void;
-  onConnectGoogle: () => void;
-}
-
-export const SettingsSecurityTab = ({
-  admin,
-  disconnectingSSO,
-  onDisconnectSSO,
-  onConnectGoogle,
-}: SettingsSecurityTabProps) => {
+export const SettingsSecurityTab = () => {
   const { t } = useI18n();
+  const { admin } = useAuth();
+  const setAdmin = useAuthStore((s) => s.setAdmin);
+  const [disconnectingSSO, setDisconnectingSSO] = useState(false);
+
+  const handleDisconnectSSO = async () => {
+    setDisconnectingSSO(true);
+    try {
+      const res = await api.delete('/auth/google/link');
+      if (res.status === 200 && admin) {
+        setAdmin({ ...admin, ssoEnabled: false, googleEmail: null });
+        toast.success(t('admin.settings.sso.unlink_success'));
+      }
+    } catch {
+      toast.error(t('admin.common.error'));
+    } finally {
+      setDisconnectingSSO(false);
+    }
+  };
+
+  const handleConnectGoogle = () => {
+    window.location.href = `${API_BASE}/api/auth/google/link`;
+  };
 
   return (
     <div className='max-w-md space-y-4'>
@@ -50,7 +56,7 @@ export const SettingsSecurityTab = ({
           {admin?.googleEmail ? (
             <button
               type='button'
-              onClick={onDisconnectSSO}
+              onClick={handleDisconnectSSO}
               disabled={disconnectingSSO}
               className='px-4 py-2 text-sm rounded-lg border border-red-200 text-red-500 hover:bg-red-50 transition-colors disabled:opacity-50'
             >
@@ -59,7 +65,7 @@ export const SettingsSecurityTab = ({
           ) : (
             <button
               type='button'
-              onClick={onConnectGoogle}
+              onClick={handleConnectGoogle}
               className='flex items-center gap-2 px-4 py-2 text-sm rounded-lg border border-zinc-300 bg-white text-zinc-700 hover:bg-zinc-50 transition-colors'
             >
               <svg width='16' height='16' viewBox='0 0 24 24' aria-hidden='true'>

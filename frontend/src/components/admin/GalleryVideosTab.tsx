@@ -4,6 +4,7 @@ import { useI18n } from '@/lib/i18n';
 import { getImageUrl } from '@/lib/api';
 import { Button } from '@/components/admin/Button';
 import { useVideoUpload } from '@/hooks/useVideoUpload';
+import type { GalleryDetail } from '@/types/admin';
 
 interface VideoItem {
   filename: string;
@@ -14,7 +15,7 @@ interface VideoItem {
 interface Props {
   galleryId: string;
   videos: VideoItem[];
-  setGallery: (updater: (prev: any) => any) => void;
+  setGallery: React.Dispatch<React.SetStateAction<GalleryDetail | null>>;
 }
 
 export const GalleryVideosTab = ({ galleryId, videos, setGallery }: Props) => {

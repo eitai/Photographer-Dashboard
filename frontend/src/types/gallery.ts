@@ -17,6 +17,31 @@ export interface GalleryFolder {
   sortOrder: number;
 }
 
+/**
+ * Minimal preview image shape embedded in gallery list responses.
+ * The list endpoint returns up to 5 items per gallery; single-gallery
+ * endpoints return full GalleryImage objects instead.
+ */
+export interface GalleryPreviewImage {
+  _id: string;
+  thumbnailPath: string | null;
+  previewPath: string | null;
+}
+
+/**
+ * Minimal submission shape embedded in gallery list responses.
+ * Matches the shape returned by the submissions endpoint but typed
+ * loosely so additional fields from that endpoint pass through.
+ */
+export interface EmbeddedSubmission {
+  _id: string;
+  selectedImageIds: string[];
+  submittedAt?: string;
+  clientMessage?: string;
+  heroImageId?: string;
+  imageComments?: Record<string, string>;
+}
+
 export interface GalleryData {
   _id: string;
   name: string;
@@ -38,6 +63,10 @@ export interface GalleryData {
   videos?: { path: string; filename: string; originalName: string }[];
   previousSelectionIds?: string[];
   selectionEnabled?: boolean;
+  /** Embedded by the gallery LIST endpoint — up to 5 preview images per gallery. */
+  previewImages?: GalleryPreviewImage[];
+  /** Embedded by the gallery LIST endpoint — all submissions for this gallery. */
+  submissions?: EmbeddedSubmission[];
 }
 
 /** Minimal gallery shape used in admin list/card views */

@@ -66,7 +66,7 @@ export const AdminSettlements = () => {
                 <Button
                   onClick={() => create.mutate(s.supplierId)}
                   disabled={create.isPending || s.open.orderCount === 0}
-                  className='bg-charcoal hover:bg-charcoal/90 text-white'
+                  className='bg-primary hover:bg-primary/90 text-white'
                 >
                   {t('admin.settlement.create')}
                 </Button>
